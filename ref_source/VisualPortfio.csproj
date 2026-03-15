@@ -1,0 +1,272 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{2D5AA6E6-1692-47D7-818C-EC03B5FF8375}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>VisualPortfolio</RootNamespace>
+    <AssemblyName>VisualPortfolio</AssemblyName>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>portfolio.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\..\Strategy\StrategyReport\bin\Debug\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WinForms">
+      <HintPath>..\..\Strategy\StrategyReport\bin\Debug\Microsoft.ReportViewer.WinForms.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Classes\ClsBatchRun.cs" />
+    <Compile Include="Classes\ClsEquityAttr.cs" />
+    <Compile Include="Classes\ClsExecResult.cs" />
+    <Compile Include="Classes\ClsListEquity.cs" />
+    <Compile Include="Classes\ClsProperty.cs" />
+    <Compile Include="Classes\ClsWinLoss.cs" />
+    <Compile Include="Classes\ClsTradeList.cs" />
+    <Compile Include="Classes\ClsCommission.cs" />
+    <Compile Include="Forms\DlgFixProfit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\DlgFixProfit.Designer.cs">
+      <DependentUpon>DlgFixProfit.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\DlgPropertyGrid.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\DlgPropertyGrid.Designer.cs">
+      <DependentUpon>DlgPropertyGrid.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormBatchRun.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormBatchRun.Designer.cs">
+      <DependentUpon>FormBatchRun.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormCommission.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormCommission.Designer.cs">
+      <DependentUpon>FormCommission.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormDiversity.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormDiversity.Designer.cs">
+      <DependentUpon>FormDiversity.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormEquityManage.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormEquityManage.Designer.cs">
+      <DependentUpon>FormEquityManage.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormPositionAnalysis.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormPositionAnalysis.Designer.cs">
+      <DependentUpon>FormPositionAnalysis.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormWinLoss.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormWinLoss.Designer.cs">
+      <DependentUpon>FormWinLoss.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormResultSummary.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormResultSummary.Designer.cs">
+      <DependentUpon>FormResultSummary.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormSimpleMonth.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormSimpleMonth.Designer.cs">
+      <DependentUpon>FormSimpleMonth.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormSimplePlot.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormSimplePlot.Designer.cs">
+      <DependentUpon>FormSimplePlot.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormSimpleSummary.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormSimpleSummary.Designer.cs">
+      <DependentUpon>FormSimpleSummary.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormAbout.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormAbout.Designer.cs">
+      <DependentUpon>FormAbout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormMain.Designer.cs">
+      <DependentUpon>FormMain.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormOptions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormOptions.Designer.cs">
+      <DependentUpon>FormOptions.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Global.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="IndexDatabase.cs" />
+    <Compile Include="SummaryReport.cs" />
+    <Compile Include="TradeRecord.cs" />
+    <Compile Include="util.cs" />
+    <EmbeddedResource Include="Forms\DlgFixProfit.resx">
+      <DependentUpon>DlgFixProfit.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\DlgPropertyGrid.resx">
+      <DependentUpon>DlgPropertyGrid.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormBatchRun.resx">
+      <DependentUpon>FormBatchRun.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormCommission.resx">
+      <DependentUpon>FormCommission.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormEquityManage.resx">
+      <DependentUpon>FormEquityManage.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormPositionAnalysis.resx">
+      <DependentUpon>FormPositionAnalysis.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormWinLoss.resx">
+      <DependentUpon>FormWinLoss.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormResultSummary.resx">
+      <DependentUpon>FormResultSummary.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormSimpleMonth.resx">
+      <DependentUpon>FormSimpleMonth.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormSimplePlot.resx">
+      <DependentUpon>FormSimplePlot.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormSimpleSummary.resx">
+      <DependentUpon>FormSimpleSummary.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormAbout.resx">
+      <DependentUpon>FormAbout.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormMain.resx">
+      <DependentUpon>FormMain.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormOptions.resx">
+      <DependentUpon>FormOptions.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <EmbeddedResource Include="ReportProfit.rdlc" />
+    <EmbeddedResource Include="ReportCommission.rdlc" />
+    <EmbeddedResource Include="ReportQuarter.rdlc" />
+    <EmbeddedResource Include="ReportSummary.rdlc" />
+    <None Include="app.config" />
+    <None Include="Properties\DataSources\ClsCommissionEntry.datasource" />
+    <None Include="Properties\DataSources\ClsCommissionYear.datasource" />
+    <None Include="Properties\DataSources\ClsCommissionYear1.datasource" />
+    <None Include="Properties\DataSources\TReportEntry.datasource">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="portfolio.ico" />
+    <Content Include="report.ico" />
+    <EmbeddedResource Include="Resources\ReportPanel.xml">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Lib\NPlotLib\NPlot.csproj">
+      <Project>{e6867ff5-74ec-4464-8958-d71cb46232f3}</Project>
+      <Name>NPlot</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Lib\QuoteReader\QuoteReader.csproj">
+      <Project>{f5d7dedf-f472-4735-a84a-e820e827d422}</Project>
+      <Name>QuoteReader</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Lib\SharpUpdate\SharpUpdate.csproj">
+      <Project>{811c1d69-764f-4335-8363-b93a1d106268}</Project>
+      <Name>SharpUpdate</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Lib\WinFormsUI\WinFormsUI.csproj">
+      <Project>{c75532c4-765b-418e-b09b-46d36b2abdb1}</Project>
+      <Name>WinFormsUI</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PortfolioyList>
+  <Equity Index="0" FileName="aa-1.srp" Color="Blue" Weight="31.7" />
+  <Equity Index="1" FileName="aa-2.srp" Color="Maroon" Weight="31.7" />
+  <Equity Index="2" FileName="aa-3.srp" Color="Cyan" Weight="31.7" />
+</PortfolioyList>
