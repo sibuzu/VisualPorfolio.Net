@@ -38,8 +38,6 @@
       <SummaryPanel v-if="activeTab === '獲利報表'" />
       <EquityCurvePanel v-if="activeTab === '獲利曲線'" />
       <MonthlyBarPanel v-if="activeTab === '逐年獲利'" />
-      <AnnualBarPanel v-if="activeTab === '年度獲利'" />
-      <WeeklyPanel v-if="activeTab === '每週獲利'" />
       <PositionPanel v-if="activeTab === '口數分析'" />
       <WinLossPanel v-if="activeTab === '贏輸分析'" />
       <CommissionPanel v-if="activeTab === '分潤退傭'" />
@@ -63,8 +61,6 @@ import EquityManager from '../components/EquityManager.vue'
 import SummaryPanel from '../components/SummaryPanel.vue'
 import EquityCurvePanel from '../components/EquityCurvePanel.vue'
 import MonthlyBarPanel from '../components/MonthlyBarPanel.vue'
-import AnnualBarPanel from '../components/AnnualBarPanel.vue'
-import WeeklyPanel from '../components/WeeklyPanel.vue'
 import PositionPanel from '../components/PositionPanel.vue'
 import WinLossPanel from '../components/WinLossPanel.vue'
 import CommissionPanel from '../components/CommissionPanel.vue'
@@ -75,7 +71,7 @@ const projectStore = useProjectStore()
 const portfolioStore = usePortfolioStore()
 const guest = ensureGuestId()
 
-const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '年度獲利', '每週獲利', '口數分析', '贏輸分析', '分潤退傭', '多樣性分析']
+const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '口數分析', '贏輸分析', '分潤退傭', '多樣性分析']
 const activeTab = ref('獲利報表')
 const viewError = ref('')
 
