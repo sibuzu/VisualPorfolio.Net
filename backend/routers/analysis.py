@@ -103,7 +103,7 @@ def run_analysis(project_id: str, payload: AnalysisRequest, guest_id: str = Quer
             "exit": t["trade_date2"],
             "pnl": round(float(t["net_profit"]), 6),
         }
-        for t in merged[:2000]
+        for t in merged
     ]
 
     touch_access_time(project_id)
