@@ -14,13 +14,6 @@
         <input type="file" accept=".srp,.xrp" :disabled="readonly" @change="upload" />
       </div>
 
-      <div class="files">
-        <div v-for="f in projectStore.files" :key="f.filename" class="file-row">
-          <span>{{ f.filename }}</span>
-          <button v-if="!readonly" @click="removeFile(f.filename)">x</button>
-        </div>
-      </div>
-
       <div class="equity-manager-wrap">
         <EquityManager :readonly="readonly" />
       </div>
@@ -124,17 +117,6 @@ async function upload(event) {
   event.target.value = ''
 }
 
-async function removeFile(filename) {
-  viewError.value = ''
-  try {
-    await projectStore.deleteFile(route.params.projectId, filename)
-    portfolioStore.setFilesAsEquities(projectStore.files)
-    await refreshAnalysis()
-  } catch (e) {
-    viewError.value = e.message || '刪除失敗'
-  }
-}
-
 async function toggleShared(event) {
   viewError.value = ''
   try {
@@ -235,16 +217,6 @@ button {
 button.active {
   border-color: var(--accent);
   color: var(--accent);
-}
-.file-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-}
-.files {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  padding: 8px 0;
 }
 .equity-manager-wrap {
   border-top: 1px solid var(--line);
