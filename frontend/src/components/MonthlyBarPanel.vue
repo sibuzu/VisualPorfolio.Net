@@ -1,6 +1,5 @@
 <template>
   <section>
-    <h3>逐年獲利</h3>
     <div class="range-row">
       <span class="label">範圍：</span>
       <button

@@ -19,11 +19,22 @@ export const useProjectStore = defineStore('project', {
     error: ''
   }),
   actions: {
+    _withTimeout(promise, ms, message) {
+      let timer
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), ms)
+      })
+      return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+    },
     async loadProjects() {
       this.loading = true
       this.error = ''
       try {
-        this.projects = await listProjects()
+        this.projects = await this._withTimeout(
+          listProjects(),
+          15000,
+          '載入專案逾時，請檢查 API 網址與 Tunnel 設定'
+        )
       } catch (e) {
         this.error = e.message
       } finally {
@@ -90,6 +101,18 @@ export const useProjectStore = defineStore('project', {
       this.error = ''
       try {
         await uploadProjectFile(projectId, file)
+        await this.loadFiles(projectId)
+      } catch (e) {
+        this.error = e.message
+        throw e
+      }
+    },
+    async uploadFiles(projectId, files) {
+      this.error = ''
+      try {
+        for (const file of files) {
+          await uploadProjectFile(projectId, file)
+        }
         await this.loadFiles(projectId)
       } catch (e) {
         this.error = e.message

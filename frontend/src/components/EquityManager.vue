@@ -1,6 +1,5 @@
 <template>
   <section>
-    <h3>策略組合管理</h3>
     <table>
       <thead>
         <tr>
@@ -64,11 +63,13 @@ async function removeEquity(equity) {
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 th, td {
   border: 1px solid var(--line);
   padding: 6px;
   font-size: 14px;
+  word-break: break-word;
 }
 input[type='number'] {
   width: 100%;
@@ -92,4 +93,9 @@ input[type='number'] {
 .delete-btn:hover svg {
   fill: #b00020;
 }
+th:nth-child(1), td:nth-child(1) { width: 40px; text-align: center; }
+th:nth-child(2), td:nth-child(2) { width: 44px; text-align: center; }
+th:nth-child(3), td:nth-child(3) { width: 56px; text-align: center; }
+th:nth-child(5), td:nth-child(5) { width: 52px; }
+th:nth-child(6), td:nth-child(6) { width: 52px; }
 </style>

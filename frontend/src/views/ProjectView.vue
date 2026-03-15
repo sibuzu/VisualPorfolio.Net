@@ -1,20 +1,23 @@
 <template>
   <main class="wrap" v-if="projectStore.activeProject">
     <aside class="panel sidebar" :style="{ width: sidebarWidth + 'px' }">
-      <h2>{{ projectStore.activeProject.project_name }}</h2>
-      <p class="muted">{{ projectStore.activeProject.project_id }}</p>
-      <p class="muted">{{ readonly ? '唯讀檢視' : '可編輯' }}</p>
-
-      <div class="row">
-        <input type="file" accept=".srp,.xrp" :disabled="readonly" @change="upload" />
+      <div class="title-row">
+        <h2 class="project-title">{{ projectStore.activeProject.project_name }}</h2>
+        <RouterLink class="back-link" to="/">回主頁</RouterLink>
       </div>
+      <p class="muted id-line">
+        <span>{{ projectStore.activeProject.project_id }}</span>
+        <span class="status-inline">{{ readonly ? '（可檢視）' : '（可編輯）' }}</span>
+      </p>
 
       <div class="equity-manager-wrap">
+        <div class="manager-head">
+          <h3 class="manager-title">策略組合管理</h3>
+          <button type="button" class="file-btn" :disabled="readonly" @click="openFilePicker">選擇檔案</button>
+          <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp" multiple :disabled="readonly" @change="upload" />
+        </div>
         <EquityManager :readonly="readonly" />
       </div>
-
-      <button v-if="!readonly" @click="savePfoFile">儲存 PFO</button>
-      <button @click="refreshAnalysis">更新分析</button>
     </aside>
 
     <div
@@ -33,7 +36,6 @@
       <SummaryPanel v-if="activeTab === '獲利報表'" />
       <EquityCurvePanel v-if="activeTab === '獲利曲線'" />
       <MonthlyBarPanel v-if="activeTab === '逐年獲利'" />
-      <PositionPanel v-if="activeTab === '口數分析'" />
       <WinLossPanel v-if="activeTab === '贏輸分析'" />
       <CommissionPanel v-if="activeTab === '分潤退傭'" />
       <DiversityPanel v-if="activeTab === '多樣性分析'" />
@@ -56,7 +58,6 @@ import EquityManager from '../components/EquityManager.vue'
 import SummaryPanel from '../components/SummaryPanel.vue'
 import EquityCurvePanel from '../components/EquityCurvePanel.vue'
 import MonthlyBarPanel from '../components/MonthlyBarPanel.vue'
-import PositionPanel from '../components/PositionPanel.vue'
 import WinLossPanel from '../components/WinLossPanel.vue'
 import CommissionPanel from '../components/CommissionPanel.vue'
 import DiversityPanel from '../components/DiversityPanel.vue'
@@ -66,11 +67,12 @@ const projectStore = useProjectStore()
 const portfolioStore = usePortfolioStore()
 const guest = ensureGuestId()
 
-const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '口數分析', '贏輸分析', '分潤退傭', '多樣性分析']
+const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '贏輸分析', '分潤退傭', '多樣性分析']
 const activeTab = ref('獲利報表')
 const viewError = ref('')
 const sidebarWidth = ref(300)
 const resizing = ref(false)
+const fileInputRef = ref(null)
 
 const readonly = computed(() => {
   const p = projectStore.activeProject
@@ -99,11 +101,11 @@ async function refreshAnalysis() {
 }
 
 async function upload(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
+  const files = Array.from(event.target.files || [])
+  if (!files.length) return
   viewError.value = ''
   try {
-    await projectStore.uploadFile(route.params.projectId, file)
+    await projectStore.uploadFiles(route.params.projectId, files)
     portfolioStore.setFilesAsEquities(projectStore.files)
     await refreshAnalysis()
   } catch (e) {
@@ -112,14 +114,8 @@ async function upload(event) {
   event.target.value = ''
 }
 
-async function savePfoFile() {
-  viewError.value = ''
-  try {
-    await portfolioStore.saveProjectPfo(route.params.projectId)
-    alert('已儲存為 project.pfo')
-  } catch (e) {
-    viewError.value = e.message || '儲存 PFO 失敗'
-  }
+function openFilePicker() {
+  fileInputRef.value?.click()
 }
 
 function onMouseMove(event) {
@@ -172,9 +168,10 @@ onBeforeUnmount(() => {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   max-height: calc(100vh - 28px);
   overflow: auto;
+  overflow-x: hidden;
 }
 .splitter {
   width: 8px;
@@ -200,6 +197,24 @@ button {
   background: white;
   cursor: pointer;
 }
+.project-title {
+  margin: 2px 0;
+}
+.title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.back-link {
+  color: var(--muted);
+  text-decoration: underline;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.file-btn {
+  border-color: #9aa8b8;
+}
 button.active {
   border-color: var(--accent);
   color: var(--accent);
@@ -208,11 +223,30 @@ button.active {
   border-top: 1px solid var(--line);
   padding-top: 8px;
 }
-.row {
+.manager-head {
   display: flex;
+  justify-content: space-between;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
+}
+.manager-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+.id-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+.status-inline {
+  color: inherit;
+  font-weight: 600;
+}
+.file-input-hidden {
+  display: none;
 }
 .loading {
   padding: 24px;

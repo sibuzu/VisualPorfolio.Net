@@ -1,6 +1,5 @@
 <template>
   <section>
-    <h3>獲利曲線</h3>
     <div class="mode-row">
       <span class="label">類別：</span>
       <button
