@@ -84,13 +84,16 @@ function render() {
     series.push(...separateSeries.value)
   }
 
-  chart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: series.map((s) => s.name) },
-    xAxis: { type: 'category', data: dates.value },
-    yAxis: { type: 'value' },
-    series
-  })
+  chart.setOption(
+    {
+      tooltip: { trigger: 'axis' },
+      legend: { data: series.map((s) => s.name) },
+      xAxis: { type: 'category', data: dates.value },
+      yAxis: { type: 'value' },
+      series
+    },
+    { notMerge: true }
+  )
 }
 
 watch([() => analysis.value.equity_curve, () => analysis.value.position_analysis, mode], async () => {
