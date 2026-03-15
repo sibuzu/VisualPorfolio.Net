@@ -1,6 +1,6 @@
 <template>
   <main class="wrap" v-if="projectStore.activeProject">
-    <aside class="panel sidebar">
+    <aside class="panel sidebar" :style="{ width: sidebarWidth + 'px' }">
       <h2>{{ projectStore.activeProject.project_name }}</h2>
       <p class="muted">{{ projectStore.activeProject.project_id }}</p>
       <p class="muted">{{ readonly ? '唯讀檢視' : '可編輯' }}</p>
@@ -29,6 +29,13 @@
       <button @click="refreshAnalysis">更新分析</button>
     </aside>
 
+    <div
+      class="splitter"
+      role="separator"
+      aria-label="調整左側寬度"
+      @mousedown="startResize"
+    ></div>
+
     <section class="panel content">
       <p v-if="viewError" class="error">{{ viewError }}</p>
       <div class="tabs">
@@ -52,7 +59,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ensureGuestId } from '../api'
 import { useProjectStore } from '../stores/project'
@@ -74,6 +81,8 @@ const guest = ensureGuestId()
 const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '口數分析', '贏輸分析', '分潤退傭', '多樣性分析']
 const activeTab = ref('獲利報表')
 const viewError = ref('')
+const sidebarWidth = ref(300)
+const resizing = ref(false)
 
 const readonly = computed(() => {
   const p = projectStore.activeProject
@@ -145,23 +154,53 @@ async function savePfoFile() {
   }
 }
 
+function onMouseMove(event) {
+  if (!resizing.value) return
+  const minW = 240
+  const maxW = 640
+  sidebarWidth.value = Math.max(minW, Math.min(maxW, event.clientX - 14))
+}
+
+function stopResize() {
+  resizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+function startResize() {
+  if (window.innerWidth <= 900) return
+  resizing.value = true
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
 watch(
   () => route.params.projectId,
   () => loadAll()
 )
 
-onMounted(() => loadAll())
+onMounted(() => {
+  loadAll()
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', stopResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener('mouseup', stopResize)
+})
 </script>
 
 <style scoped>
 .wrap {
-  display: grid;
-  grid-template-columns: 300px 1fr;
+  display: flex;
   gap: 14px;
   padding: 14px;
   min-height: 100vh;
+  align-items: stretch;
 }
 .sidebar {
+  flex: 0 0 auto;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -169,8 +208,16 @@ onMounted(() => loadAll())
   max-height: calc(100vh - 28px);
   overflow: auto;
 }
+.splitter {
+  width: 8px;
+  cursor: col-resize;
+  border-radius: 8px;
+  background: linear-gradient(to right, transparent 0, #d6dde5 45%, #d6dde5 55%, transparent 100%);
+}
 .content {
+  flex: 1 1 auto;
   padding: 12px;
+  min-width: 0;
 }
 .tabs {
   display: flex;
@@ -220,7 +267,15 @@ button.active {
 }
 @media (max-width: 900px) {
   .wrap {
-    grid-template-columns: 1fr;
+    display: block;
+  }
+  .sidebar {
+    width: 100% !important;
+    max-height: none;
+    margin-bottom: 10px;
+  }
+  .splitter {
+    display: none;
   }
 }
 </style>
