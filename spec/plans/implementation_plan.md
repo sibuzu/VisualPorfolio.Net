@@ -1,330 +1,219 @@
 # VisualPortfolio.Net — Implementation Plan
 
-## Overview
+## Goal
+Build a web version of the existing C# WinForm `VisualPortfolio` app in `ref_source/`, with equivalent core behavior for project management, SRP/XRP parsing, portfolio analytics, and chart/table visualization.
 
-Port the existing C# WinForm **VisualPortfolio** application to a full-stack web application.
-
+## Stack
 | Layer | Technology |
 |---|---|
-| Frontend | Vue 3 + Vite + ECharts |
+| Frontend | Vue 3 + Vite + Pinia + ECharts |
 | Backend | Python 3.11+ + FastAPI |
-| Database | SQLite (`data/db/`) |
-| File Storage | Local filesystem (`data/projects/{project-id}/`) |
+| Database | SQLite (`data/db/projects.db`) |
+| Storage | Local filesystem (`data/projects/{project-id}/`) |
 
-The original WinForm app allows traders to load multiple strategy backtest result files (`.srp` / `.xrp` XML format), combine them into a portfolio, and view rich analytics (summary stats, equity curve, monthly bar charts, position analysis, win/loss, commission, diversity metrics). The web version replicates all those panels as interactive pages/tabs.
-
----
-
-## Directory Layout (Target)
-
-```
-VisualPorfolio.Net/
-├── backend/
-│   ├── main.py                  # FastAPI entry point
-│   ├── routers/
-│   │   ├── projects.py          # project CRUD
-│   │   ├── files.py             # file upload / list
-│   │   └── analysis.py          # compute & return all analytics
-│   ├── services/
-│   │   ├── parser.py            # SRP / XRP XML parser (port of ClsTradeList.cs)
-│   │   ├── portfolio.py         # portfolio merge & filter (port of FormMain UpdatePortfolio)
-│   │   ├── summary_report.py    # stats engine (port of SummaryReport.cs)
-│   │   ├── commission.py        # commission calc (port of ClsCommission.cs)
-│   │   ├── diversity.py         # diversity metrics (port of FormDiversity.cs)
-│   │   └── win_loss.py          # win/loss calc (port of ClsWinLoss.cs)
-│   ├── db/
-│   │   └── database.py          # SQLite setup via SQLModel/SQLAlchemy
-│   ├── models/
-│   │   └── project.py           # Project SQLModel / Pydantic schemas
-│   └── requirements.txt
-├── frontend/
-│   ├── index.html
-│   ├── vite.config.js
-│   ├── src/
-│   │   ├── main.js
-│   │   ├── App.vue
-│   │   ├── router/index.js
-│   │   ├── stores/
-│   │   │   ├── project.js       # Pinia store – project list, active project
-│   │   │   └── portfolio.js     # Pinia store – analysis results
-│   │   ├── api/
-│   │   │   └── index.js         # Axios wrapper for FastAPI calls
-│   │   ├── views/
-│   │   │   ├── HomeView.vue     # Project list / landing page
-│   │   │   ├── ProjectView.vue  # Main workspace (tabbed panels)
-│   │   │   └── NotFound.vue
-│   │   └── components/
-│   │       ├── EquityManager.vue     # Strategy list (add/remove/reorder/color/weight)
-│   │       ├── SummaryPanel.vue      # Key metrics table
-│   │       ├── EquityCurvePanel.vue  # ECharts line chart (profit / drawdown)
-│   │       ├── MonthlyBarPanel.vue   # ECharts bar chart (by year/month)
-│   │       ├── PositionPanel.vue     # Position analysis table
-│   │       ├── WinLossPanel.vue      # Win/loss breakdown table
-│   │       ├── CommissionPanel.vue   # Commission settings & result table
-│   │       └── DiversityPanel.vue    # Diversity metrics table
-└── data/
-    ├── db/
-    │   └── projects.db          # SQLite file (auto-created)
-    └── projects/
-        └── {project-id}/        # uploaded .srp / .xrp / .pfo files live here
-```
-
----
-
-## Phase 1 — Backend
-
-### 1.1 Database Model (`backend/db/database.py`, `backend/models/project.py`)
-
-SQLite table **projects**:
-
-| Column | Type | Notes |
+## Spec Traceability (Requirements 1-8)
+| Req | Requirement | Implementation |
 |---|---|---|
-| project_id | TEXT PK | `VP[A-Z]{2}-[A-Z]{4}` format |
-| user_id | TEXT | Guest UUID (from frontend) |
-| project_name | TEXT | user-provided name |
-| shared | BOOLEAN | default `false` |
-| create_time | DATETIME | UTC |
-| access_time | DATETIME | updated on every access |
+| 1 | Port WinForm features from `ref_source/` | Port parser/calculation logic from C# service by service; reproduce UI panels as Vue tabs |
+| 2 | Frontend uses Vue + ECharts; upload SRP/XRP XML | Vue workspace with upload flow, strategy manager, ECharts for equity/monthly visuals |
+| 3 | Backend uses Python + FastAPI | FastAPI routers for projects/files/analysis/pfo |
+| 4 | SQLite table with project fields | `projects` table includes `project_id`, `user_id`, `project_name`, `shared`, `create_time`, `access_time` |
+| 5 | Guest UUID + LocalStorage + create/list projects | Frontend generates UUIDv4 on first load, stores in LocalStorage, passes as `guest_id` |
+| 6 | Access rules by owner/shared | API authorization: owner edit, shared non-owner read-only, private non-owner denied |
+| 7 | Project directory `data/projects/{project-id}` | Create directory at project creation; store uploads and `.pfo` there |
+| 8 | Update access time and delete inactive >72h | Touch `access_time` on edit/view; periodic cleanup removes DB record + directory |
 
-Auto-cleanup job: on every API startup and hourly via `asyncio`, delete projects where `access_time < NOW - 72h` and purge their directories.
+## Data Model
+Table: `projects`
+- `project_id` TEXT PRIMARY KEY, format: `VP[A-Z]{2}-[A-Z]{4}`
+- `user_id` TEXT NOT NULL (Guest UUID)
+- `project_name` TEXT NOT NULL
+- `shared` INTEGER NOT NULL DEFAULT 0
+- `create_time` TEXT NOT NULL (UTC ISO8601)
+- `access_time` TEXT NOT NULL (UTC ISO8601)
 
-### 1.2 File Parser (`backend/services/parser.py`)
+Notes:
+- Spec names fields with hyphens; DB uses snake_case columns for SQLite compatibility.
+- API request/response can expose either style, but internal model uses snake_case.
 
-Port `ClsTradeList.LoadFile()` / `LoadSrpNode()` / `LoadXrpNode()` to Python:
+## Backend Plan
+### 1. Project and auth foundation
+Files:
+- `backend/main.py`
+- `backend/db/database.py`
+- `backend/models/project.py`
+- `backend/routers/projects.py`
+- `backend/services/project_access.py`
 
-- Detect file type by root XML element (`策略回測` → SRP, `CryptoReport` → XRP).
-- Parse trade records into a list of `TradeItem` dicts: `{idx, trade_date1, trade_date2, profit, net_profit, trade_amount, bs, contract, price1, price2, point_value, strategy_index}`.
-- Calculate per-file stats: `avg`, `stdev`, `period`, `net_profit`, `mdd`.
-- Apply slippage from XML `<滑價>`.
+Work:
+- Initialize DB and auto-create `projects` table.
+- Implement project ID generator (`VP[A-Z]{2}-[A-Z]{4}` with collision check).
+- Implement endpoints:
+  - `GET /projects?guest_id=...`
+  - `POST /projects`
+  - `GET /projects/{project_id}`
+  - `PATCH /projects/{project_id}`
+  - `DELETE /projects/{project_id}`
+- Enforce rules:
+  - `owner`: read/write
+  - `shared non-owner`: read-only
+  - `private non-owner`: 403
+- On project create: mkdir `data/projects/{project_id}`.
+- On any successful read/write access: update `access_time`.
 
-### 1.3 Portfolio Merge (`backend/services/portfolio.py`)
+### 2. File upload and storage
+Files:
+- `backend/routers/files.py`
+- `backend/services/storage.py`
 
-Port `UpdatePortfolio()`:
+Work:
+- Endpoints:
+  - `GET /projects/{id}/files`
+  - `POST /projects/{id}/files` (only `.srp`/`.xrp`)
+  - `DELETE /projects/{id}/files/{filename}`
+- Save files under `data/projects/{project_id}/`.
+- Validate file extension and basic XML readability.
 
-- Merge trade lists from all active equities, tagging each item with `strategy_index`, `contract`, `weight`.
-- Sort by `trade_date2` then `idx`.
-- Filter by date range (start/end).
-- Compute cumulative index `aux_idx`.
+### 3. Parser + analytics port from C#
+Files:
+- `backend/services/parser.py`
+- `backend/services/portfolio.py`
+- `backend/services/summary_report.py`
+- `backend/services/commission.py`
+- `backend/services/diversity.py`
+- `backend/services/win_loss.py`
+- `backend/routers/analysis.py`
 
-### 1.4 Statistics Engine (`backend/services/summary_report.py`)
+Work:
+- Port SRP/XRP parsing logic from WinForm code in `ref_source/`.
+- Port trade merge, date filtering, weighted equity composition.
+- Port summary/mdd/sharpe/sortino/sqn/win-loss/commission/diversity calculations.
+- Endpoint:
+  - `POST /projects/{id}/analysis` returns all panel data in one payload.
 
-Port `TSummaryReport.CreateSimpleReport()`:
+### 4. PFO interoperability
+Files:
+- `backend/routers/pfo.py`
+- `backend/services/pfo.py`
 
-- **Summary Part**: net profit, MDD (top-N), profit factor, win prob, avg win/loss, Sharpe ratio, Sortino ratio, SQN.
-- **Annual/Monthly/Weekly Part**: bucket profits and MDD by year, month, quarter, week.
-- **MDD tracking**: store start/end indices for overlaying on equity curve.
+Work:
+- Endpoints:
+  - `GET /projects/{id}/pfo`
+  - `PUT /projects/{id}/pfo`
+- Preserve WinForm-compatible XML schema.
+- Store file references as project-relative paths.
 
-### 1.5 Other Service Ports
+### 5. 72-hour cleanup job
+Files:
+- `backend/services/cleanup.py`
+- `backend/main.py`
 
-- `commission.py` — port `ClsCommission.cs`
-- `diversity.py` — port `FormDiversity.cs` (VOR, EER, RDR, DCI, ENB, etc.)
-- `win_loss.py` — port `ClsWinLoss.cs`
+Work:
+- On startup: run one cleanup pass.
+- Schedule periodic cleanup (hourly).
+- Delete project where `access_time < now - 72h`.
+- Delete DB row and `data/projects/{project_id}/` recursively.
 
-### 1.6 API Endpoints (`backend/routers/`)
+## Frontend Plan
+### 1. App skeleton and guest identity
+Files:
+- `frontend/src/main.js`
+- `frontend/src/App.vue`
+- `frontend/src/router/index.js`
+- `frontend/src/api/index.js`
 
-#### Projects (`/projects`)
+Work:
+- On app load, read `localStorage.guest_uuid`.
+- If missing, generate UUIDv4 and persist.
+- Attach `guest_id` to API requests.
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/projects?guest_id=...` | List projects for this user |
-| POST | `/projects` | Create project (body: `{guest_id, project_name}`) → returns `{project_id}` |
-| GET | `/projects/{project_id}` | Get project metadata (validates access) |
-| PATCH | `/projects/{project_id}` | Update `shared`, `project_name` |
-| DELETE | `/projects/{project_id}` | Delete project + files |
+### 2. Home and project management
+Files:
+- `frontend/src/views/HomeView.vue`
+- `frontend/src/stores/project.js`
 
-Access rules:
-- `user_id == guest_id` → full edit access (update `access_time`)
-- `shared=true`, `user_id != guest_id` → read-only (update `access_time`)
-- `shared=false`, `user_id != guest_id` → 403
+Work:
+- Show project list via `GET /projects`.
+- Create project dialog (`POST /projects`).
+- Rename/share toggle/delete actions (`PATCH`/`DELETE`).
 
-#### Files (`/projects/{project_id}/files`)
+### 3. Project workspace
+Files:
+- `frontend/src/views/ProjectView.vue`
+- `frontend/src/components/EquityManager.vue`
+- `frontend/src/components/*Panel.vue`
+- `frontend/src/stores/portfolio.js`
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/projects/{id}/files` | List uploaded files |
-| POST | `/projects/{id}/files` | Upload `.srp` / `.xrp` (multipart) |
-| DELETE | `/projects/{id}/files/{filename}` | Remove a file |
+Work:
+- Left sidebar: uploaded files + active strategies + contract/weight/color/order/date controls.
+- Right area tabs:
+  - Summary
+  - Equity Curve (ECharts)
+  - Monthly Bar (ECharts)
+  - Position Analysis
+  - Win/Loss
+  - Commission
+  - Diversity
+- Trigger re-analysis when settings change.
 
-Files saved to `data/projects/{project_id}/`.
+### 4. Read-only UX for shared projects
+Work:
+- If non-owner + shared project: disable edit actions (upload/delete/rename/reorder/save).
+- Keep charts/tables viewable.
 
-#### Analysis (`/projects/{project_id}/analysis`)
+## API Contract (MVP)
+### Projects
+- `GET /projects?guest_id=UUID`
+- `POST /projects` body: `{ "guest_id": "...", "project_name": "..." }`
+- `GET /projects/{project_id}?guest_id=UUID`
+- `PATCH /projects/{project_id}` body: `{ "guest_id": "...", "project_name": "...", "shared": true }`
+- `DELETE /projects/{project_id}` body or query carries `guest_id`
 
-| Method | Path | Description |
-|---|---|---|
-| POST | `/projects/{id}/analysis` | Run full analysis |
+### Files
+- `GET /projects/{project_id}/files?guest_id=UUID`
+- `POST /projects/{project_id}/files` multipart + `guest_id`
+- `DELETE /projects/{project_id}/files/{filename}?guest_id=UUID`
 
-Request body:
-```json
-{
-  "equities": [
-    { "filename": "aa-1.srp", "active": true, "contract": 1, "weight": 1.0, "color": "#0000FF", "name": "Strategy A" }
-  ],
-  "date_range": { "start": "2020-01-01", "end": "2025-12-31", "all": true },
-  "options": { "capital": 100, "risk_free_rate": 3.0, "mdd_count": 5, "div_by_count": false }
-}
-```
+### Analysis
+- `POST /projects/{project_id}/analysis` with equities/date/options + `guest_id`
+- Response includes: `summary`, `equity_curve`, `monthly`, `position_analysis`, `win_loss`, `commission`, `diversity`, `mdd_markers`
 
-Response body (all panels in one call):
-```json
-{
-  "summary": { "period": "...", "net_profit": 0, "mdd": 0, ... },
-  "equity_curve": [ { "date": "2020-01-05", "profit": 1234, "drawdown": 0 } ],
-  "monthly": [ { "period": "2020/01", "profit": 0, "mdd": 0 } ],
-  "position_analysis": [ ... ],
-  "win_loss": { ... },
-  "commission": { ... },
-  "diversity": { ... },
-  "mdd_markers": [ { "start_idx": 0, "end_idx": 10, "value": -5000 } ]
-}
-```
-
-#### PFO Save/Load (`/projects/{project_id}/pfo`)
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/projects/{id}/pfo` | Download `.pfo` XML |
-| PUT | `/projects/{id}/pfo` | Save equity list as `.pfo` XML |
-
-`.pfo` format mirrors the existing WinForm XML structure (for interoperability).
-
----
-
-## Phase 2 — Frontend
-
-### 2.1 Guest UUID & Project Management
-
-On first load, `App.vue` checks `localStorage` for `guest_uuid`. If absent, generates a UUID v4 and stores it. All API calls include it as a query/header param.
-
-`HomeView.vue` fetches `GET /projects?guest_id=<uuid>` and lists the user's projects. A "New Project" button prompts for a name and calls `POST /projects`.
-
-Projects can be shared (toggle switch → `PATCH /projects/{id}` with `shared=true`). A shareable URL containing `project_id` is shown.
-
-### 2.2 Project Workspace (`ProjectView.vue`)
-
-Layout: left sidebar **EquityManager** + tabbed right panel with 7 analysis tabs.
-
-**EquityManager** (mirrors `FormEquityManage`):
-- List of strategies with columns: Active (checkbox), #, Color (picker), Name, File, Contract, Weight, Edit (file picker), Delete.
-- "Add File" button → opens file picker or drag-drop zone → uploads to `/projects/{id}/files`.
-- "Move Up / Move Down" reorder buttons.
-- "Div by Count" checkbox.
-- Date-range pickers (Start / End / All checkbox).
-- Any change triggers re-analysis call (`POST /projects/{id}/analysis`).
-
-**Tabs:**
-1. **Summary** (`SummaryPanel.vue`) — two-column key metrics table.
-2. **Equity Curve** (`EquityCurvePanel.vue`) — ECharts line chart:
-   - Y-axis: Cumulative Profit ($) or Drawdown ($).
-   - X-axis: Trade Date.
-   - Dropdown: Total / Separate / Total+Sep / Drawdown.
-   - Year filter dropdown.
-   - Overlay MDD segments as horizontal red bars.
-   - Tooltip with date + value.
-3. **Monthly Bar** (`MonthlyBarPanel.vue`) — ECharts bar chart:
-   - Interval selector (Yearly / Half-year / Quarterly / Monthly).
-   - Kind: Profit / Drawdown / Both / Sep Profit / Sep Drawdown.
-   - Rolling average spinner.
-   - Year drill-down.
-4. **Position Analysis** (`PositionPanel.vue`) — table of open/closed positions.
-5. **Win/Loss** (`WinLossPanel.vue`) — win/loss distribution tables.
-6. **Commission** (`CommissionPanel.vue`) — commission summary table.
-7. **Diversity** (`DiversityPanel.vue`) — diversity metrics table.
-
-### 2.3 State Management (Pinia)
-
-- `useProjectStore` — project list, active project id/name, file list, equity config.
-- `usePortfolioStore` — analysis results (all panel data), loading state, error.
-
-### 2.4 API Client (`src/api/index.js`)
-
-Axios instance with base URL pointing to FastAPI. All requests tag `guest_id` automatically.
-
----
-
-## Phase 3 — Cross-Cutting Concerns
-
-### 3.1 CORS
-
-FastAPI will allow `http://localhost:5173` (Vite dev) and production origin.
-
-### 3.2 Auto-Deletion
-
-Background task: on every project access, update `access_time`. A startup + periodic async task deletes projects with `access_time < now-72h` and their directories.
-
-### 3.3 File Access in `.pfo`
-
-`.pfo` must store filenames **relative** to the project directory (not absolute) so they are portable. On load, resolve relative to `data/projects/{project_id}/`.
-
----
-
-## Verification Plan
-
-### Backend — Unit Tests
-
-Run with:
-```powershell
-cd d:\git\VisualPorfolio.Net\backend
-pip install pytest httpx
-pytest tests/ -v
-```
-
-Tests to write in `backend/tests/`:
-
-| Test File | What it covers |
-|---|---|
-| `test_parser.py` | Parse `ref_result/project/aa-1.srp` → assert trade count, net_profit, MDD match known values; parse `Report.xrp` similarly |
-| `test_portfolio.py` | Merge 3 SRP files with weights, assert sorted order and filtered date range |
-| `test_summary.py` | Run stats engine on known trade list, assert Sharpe/Sortino/MDD values |
-| `test_projects_api.py` | Create project, list, access control (403 for strangers, 200 for owner), delete |
-| `test_analysis_api.py` | Upload SRP, call `/analysis`, assert response has all expected keys |
-
-### Frontend — Manual Verification (Browser)
-
-Start dev servers:
-```powershell
-# Terminal 1 — Backend
-cd d:\git\VisualPorfolio.Net\backend
-uvicorn main:app --reload --port 8000
-
-# Terminal 2 — Frontend
-cd d:\git\VisualPorfolio.Net\frontend
-npm run dev
-```
-
-Open `http://localhost:5173` and verify:
-
-1. **Guest UUID** — Open DevTools → Application → LocalStorage → confirm `guest_uuid` is set.
-2. **Create Project** — Click "New Project", enter name, confirm project appears in list.
-3. **Upload Files** — Open project, upload `ref_result/project/aa-1.srp`, `aa-2.srp`, `aa-3.srp`. Confirm they appear in the equity list.
-4. **Analysis** — Confirm all 7 tabs populate with data (no empty/error states).
-5. **Equity Curve** — Switch dropdown between Total / Drawdown; verify chart updates.
-6. **Monthly Bar** — Toggle interval and year filter; verify bars update.
-7. **Access Control** — Copy project URL, open in Incognito. If `shared=false` → should be denied. Toggle shared → Incognito user can view but not edit.
-8. **PFO Round-trip** — Save `.pfo`, download it, re-upload by opening the `.pfo` in a new project, verify same strategies load.
-9. **72h Expiry** — (requires time-travel test or manual DB update) Set `access_time` to >72h ago, restart backend, confirm project is purged.
-
----
+### PFO
+- `GET /projects/{project_id}/pfo?guest_id=UUID`
+- `PUT /projects/{project_id}/pfo` + `guest_id`
 
 ## Implementation Order
+1. Backend project CRUD + access control + directory creation
+2. Frontend Home page + guest UUID flow
+3. File upload/list/delete
+4. SRP/XRP parser and trade model
+5. Portfolio + summary engine
+6. Remaining calculation modules (commission/diversity/win-loss)
+7. Analysis endpoint integration with all panels
+8. PFO save/load interoperability
+9. 72-hour cleanup scheduler + hardening
+10. End-to-end verification and bug fixes
 
-```mermaid
-gantt
-    title VisualPortfolio.Net Build Order
-    dateFormat  YYYY-MM-DD
-    section Backend
-    DB model + project API       :a1, 2026-03-16, 2d
-    SRP/XRP parser               :a2, after a1, 2d
-    Portfolio merge + stats      :a3, after a2, 3d
-    Commission + Diversity + WL  :a4, after a3, 2d
-    Analysis API endpoint        :a5, after a4, 1d
-    section Frontend
-    Vue scaffold + routing       :b1, after a1, 1d
-    HomeView + project mgmt      :b2, after b1, 1d
-    EquityManager component      :b3, after b2, 1d
-    SummaryPanel                 :b4, after b3, 1d
-    EquityCurvePanel (ECharts)   :b5, after b4, 2d
-    MonthlyBarPanel (ECharts)    :b6, after b5, 1d
-    Remaining panels             :b7, after b6, 2d
-    section Integration
-    API wiring + E2E test        :c1, after a5 b7, 2d
-```
+## Verification Plan
+### Backend automated tests (`backend/tests`)
+- `test_projects_api.py`: guest-based create/list/get/patch/delete + access policy
+- `test_files_api.py`: upload/list/delete and extension checks
+- `test_parser.py`: parse sample SRP/XRP from `ref_result/project`
+- `test_analysis_api.py`: analysis response schema and key metrics sanity
+- `test_cleanup.py`: stale project purge for `>72h`
+
+### Frontend manual checks
+1. First visit creates `guest_uuid` in LocalStorage.
+2. Creating project creates DB row and `data/projects/{project_id}` directory.
+3. Upload `.srp/.xrp` succeeds; files appear in list.
+4. All analysis tabs render with non-empty data for sample files.
+5. Shared project opened by non-owner is view-only.
+6. Private project opened by non-owner returns 403.
+7. Accessing project updates `access_time`.
+8. Setting stale `access_time` (older than 72h) and running cleanup deletes DB row + files.
+
+## Definition of Done
+- All 8 spec requirements are implemented and mapped to tested behavior.
+- Core calculations are validated against sample outputs from `ref_result/` within acceptable tolerance.
+- No unauthorized edit path exists for non-owner users.
+- Inactive project cleanup works for both DB and filesystem.
