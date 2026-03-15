@@ -3,10 +3,10 @@
     <aside class="panel sidebar">
       <h2>{{ projectStore.activeProject.project_name }}</h2>
       <p class="muted">{{ projectStore.activeProject.project_id }}</p>
-      <p class="muted">{{ readonly ? 'Read-only view' : 'Editable' }}</p>
+      <p class="muted">{{ readonly ? '唯讀檢視' : '可編輯' }}</p>
 
       <div class="row">
-        <label>Shared</label>
+        <label>共享</label>
         <input :disabled="readonly" type="checkbox" :checked="projectStore.activeProject.shared" @change="toggleShared($event)" />
       </div>
 
@@ -25,8 +25,8 @@
         <EquityManager :readonly="readonly" />
       </div>
 
-      <button v-if="!readonly" @click="savePfoFile">Save PFO</button>
-      <button @click="refreshAnalysis">Refresh Analysis</button>
+      <button v-if="!readonly" @click="savePfoFile">儲存 PFO</button>
+      <button @click="refreshAnalysis">更新分析</button>
     </aside>
 
     <section class="panel content">
@@ -35,21 +35,21 @@
         <button v-for="tab in tabs" :key="tab" :class="{ active: activeTab === tab }" @click="activeTab = tab">{{ tab }}</button>
       </div>
 
-      <SummaryPanel v-if="activeTab === 'Summary'" />
-      <EquityCurvePanel v-if="activeTab === 'Equity Curve'" />
-      <MonthlyBarPanel v-if="activeTab === 'Monthly Bar'" />
-      <AnnualBarPanel v-if="activeTab === 'Annual Bar'" />
-      <WeeklyPanel v-if="activeTab === 'Weekly'" />
-      <PositionPanel v-if="activeTab === 'Position Analysis'" />
-      <WinLossPanel v-if="activeTab === 'Win/Loss'" />
-      <CommissionPanel v-if="activeTab === 'Commission'" />
-      <DiversityPanel v-if="activeTab === 'Diversity'" />
+      <SummaryPanel v-if="activeTab === '獲利報表'" />
+      <EquityCurvePanel v-if="activeTab === '獲利曲線'" />
+      <MonthlyBarPanel v-if="activeTab === '逐年獲利'" />
+      <AnnualBarPanel v-if="activeTab === '年度獲利'" />
+      <WeeklyPanel v-if="activeTab === '每週獲利'" />
+      <PositionPanel v-if="activeTab === '口數分析'" />
+      <WinLossPanel v-if="activeTab === '贏輸分析'" />
+      <CommissionPanel v-if="activeTab === '分潤退傭'" />
+      <DiversityPanel v-if="activeTab === '多樣性分析'" />
     </section>
   </main>
 
   <main v-else class="loading">
     <p v-if="viewError" class="error">{{ viewError }}</p>
-    <p v-else>Loading project...</p>
+    <p v-else>載入專案中...</p>
   </main>
 </template>
 
@@ -75,8 +75,8 @@ const projectStore = useProjectStore()
 const portfolioStore = usePortfolioStore()
 const guest = ensureGuestId()
 
-const tabs = ['Summary', 'Equity Curve', 'Monthly Bar', 'Annual Bar', 'Weekly', 'Position Analysis', 'Win/Loss', 'Commission', 'Diversity']
-const activeTab = ref('Summary')
+const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '年度獲利', '每週獲利', '口數分析', '贏輸分析', '分潤退傭', '多樣性分析']
+const activeTab = ref('獲利報表')
 const viewError = ref('')
 
 const readonly = computed(() => {
@@ -92,7 +92,7 @@ async function loadAll() {
     portfolioStore.setFilesAsEquities(projectStore.files)
     await refreshAnalysis()
   } catch (e) {
-    viewError.value = e.message || 'Failed to load project'
+    viewError.value = e.message || '載入專案失敗'
   }
 }
 
@@ -101,7 +101,7 @@ async function refreshAnalysis() {
   try {
     await portfolioStore.analyze(route.params.projectId)
   } catch (e) {
-    viewError.value = e.message || 'Failed to run analysis'
+    viewError.value = e.message || '執行分析失敗'
   }
 }
 
@@ -114,7 +114,7 @@ async function upload(event) {
     portfolioStore.setFilesAsEquities(projectStore.files)
     await refreshAnalysis()
   } catch (e) {
-    viewError.value = e.message || 'Upload failed'
+    viewError.value = e.message || '上傳失敗'
   }
   event.target.value = ''
 }
@@ -126,7 +126,7 @@ async function removeFile(filename) {
     portfolioStore.setFilesAsEquities(projectStore.files)
     await refreshAnalysis()
   } catch (e) {
-    viewError.value = e.message || 'Delete failed'
+    viewError.value = e.message || '刪除失敗'
   }
 }
 
@@ -135,7 +135,7 @@ async function toggleShared(event) {
   try {
     await projectStore.patchProject(route.params.projectId, { shared: event.target.checked })
   } catch (e) {
-    viewError.value = e.message || 'Update failed'
+    viewError.value = e.message || '更新失敗'
   }
 }
 
@@ -143,9 +143,9 @@ async function savePfoFile() {
   viewError.value = ''
   try {
     await portfolioStore.saveProjectPfo(route.params.projectId)
-    alert('Saved as project.pfo')
+    alert('已儲存為 project.pfo')
   } catch (e) {
-    viewError.value = e.message || 'Save PFO failed'
+    viewError.value = e.message || '儲存 PFO 失敗'
   }
 }
 

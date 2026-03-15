@@ -1,6 +1,6 @@
 <template>
   <section>
-    <h3>Diversity</h3>
+    <h3>多樣性分析</h3>
     <pre>{{ formatted }}</pre>
   </section>
 </template>

@@ -1,6 +1,6 @@
 <template>
   <section>
-    <h3>Commission</h3>
+    <h3>分潤退傭</h3>
     <pre>{{ formatted }}</pre>
   </section>
 </template>

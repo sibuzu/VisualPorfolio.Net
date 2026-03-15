@@ -1,6 +1,6 @@
 <template>
   <section>
-    <h3>Annual Bar</h3>
+    <h3>年度獲利</h3>
     <div ref="chartRef" class="chart"></div>
   </section>
 </template>
@@ -20,11 +20,11 @@ function render() {
   if (!chart) chart = echarts.init(chartRef.value)
   chart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Profit', 'MDD'] },
+    legend: { data: ['獲利', 'MDD'] },
     xAxis: { type: 'category', data: analysis.value.annual.map((m) => m.period) },
     yAxis: { type: 'value' },
     series: [
-      { name: 'Profit', type: 'bar', data: analysis.value.annual.map((m) => m.profit) },
+      { name: '獲利', type: 'bar', data: analysis.value.annual.map((m) => m.profit) },
       { name: 'MDD', type: 'bar', data: analysis.value.annual.map((m) => m.mdd) }
     ]
   })

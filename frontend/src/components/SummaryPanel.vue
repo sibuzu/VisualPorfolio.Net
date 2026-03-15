@@ -1,6 +1,6 @@
 <template>
   <section>
-    <h3>Summary</h3>
+    <h3>獲利報表</h3>
     <table>
       <tbody>
         <tr v-for="(v, k) in analysis.summary" :key="k">

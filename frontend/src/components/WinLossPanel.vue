@@ -1,6 +1,6 @@
 <template>
   <section>
-    <h3>Win/Loss</h3>
+    <h3>贏輸分析</h3>
     <pre>{{ formatted }}</pre>
   </section>
 </template>

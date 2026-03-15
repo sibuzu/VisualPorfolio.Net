@@ -1,15 +1,15 @@
 <template>
   <section>
-    <h3>Equity Manager</h3>
+    <h3>策略組合管理</h3>
     <table>
       <thead>
         <tr>
-          <th>Active</th>
-          <th>Color</th>
-          <th>Name</th>
-          <th>File</th>
-          <th>Contract</th>
-          <th>Weight</th>
+          <th>啟動</th>
+          <th>顏色</th>
+          <th>名稱</th>
+          <th>檔案</th>
+          <th>口數</th>
+          <th>權重</th>
         </tr>
       </thead>
       <tbody>

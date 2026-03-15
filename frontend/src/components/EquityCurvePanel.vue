@@ -1,6 +1,6 @@
 <template>
   <section>
-    <h3>Equity Curve</h3>
+    <h3>獲利曲線</h3>
     <div ref="chartRef" class="chart"></div>
   </section>
 </template>
@@ -21,12 +21,12 @@ function render() {
   const x = analysis.value.equity_curve.map((r) => r.date)
   chart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Profit', 'Drawdown'] },
+    legend: { data: ['獲利', '回檔'] },
     xAxis: { type: 'category', data: x },
     yAxis: { type: 'value' },
     series: [
-      { name: 'Profit', type: 'line', data: analysis.value.equity_curve.map((r) => r.profit), smooth: true },
-      { name: 'Drawdown', type: 'line', data: analysis.value.equity_curve.map((r) => r.drawdown), smooth: true }
+      { name: '獲利', type: 'line', data: analysis.value.equity_curve.map((r) => r.profit), smooth: true },
+      { name: '回檔', type: 'line', data: analysis.value.equity_curve.map((r) => r.drawdown), smooth: true }
     ]
   })
 }

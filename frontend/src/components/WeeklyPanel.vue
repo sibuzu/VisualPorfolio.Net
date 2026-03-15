@@ -1,6 +1,6 @@
 <template>
   <section>
-    <h3>Weekly</h3>
+    <h3>每週獲利</h3>
     <div ref="chartRef" class="chart"></div>
   </section>
 </template>
@@ -20,12 +20,12 @@ function render() {
   if (!chart) chart = echarts.init(chartRef.value)
   chart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Weekly Profit', 'Cumulative'] },
+    legend: { data: ['每週獲利', '累積獲利'] },
     xAxis: { type: 'category', data: analysis.value.weekly.map((w) => w.period) },
     yAxis: [{ type: 'value' }, { type: 'value' }],
     series: [
-      { name: 'Weekly Profit', type: 'bar', data: analysis.value.weekly.map((w) => w.profit), yAxisIndex: 0 },
-      { name: 'Cumulative', type: 'line', data: analysis.value.weekly.map((w) => w.cumulative), yAxisIndex: 1, smooth: true }
+      { name: '每週獲利', type: 'bar', data: analysis.value.weekly.map((w) => w.profit), yAxisIndex: 0 },
+      { name: '累積獲利', type: 'line', data: analysis.value.weekly.map((w) => w.cumulative), yAxisIndex: 1, smooth: true }
     ]
   })
 }

@@ -2,26 +2,26 @@
   <main class="home">
     <section class="panel card">
       <h1>VisualPortfolio.Net</h1>
-      <p class="muted">Guest ID: {{ guest }}</p>
+      <p class="muted">訪客 ID：{{ guest }}</p>
       <div class="row">
-        <input v-model.trim="newProjectName" placeholder="New project name" @keyup.enter="onCreate" />
-        <button @click="onCreate">Create Project</button>
+        <input v-model.trim="newProjectName" placeholder="輸入新專案名稱" @keyup.enter="onCreate" />
+        <button @click="onCreate">建立專案</button>
       </div>
       <p v-if="store.error" class="error">{{ store.error }}</p>
     </section>
 
     <section class="panel card">
-      <h2>Projects</h2>
-      <p v-if="store.loading">Loading...</p>
+      <h2>專案列表</h2>
+      <p v-if="store.loading">載入中...</p>
       <ul v-else class="list">
         <li v-for="p in store.projects" :key="p.project_id" class="project-item">
           <div>
             <strong>{{ p.project_name }}</strong>
-            <p class="muted">{{ p.project_id }} · {{ p.shared ? 'shared' : 'private' }}</p>
+            <p class="muted">{{ p.project_id }} · {{ p.shared ? '共享' : '私人' }}</p>
           </div>
           <div class="row">
-            <RouterLink :to="`/projects/${p.project_id}`">Open</RouterLink>
-            <button @click="remove(p.project_id)">Delete</button>
+            <RouterLink :to="`/projects/${p.project_id}`">開啟</RouterLink>
+            <button @click="remove(p.project_id)">刪除</button>
           </div>
         </li>
       </ul>
@@ -46,7 +46,7 @@ async function onCreate() {
 }
 
 async function remove(projectId) {
-  if (!confirm('Delete this project?')) return
+  if (!confirm('確定要刪除此專案嗎？')) return
   await store.remove(projectId)
 }
 

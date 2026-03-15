@@ -1,9 +1,9 @@
 <template>
   <section>
-    <h3>Position Analysis</h3>
+    <h3>口數分析</h3>
     <table>
       <thead>
-        <tr><th>Strategy</th><th>Side</th><th>Entry</th><th>Exit</th><th>PNL</th></tr>
+        <tr><th>策略</th><th>方向</th><th>進場</th><th>出場</th><th>損益</th></tr>
       </thead>
       <tbody>
         <tr v-for="(r, i) in rows" :key="i">
