@@ -24,7 +24,6 @@ def init_db() -> None:
                 project_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
                 project_name TEXT NOT NULL,
-                shared INTEGER NOT NULL DEFAULT 0,
                 create_time TEXT NOT NULL,
                 access_time TEXT NOT NULL
             )

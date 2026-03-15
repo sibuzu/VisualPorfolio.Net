@@ -6,11 +6,6 @@
       <p class="muted">{{ readonly ? '唯讀檢視' : '可編輯' }}</p>
 
       <div class="row">
-        <label>共享</label>
-        <input :disabled="readonly" type="checkbox" :checked="projectStore.activeProject.shared" @change="toggleShared($event)" />
-      </div>
-
-      <div class="row">
         <input type="file" accept=".srp,.xrp" :disabled="readonly" @change="upload" />
       </div>
 
@@ -80,7 +75,7 @@ const resizing = ref(false)
 const readonly = computed(() => {
   const p = projectStore.activeProject
   if (!p) return true
-  return p.user_id !== guest && p.shared
+  return p.user_id !== guest
 })
 
 async function loadAll() {
@@ -115,15 +110,6 @@ async function upload(event) {
     viewError.value = e.message || '上傳失敗'
   }
   event.target.value = ''
-}
-
-async function toggleShared(event) {
-  viewError.value = ''
-  try {
-    await projectStore.patchProject(route.params.projectId, { shared: event.target.checked })
-  } catch (e) {
-    viewError.value = e.message || '更新失敗'
-  }
 }
 
 async function savePfoFile() {

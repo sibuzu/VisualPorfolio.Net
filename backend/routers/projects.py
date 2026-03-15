@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shutil
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from backend.models.project import ProjectCreateRequest, ProjectListResponse, ProjectPatchRequest
 from backend.services.project_access import (
@@ -39,7 +39,7 @@ def get_project(project_id: str, guest_id: str = Query(..., min_length=8)):
 
 @router.patch("/{project_id}")
 def patch_project(project_id: str, payload: ProjectPatchRequest):
-    project = update_project(project_id, payload.guest_id, payload.project_name, payload.shared)
+    project = update_project(project_id, payload.guest_id, payload.project_name)
     return {"project": project}
 
 

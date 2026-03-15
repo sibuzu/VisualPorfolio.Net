@@ -7,7 +7,7 @@ VisualPortfolio.Net Spec Requirement
 3. 端處理層 (Backend): 負責邏輯計算、檔案解析與 API 管理。使用 Python + FastAPI。
 
 4. 資料儲存層 (Database & Storage): 使用 Sqlite db (data/db/ 目錄下), 有一個 project db 其 columns:
-   project-id, user-id, project-name, shared, create-time, access-time
+   project-id, user-id, project-name, create-time, access-time
 
 5. **分配訪客 ID：** 當使用者第一次進入網頁，後端或前端產生一個隨機的 **Guest_UUID** (550e8400-e29b-41d4...)。
 
@@ -18,8 +18,7 @@ VisualPortfolio.Net Spec Requirement
    **讀取記錄：** 當使用者再次回到網頁，前端從 LocalStorage 讀出 UUID，並向後端請求：`GET /projects?guest_id=...`。
 
 6. user_id 相等 -> 可編輯
-   shared=true, user_id 不相等 -> 可觀看
-   shared=false, user_id 不相等 -> no access
+   user_id 不相等 -> 可觀看(唯讀)
 
 7. 建立project dir = data/projects/{project-id}，之前上傳的 srp xrp files 或是 建立的 pfo 都是放在這個project dir
 

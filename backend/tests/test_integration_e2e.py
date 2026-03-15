@@ -78,7 +78,7 @@ def test_e2e_metric_parity_with_sample_srp():
         assert isinstance(body["commission"]["years"], list)
 
 
-def test_e2e_shared_readonly_and_pfo_roundtrip():
+def test_e2e_readonly_and_pfo_roundtrip():
     with TestClient(app) as client:
         project_id = _create_project(client, OWNER, "shared-pfo")
         _upload(client, project_id, OWNER, "aa-1.srp")
@@ -101,12 +101,6 @@ def test_e2e_shared_readonly_and_pfo_roundtrip():
         assert "PortfolioyList" in download.text
         assert "aa-1.srp" in download.text
         assert "aa-2.srp" in download.text
-
-        share = client.patch(
-            f"/projects/{project_id}",
-            json={"guest_id": OWNER, "shared": True},
-        )
-        assert share.status_code == 200
 
         stranger_read = client.get(f"/projects/{project_id}", params={"guest_id": STRANGER})
         assert stranger_read.status_code == 200

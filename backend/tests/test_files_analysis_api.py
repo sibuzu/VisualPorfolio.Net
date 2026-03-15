@@ -69,7 +69,7 @@ def test_upload_and_analysis_flow():
         assert body["summary"]["trade_count"] > 0
 
 
-def test_private_and_shared_access_rules():
+def test_owner_edit_other_view_only_access_rules():
     sample = Path("ref_result/project/aa-1.srp")
     payload = sample.read_bytes()
 
@@ -81,15 +81,6 @@ def test_private_and_shared_access_rules():
             files={"file": ("aa-1.srp", payload, "application/xml")},
         )
         assert up.status_code == 200
-
-        denied = client.get(f"/projects/{project_id}", params={"guest_id": STRANGER})
-        assert denied.status_code == 403
-
-        share = client.patch(
-            f"/projects/{project_id}",
-            json={"guest_id": OWNER, "shared": True},
-        )
-        assert share.status_code == 200
 
         allowed = client.get(f"/projects/{project_id}", params={"guest_id": STRANGER})
         assert allowed.status_code == 200

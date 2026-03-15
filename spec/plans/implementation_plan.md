@@ -17,9 +17,9 @@ Build a web version of the existing C# WinForm `VisualPortfolio` app in `ref_sou
 | 1 | Port WinForm features from `ref_source/` | Port parser/calculation logic from C# service by service; reproduce UI panels as Vue tabs |
 | 2 | Frontend uses Vue + ECharts; upload SRP/XRP XML | Vue workspace with upload flow, strategy manager, ECharts for equity/monthly visuals |
 | 3 | Backend uses Python + FastAPI | FastAPI routers for projects/files/analysis/pfo |
-| 4 | SQLite table with project fields | `projects` table includes `project_id`, `user_id`, `project_name`, `shared`, `create_time`, `access_time` |
+| 4 | SQLite table with project fields | `projects` table includes `project_id`, `user_id`, `project_name`, `create_time`, `access_time` |
 | 5 | Guest UUID + LocalStorage + create/list projects | Frontend generates UUIDv4 on first load, stores in LocalStorage, passes as `guest_id` |
-| 6 | Access rules by owner/shared | API authorization: owner edit, shared non-owner read-only, private non-owner denied |
+| 6 | Access rules by owner/user-id | API authorization: owner edit, non-owner read-only |
 | 7 | Project directory `data/projects/{project-id}` | Create directory at project creation; store uploads and `.pfo` there |
 | 8 | Update access time and delete inactive >72h | Touch `access_time` on edit/view; periodic cleanup removes DB record + directory |
 
@@ -28,7 +28,6 @@ Table: `projects`
 - `project_id` TEXT PRIMARY KEY, format: `VP[A-Z]{2}-[A-Z]{4}`
 - `user_id` TEXT NOT NULL (Guest UUID)
 - `project_name` TEXT NOT NULL
-- `shared` INTEGER NOT NULL DEFAULT 0
 - `create_time` TEXT NOT NULL (UTC ISO8601)
 - `access_time` TEXT NOT NULL (UTC ISO8601)
 
@@ -56,8 +55,7 @@ Work:
   - `DELETE /projects/{project_id}`
 - Enforce rules:
   - `owner`: read/write
-  - `shared non-owner`: read-only
-  - `private non-owner`: 403
+  - `non-owner`: read-only
 - On project create: mkdir `data/projects/{project_id}`.
 - On any successful read/write access: update `access_time`.
 
@@ -135,7 +133,7 @@ Files:
 Work:
 - Show project list via `GET /projects`.
 - Create project dialog (`POST /projects`).
-- Rename/share toggle/delete actions (`PATCH`/`DELETE`).
+- Rename/delete actions (`PATCH`/`DELETE`).
 
 ### 3. Project workspace
 Files:
@@ -156,9 +154,9 @@ Work:
   - Diversity
 - Trigger re-analysis when settings change.
 
-### 4. Read-only UX for shared projects
+### 4. Read-only UX for non-owner projects
 Work:
-- If non-owner + shared project: disable edit actions (upload/delete/rename/reorder/save).
+- If non-owner: disable edit actions (upload/delete/rename/reorder/save).
 - Keep charts/tables viewable.
 
 ## API Contract (MVP)
@@ -166,7 +164,7 @@ Work:
 - `GET /projects?guest_id=UUID`
 - `POST /projects` body: `{ "guest_id": "...", "project_name": "..." }`
 - `GET /projects/{project_id}?guest_id=UUID`
-- `PATCH /projects/{project_id}` body: `{ "guest_id": "...", "project_name": "...", "shared": true }`
+- `PATCH /projects/{project_id}` body: `{ "guest_id": "...", "project_name": "..." }`
 - `DELETE /projects/{project_id}` body or query carries `guest_id`
 
 ### Files
@@ -207,8 +205,8 @@ Work:
 2. Creating project creates DB row and `data/projects/{project_id}` directory.
 3. Upload `.srp/.xrp` succeeds; files appear in list.
 4. All analysis tabs render with non-empty data for sample files.
-5. Shared project opened by non-owner is view-only.
-6. Private project opened by non-owner returns 403.
+5. Non-owner opens project as view-only.
+6. Non-owner cannot edit (upload/delete/patch/pfo save).
 7. Accessing project updates `access_time`.
 8. Setting stale `access_time` (older than 72h) and running cleanup deletes DB row + files.
 

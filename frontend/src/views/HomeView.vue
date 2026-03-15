@@ -17,7 +17,7 @@
         <li v-for="p in store.projects" :key="p.project_id" class="project-item">
           <div>
             <strong>{{ p.project_name }}</strong>
-            <p class="muted">{{ p.project_id }} · {{ p.shared ? '共享' : '私人' }}</p>
+            <p class="muted">{{ p.project_id }}</p>
           </div>
           <div class="row">
             <RouterLink :to="`/projects/${p.project_id}`">開啟</RouterLink>
