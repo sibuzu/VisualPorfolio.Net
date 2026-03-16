@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -42,12 +43,26 @@ def project_dir(project_id: str) -> Path:
 def write_project_config(project_id: str, project_name: str, user_id: str) -> None:
     pdir = project_dir(project_id)
     pdir.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(pdir, 0o775)
+    except OSError:
+        pass
+
     payload = {
         "project_id": project_id,
         "project_name": project_name,
         "user_id": user_id,
     }
-    (pdir / "config.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    cfg = pdir / "config.json"
+    try:
+        if cfg.exists():
+            try:
+                os.chmod(cfg, 0o664)
+            except OSError:
+                pass
+        cfg.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    except PermissionError:
+        raise HTTPException(status_code=500, detail=f"Project config is not writable: {project_id}")
 
 
 def create_project(user_id: str, project_name: str) -> dict:
@@ -120,7 +135,11 @@ def update_project(project_id: str, user_id: str, project_name: str | None) -> d
             (new_name, now_utc_iso(), project_id),
         )
         conn.commit()
-    write_project_config(project_id, new_name, project["user_id"])
+    # Best-effort sync to config.json: project rename must not fail if file permission is broken.
+    try:
+        write_project_config(project_id, new_name, project["user_id"])
+    except HTTPException:
+        pass
     return get_project(project_id)
 
 

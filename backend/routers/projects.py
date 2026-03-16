@@ -68,6 +68,8 @@ def list_projects(current_user: str = Depends(require_auth)):
 
 @router.post("")
 def post_project(payload: ProjectCreateRequest, current_user: str = Depends(require_auth)):
+    if current_user == "guest":
+        raise HTTPException(status_code=403, detail="guest cannot create project")
     project = create_project(current_user, payload.project_name)
     return {"project_id": project["project_id"], "project": project}
 

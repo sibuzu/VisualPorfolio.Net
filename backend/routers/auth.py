@@ -46,6 +46,14 @@ def login(payload: AuthRequest, request: Request, response: Response):
     return {"ok": True, "user_id": user_id, "expired_in": TOKEN_TTL_SECONDS}
 
 
+@router.post("/guest")
+def guest_login(request: Request, response: Response):
+    user_id = "guest"
+    token = issue_token(user_id)
+    set_auth_cookies(response, request, user_id, token)
+    return {"ok": True, "user_id": user_id, "expired_in": TOKEN_TTL_SECONDS}
+
+
 @router.post("/logout")
 def logout(request: Request, response: Response):
     clear_auth_cookies(response, request)

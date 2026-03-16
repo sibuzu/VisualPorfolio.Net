@@ -77,8 +77,9 @@ def init_users_db() -> None:
 def create_user(user_id: str, password: str) -> None:
     if not user_id.strip():
         raise HTTPException(status_code=400, detail="user_id is required")
-    if user_id.strip().lower() == "admin":
-        raise HTTPException(status_code=400, detail="user_id 'admin' is reserved")
+    reserved = {"admin", "guest"}
+    if user_id.strip().lower() in reserved:
+        raise HTTPException(status_code=400, detail=f"user_id '{user_id.strip().lower()}' is reserved")
     if not password:
         raise HTTPException(status_code=400, detail="password is required")
     with _users_conn() as conn:

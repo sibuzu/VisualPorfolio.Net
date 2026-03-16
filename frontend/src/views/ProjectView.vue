@@ -66,7 +66,7 @@
       <EquityCurvePanel v-if="activeTab === '獲利曲線'" />
       <MonthlyBarPanel v-if="activeTab === '逐年獲利'" />
       <WinLossPanel v-if="activeTab === '贏輸分析'" />
-      <CommissionPanel v-if="activeTab === '分潤退傭'" />
+      <CommissionPanel v-if="activeTab === '分潤退傭'" :readonly="readonly" />
       <DiversityPanel v-if="activeTab === '多樣性分析'" />
     </section>
   </main>

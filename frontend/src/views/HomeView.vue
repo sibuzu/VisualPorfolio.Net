@@ -5,7 +5,9 @@
       <p class="muted">使用者：{{ userId }}</p>
       <div class="row">
         <input v-model.trim="newProjectName" placeholder="輸入新專案名稱" @keyup.enter="onCreate" />
-        <button @click="onCreate">建立專案</button>
+        <button :disabled="isGuest" @click="onCreate">建立專案</button>
+        <span class="row-spacer"></span>
+        <button type="button" class="switch-user-btn" @click="switchUser">Logout</button>
       </div>
       <p v-if="store.error" class="error">{{ store.error }}</p>
     </section>
@@ -21,6 +23,7 @@
           </div>
           <div class="row">
             <button @click="openProject(p.project_id)">開啟</button>
+            <button @click="renameProject(p)">改名</button>
             <button @click="remove(p.project_id)">刪除</button>
           </div>
         </li>
@@ -32,13 +35,14 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { authMe } from '../api'
+import { authLogout, authMe } from '../api'
 import { useProjectStore } from '../stores/project'
 
 const store = useProjectStore()
 const router = useRouter()
 const userId = ref('')
 const newProjectName = ref('')
+const isGuest = ref(false)
 
 async function onCreate() {
   if (!newProjectName.value) return
@@ -54,13 +58,31 @@ async function remove(projectId) {
   await store.remove(projectId)
 }
 
+async function renameProject(project) {
+  const nextName = prompt('請輸入新專案名稱', project?.project_name || '')
+  if (nextName == null) return
+  const name = String(nextName).trim()
+  if (!name) return
+  await store.patchProject(project.project_id, { project_name: name })
+}
+
 function openProject(projectId) {
   router.push(`/projects/${projectId}`)
+}
+
+async function switchUser() {
+  try {
+    await authLogout()
+  } catch {
+    // Ignore logout failure and still jump to login.
+  }
+  router.push('/login')
 }
 
 onMounted(() => {
   authMe().then((m) => {
     userId.value = m.user_id || ''
+    isGuest.value = userId.value === 'guest'
   }).catch(() => {})
   store.loadProjects()
 })
@@ -82,6 +104,9 @@ onMounted(() => {
   gap: 8px;
   align-items: center;
 }
+.row-spacer {
+  flex: 1;
+}
 input {
   padding: 8px 10px;
   border: 1px solid var(--line);
@@ -95,6 +120,14 @@ button {
   background: var(--accent);
   color: white;
   cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.switch-user-btn {
+  background: #fff;
+  color: var(--accent);
 }
 .list {
   list-style: none;

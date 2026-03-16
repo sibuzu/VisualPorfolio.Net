@@ -3,7 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import ProjectView from '../views/ProjectView.vue'
 import LoginView from '../views/LoginView.vue'
 import AdminView from '../views/AdminView.vue'
-import { authMe } from '../api'
+import { authGuest, authMe } from '../api'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,9 +18,20 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   if (to.path === '/login' || to.path === '/admin') return true
   try {
-    await authMe()
+    const me = await authMe()
+    if (me?.user_id === 'guest' && !to.path.startsWith('/projects/')) {
+      return '/login'
+    }
     return true
   } catch {
+    if (to.path.startsWith('/projects/')) {
+      try {
+        await authGuest()
+        return true
+      } catch {
+        // Fall through to regular login page.
+      }
+    }
     return {
       path: '/login',
       query: { redirect: to.fullPath }

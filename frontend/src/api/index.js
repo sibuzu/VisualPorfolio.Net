@@ -61,6 +61,16 @@ export async function authLogin(userId, password) {
   }
 }
 
+export async function authGuest() {
+  try {
+    const { data } = await api.post('/auth/guest')
+    setCurrentUserId(data.user_id)
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function authLogout() {
   try {
     const { data } = await api.post('/auth/logout')

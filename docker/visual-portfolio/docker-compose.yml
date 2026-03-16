@@ -13,6 +13,9 @@ services:
       context: ../..
       dockerfile: docker/visual-portfolio/Dockerfile.backend
     container_name: visualportfolio-backend
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      - UMASK=002
     volumes:
       - ../../data:/app/data
     restart: unless-stopped
@@ -28,3 +31,8 @@ networks:
 #   service: http://visualportfolio-frontend:80
 # - hostname: api-visualportfolio.sibuzu.com
 #   service: http://visualportfolio-backend:8000
+#
+# Run with host uid/gid to avoid root-owned files on bind mount:
+#   export UID=$(id -u)
+#   export GID=$(id -g)
+#   docker compose -f docker/visual-portfolio/docker-compose.yml up -d --build
