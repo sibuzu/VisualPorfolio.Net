@@ -27,8 +27,16 @@
             </button>
           </td>
           <td><input :disabled="readonly" type="checkbox" v-model="e.active" @change="refresh" /></td>
-          <td><input :disabled="readonly" type="color" v-model="e.color" @change="refresh" /></td>
-          <td>{{ e.name }}</td>
+          <td>
+            <input
+              :disabled="readonly"
+              class="color-input"
+              type="color"
+              v-model="e.color"
+              @change="refresh"
+            />
+          </td>
+          <td class="name-cell" :title="displayName(e.name)">{{ displayName(e.name) }}</td>
           <td><input :disabled="readonly" type="number" min="0" step="0.1" v-model.number="e.contract" @change="refresh" /></td>
           <td><input :disabled="readonly" type="number" min="0" step="0.1" v-model.number="e.weight" @change="refresh" /></td>
         </tr>
@@ -47,6 +55,10 @@ const route = useRoute()
 const store = usePortfolioStore()
 const projectStore = useProjectStore()
 
+function displayName(name) {
+  return String(name || '').replace(/\.[^.]+$/, '')
+}
+
 async function refresh() {
   await store.analyze(route.params.projectId)
 }
@@ -63,16 +75,24 @@ async function removeEquity(equity) {
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 th, td {
   border: 1px solid var(--line);
   padding: 6px;
   font-size: 14px;
-  word-break: break-word;
+  word-break: normal;
 }
 input[type='number'] {
   width: 100%;
+}
+.color-input {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
 }
 .delete-btn {
   display: inline-flex;
@@ -95,7 +115,11 @@ input[type='number'] {
 }
 th:nth-child(1), td:nth-child(1) { width: 40px; text-align: center; }
 th:nth-child(2), td:nth-child(2) { width: 44px; text-align: center; }
-th:nth-child(3), td:nth-child(3) { width: 56px; text-align: center; }
+th:nth-child(3), td:nth-child(3) { width: 44px; text-align: center; }
+th:nth-child(4), td:nth-child(4) { min-width: 15ch; }
 th:nth-child(5), td:nth-child(5) { width: 52px; }
 th:nth-child(6), td:nth-child(6) { width: 52px; }
+.name-cell {
+  white-space: nowrap;
+}
 </style>

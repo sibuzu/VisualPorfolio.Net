@@ -70,7 +70,7 @@ const guest = ensureGuestId()
 const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '贏輸分析', '分潤退傭', '多樣性分析']
 const activeTab = ref('獲利報表')
 const viewError = ref('')
-const sidebarWidth = ref(300)
+const sidebarWidth = ref(390)
 const resizing = ref(false)
 const fileInputRef = ref(null)
 
@@ -120,7 +120,7 @@ function openFilePicker() {
 
 function onMouseMove(event) {
   if (!resizing.value) return
-  const minW = 240
+  const minW = 360
   const maxW = 640
   sidebarWidth.value = Math.max(minW, Math.min(maxW, event.clientX - 14))
 }

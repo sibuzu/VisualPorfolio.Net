@@ -1,0 +1,30 @@
+services:
+  visualportfolio-frontend:
+    build:
+      context: ../..
+      dockerfile: docker/visual-portfolio/Dockerfile.frontend
+    container_name: visualportfolio-frontend
+    restart: unless-stopped
+    networks:
+      - sibuzu-net
+
+  visualportfolio-backend:
+    build:
+      context: ../..
+      dockerfile: docker/visual-portfolio/Dockerfile.backend
+    container_name: visualportfolio-backend
+    volumes:
+      - ../../data:/app/data
+    restart: unless-stopped
+    networks:
+      - sibuzu-net
+
+networks:
+  sibuzu-net:
+    external: true
+
+# Cloudflare Tunnel ingress suggestion:
+# - hostname: visualportfolio.sibuzu.com
+#   service: http://visualportfolio-frontend:80
+# - hostname: api-visualportfolio.sibuzu.com
+#   service: http://visualportfolio-backend:8000
