@@ -26,6 +26,8 @@ const chartRef = ref(null)
 let chart
 const { analysis } = storeToRefs(usePortfolioStore())
 const mode = ref('total')
+const MAX_POINTS = 2000
+const MAX_SEPARATE_SERIES = 20
 const modeOptions = [
   { label: '總獲利', value: 'total' },
   { label: '個別獲利', value: 'separate' },
@@ -75,24 +77,75 @@ const separateSeries = computed(() => {
 function render() {
   if (!chartRef.value) return
   if (!chart) chart = echarts.init(chartRef.value)
-  const series = []
+  const selected = []
   if (mode.value === 'total' || mode.value === 'both') {
-    series.push({ name: '總獲利', type: 'line', data: totalSeries.value, smooth: true, lineStyle: { width: 3 } })
+    selected.push({ name: '總獲利', type: 'line', data: totalSeries.value, smooth: true, lineStyle: { width: 3 } })
   }
   if (mode.value === 'separate' || mode.value === 'both') {
-    series.push(...separateSeries.value)
+    selected.push(...separateSeries.value.slice(0, MAX_SEPARATE_SERIES))
   }
+  const sampled = downsampleSeries(dates.value, selected, MAX_POINTS)
+  const series = sampled.series
 
   chart.setOption(
     {
       tooltip: { trigger: 'axis' },
       legend: { data: series.map((s) => s.name) },
-      xAxis: { type: 'category', data: dates.value },
+      xAxis: { type: 'category', data: sampled.dates },
       yAxis: { type: 'value' },
       series
     },
     { notMerge: true }
   )
+}
+
+function downsampleSeries(sourceDates, sourceSeries, targetCount) {
+  const n = sourceDates.length
+  if (!n || n <= targetCount) {
+    return { dates: sourceDates, series: sourceSeries }
+  }
+  if (targetCount <= 2) {
+    const edgeSeries = sourceSeries.map((s) => ({
+      ...s,
+      data: [s.data?.[0] ?? 0, s.data?.[n - 1] ?? 0]
+    }))
+    return { dates: [sourceDates[0], sourceDates[n - 1]], series: edgeSeries }
+  }
+
+  const interiorCount = targetCount - 2
+  const interiorN = n - 2
+  const bucketSize = interiorN / interiorCount
+  const sampledDates = [sourceDates[0]]
+  const sampledSeries = sourceSeries.map((s) => ({ ...s, data: [s.data?.[0] ?? 0] }))
+
+  for (let i = 0; i < interiorCount; i++) {
+    const start = 1 + Math.floor(i * bucketSize)
+    const endBase = 1 + Math.floor((i + 1) * bucketSize)
+    const end = Math.min(n - 1, endBase)
+    const bucketEnd = end <= start ? Math.min(n - 1, start + 1) : end
+
+    sampledDates.push(sourceDates[bucketEnd - 1])
+
+    for (let si = 0; si < sourceSeries.length; si++) {
+      let sum = 0
+      let count = 0
+      const arr = sourceSeries[si].data || []
+      for (let j = start; j < bucketEnd; j++) {
+        const v = Number(arr[j])
+        if (Number.isFinite(v)) {
+          sum += v
+          count++
+        }
+      }
+      sampledSeries[si].data.push(count > 0 ? sum / count : 0)
+    }
+  }
+
+  sampledDates.push(sourceDates[n - 1])
+  for (let si = 0; si < sourceSeries.length; si++) {
+    sampledSeries[si].data.push(sourceSeries[si].data?.[n - 1] ?? 0)
+  }
+  return { dates: sampledDates, series: sampledSeries }
 }
 
 watch([() => analysis.value.equity_curve, () => analysis.value.position_analysis, mode], async () => {
