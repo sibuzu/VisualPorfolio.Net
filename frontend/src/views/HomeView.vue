@@ -20,7 +20,7 @@
             <p class="muted">{{ p.project_id }}</p>
           </div>
           <div class="row">
-            <RouterLink :to="`/projects/${p.project_id}`">開啟</RouterLink>
+            <button @click="openProject(p.project_id)">開啟</button>
             <button @click="remove(p.project_id)">刪除</button>
           </div>
         </li>
@@ -31,11 +31,12 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { ensureGuestId } from '../api'
 import { useProjectStore } from '../stores/project'
 
 const store = useProjectStore()
+const router = useRouter()
 const guest = ensureGuestId()
 const newProjectName = ref('')
 
@@ -48,6 +49,10 @@ async function onCreate() {
 async function remove(projectId) {
   if (!confirm('確定要刪除此專案嗎？')) return
   await store.remove(projectId)
+}
+
+function openProject(projectId) {
+  router.push(`/projects/${projectId}`)
 }
 
 onMounted(() => {

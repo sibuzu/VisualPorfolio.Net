@@ -59,7 +59,7 @@ def list_projects_for_guest(guest_id: str) -> list[dict]:
         rows = conn.execute(
             """
             SELECT * FROM projects
-            WHERE user_id = ?
+            WHERE user_id = ? OR user_id = 'anonymous'
             ORDER BY access_time DESC
             """,
             (guest_id,),
