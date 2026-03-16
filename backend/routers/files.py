@@ -3,9 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from backend.services.project_access import get_project_access, project_dir, touch_access_time
+from backend.services.auth import require_auth
 
 router = APIRouter(prefix="/projects/{project_id}/files", tags=["files"])
 
@@ -19,8 +20,8 @@ def _validate_filename(name: str) -> None:
 
 
 @router.get("")
-def list_files(project_id: str, user_id: str = Query(..., min_length=8)):
-    get_project_access(project_id, user_id)
+def list_files(project_id: str, current_user: str = Depends(require_auth)):
+    get_project_access(project_id, current_user)
     folder = project_dir(project_id)
     folder.mkdir(parents=True, exist_ok=True)
 
@@ -34,8 +35,8 @@ def list_files(project_id: str, user_id: str = Query(..., min_length=8)):
 
 
 @router.post("")
-async def upload_file(project_id: str, user_id: str = Query(..., min_length=8), file: UploadFile = File(...)):
-    _, access = get_project_access(project_id, user_id)
+async def upload_file(project_id: str, file: UploadFile = File(...), current_user: str = Depends(require_auth)):
+    _, access = get_project_access(project_id, current_user)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Read-only project")
 
@@ -57,8 +58,8 @@ async def upload_file(project_id: str, user_id: str = Query(..., min_length=8), 
 
 
 @router.delete("/{filename}")
-def delete_file(project_id: str, filename: str, user_id: str = Query(..., min_length=8)):
-    _, access = get_project_access(project_id, user_id)
+def delete_file(project_id: str, filename: str, current_user: str = Depends(require_auth)):
+    _, access = get_project_access(project_id, current_user)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Read-only project")
 

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from backend.services.pfo import save_pfo
 from backend.services.project_access import get_project_access, project_dir, touch_access_time
+from backend.services.auth import require_auth
 
 router = APIRouter(prefix="/projects/{project_id}/pfo", tags=["pfo"])
 
@@ -26,8 +27,8 @@ class PfoSaveRequest(BaseModel):
 
 
 @router.get("")
-def get_pfo(project_id: str, user_id: str = Query(..., min_length=8)):
-    get_project_access(project_id, user_id)
+def get_pfo(project_id: str, current_user: str = Depends(require_auth)):
+    get_project_access(project_id, current_user)
     path = project_dir(project_id) / "project.pfo"
     if not path.exists():
         raise HTTPException(status_code=404, detail="PFO not found")
@@ -36,8 +37,8 @@ def get_pfo(project_id: str, user_id: str = Query(..., min_length=8)):
 
 
 @router.put("")
-def put_pfo(project_id: str, payload: PfoSaveRequest, user_id: str = Query(..., min_length=8)):
-    _, access = get_project_access(project_id, user_id)
+def put_pfo(project_id: str, payload: PfoSaveRequest, current_user: str = Depends(require_auth)):
+    _, access = get_project_access(project_id, current_user)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Read-only project")
 

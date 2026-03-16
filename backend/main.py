@@ -7,16 +7,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db.database import init_db
+from backend.routers.auth import router as auth_router
 from backend.routers.analysis import router as analysis_router
 from backend.routers.files import router as files_router
 from backend.routers.pfo import router as pfo_router
 from backend.routers.projects import router as projects_router
+from backend.services.auth import init_users_db
 from backend.services.cleanup import cleanup_loop, cleanup_stale_projects
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    init_users_db()
     cleanup_stale_projects()
 
     stop_event = asyncio.Event()
@@ -51,6 +54,7 @@ app.add_middleware(
     allow_origin_regex=r"^https?://([a-zA-Z0-9.-]+)(:\d+)?$",
 )
 
+app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(files_router)
 app.include_router(analysis_router)

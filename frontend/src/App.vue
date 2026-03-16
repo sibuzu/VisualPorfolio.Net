@@ -2,12 +2,6 @@
   <router-view />
 </template>
 
-<script setup>
-import { ensureGuestId } from './api'
-
-ensureGuestId()
-</script>
-
 <style>
 :root {
   --bg: #f5f7fb;

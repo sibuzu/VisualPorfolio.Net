@@ -6,11 +6,12 @@ import zipfile
 from pathlib import Path
 import os
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
 from backend.models.project import ProjectCopyRequest, ProjectCreateRequest, ProjectListResponse, ProjectPatchRequest
+from backend.services.auth import require_auth
 from backend.services.project_access import (
     create_project,
     create_project_with_user,
@@ -59,33 +60,33 @@ def _safe_extract_zip(zip_path: Path, dst: Path) -> None:
 
 
 @router.get("", response_model=ProjectListResponse)
-def list_projects(user_id: str = Query(..., min_length=8)):
-    projects = list_projects_for_guest(user_id)
+def list_projects(current_user: str = Depends(require_auth)):
+    projects = list_projects_for_guest(current_user)
     return {"projects": projects}
 
 
 @router.post("")
-def post_project(payload: ProjectCreateRequest):
-    project = create_project(payload.user_id, payload.project_name)
+def post_project(payload: ProjectCreateRequest, current_user: str = Depends(require_auth)):
+    project = create_project(current_user, payload.project_name)
     return {"project_id": project["project_id"], "project": project}
 
 
 @router.get("/{project_id}")
-def get_project(project_id: str, user_id: str = Query(..., min_length=8)):
-    project, _ = get_project_access(project_id, user_id)
+def get_project(project_id: str, current_user: str = Depends(require_auth)):
+    project, _ = get_project_access(project_id, current_user)
     touch_access_time(project_id)
     return {"project": project}
 
 
 @router.patch("/{project_id}")
-def patch_project(project_id: str, payload: ProjectPatchRequest):
-    project = update_project(project_id, payload.user_id, payload.project_name)
+def patch_project(project_id: str, payload: ProjectPatchRequest, current_user: str = Depends(require_auth)):
+    project = update_project(project_id, current_user, payload.project_name)
     return {"project": project}
 
 
 @router.delete("/{project_id}")
-def delete_project(project_id: str, user_id: str = Query(..., min_length=8)):
-    project, access = get_project_access(project_id, user_id)
+def delete_project(project_id: str, current_user: str = Depends(require_auth)):
+    project, access = get_project_access(project_id, current_user)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Only owner can delete")
 
@@ -98,11 +99,11 @@ def delete_project(project_id: str, user_id: str = Query(..., min_length=8)):
 
 
 @router.post("/{project_id}/copy")
-def copy_project(project_id: str, payload: ProjectCopyRequest):
-    source, _ = get_project_access(project_id, payload.user_id)
+def copy_project(project_id: str, payload: ProjectCopyRequest, current_user: str = Depends(require_auth)):
+    source, _ = get_project_access(project_id, current_user)
 
     # Copy always creates a new owner project for the caller.
-    cloned = create_project_with_user(payload.user_id, payload.project_name)
+    cloned = create_project_with_user(current_user, payload.project_name)
     src_dir = project_dir(project_id)
     dst_dir = project_dir(cloned["project_id"])
     if src_dir.exists():
@@ -112,7 +113,7 @@ def copy_project(project_id: str, payload: ProjectCopyRequest):
 
 
 @router.get("/{project_id}/download")
-def download_project(project_id: str):
+def download_project(project_id: str, current_user: str = Depends(require_auth)):
     src_dir = project_dir(project_id)
     if not src_dir.exists():
         raise HTTPException(status_code=404, detail="Project directory not found")
@@ -145,6 +146,7 @@ def upload_project_zip(
     file: UploadFile = File(...),
     project_name: str = Form(..., min_length=1),
     user_id: str | None = Query(default=None, min_length=8),
+    current_user: str = Depends(require_auth),
 ):
     project_name = project_name.strip()
     if not project_name:
@@ -161,6 +163,8 @@ def upload_project_zip(
             raise
 
     if user_id:
+        if user_id != current_user:
+            raise HTTPException(status_code=403, detail="user_id mismatch with auth user")
         target_user_id = user_id
     elif existing:
         target_user_id = existing["user_id"]

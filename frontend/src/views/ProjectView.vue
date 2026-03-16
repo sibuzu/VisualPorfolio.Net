@@ -80,7 +80,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ensureGuestId } from '../api'
+import { authMe, currentUserId } from '../api'
 import { useProjectStore } from '../stores/project'
 import { usePortfolioStore } from '../stores/portfolio'
 import EquityManager from '../components/EquityManager.vue'
@@ -94,7 +94,7 @@ import DiversityPanel from '../components/DiversityPanel.vue'
 const route = useRoute()
 const projectStore = useProjectStore()
 const portfolioStore = usePortfolioStore()
-const guest = ensureGuestId()
+const currentUser = ref(currentUserId())
 
 const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '贏輸分析', '分潤退傭', '多樣性分析']
 const activeTab = ref('獲利報表')
@@ -107,7 +107,7 @@ const fileInputRef = ref(null)
 const readonly = computed(() => {
   const p = projectStore.activeProject
   if (!p) return true
-  return p.user_id !== guest
+  return p.user_id !== currentUser.value
 })
 
 async function loadAll() {
@@ -225,6 +225,9 @@ watch(
 )
 
 onMounted(() => {
+  authMe().then((m) => {
+    currentUser.value = m.user_id || currentUserId()
+  }).catch(() => {})
   loadAll()
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', stopResize)

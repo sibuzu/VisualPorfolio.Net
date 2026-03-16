@@ -2,7 +2,7 @@
   <main class="home">
     <section class="panel card">
       <h1>VisualPortfolio.Net</h1>
-      <p class="muted">訪客 ID：{{ guest }}</p>
+      <p class="muted">使用者：{{ userId }}</p>
       <div class="row">
         <input v-model.trim="newProjectName" placeholder="輸入新專案名稱" @keyup.enter="onCreate" />
         <button @click="onCreate">建立專案</button>
@@ -32,18 +32,21 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ensureGuestId } from '../api'
+import { authMe } from '../api'
 import { useProjectStore } from '../stores/project'
 
 const store = useProjectStore()
 const router = useRouter()
-const guest = ensureGuestId()
+const userId = ref('')
 const newProjectName = ref('')
 
 async function onCreate() {
   if (!newProjectName.value) return
-  await store.create(newProjectName.value)
+  const projectId = await store.create(newProjectName.value)
   newProjectName.value = ''
+  if (projectId) {
+    router.push(`/projects/${projectId}`)
+  }
 }
 
 async function remove(projectId) {
@@ -56,6 +59,9 @@ function openProject(projectId) {
 }
 
 onMounted(() => {
+  authMe().then((m) => {
+    userId.value = m.user_id || ''
+  }).catch(() => {})
   store.loadProjects()
 })
 </script>

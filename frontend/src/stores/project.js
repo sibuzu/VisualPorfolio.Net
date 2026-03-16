@@ -45,8 +45,9 @@ export const useProjectStore = defineStore('project', {
     async create(name) {
       this.error = ''
       try {
-        await createProject(name)
+        const created = await createProject(name)
         await this.loadProjects()
+        return created?.project_id || created?.project?.project_id || ''
       } catch (e) {
         this.error = e.message
         throw e

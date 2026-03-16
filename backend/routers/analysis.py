@@ -3,10 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.services.commission import CommissionCfg, build_commission
+from backend.services.auth import require_auth
 from backend.services.diversity import build_diversity
 from backend.services.parser import parse_file
 from backend.services.portfolio import merge_trades
@@ -54,8 +55,8 @@ def _parse_date(value: str | None) -> datetime | None:
 
 
 @router.post("")
-def run_analysis(project_id: str, payload: AnalysisRequest, user_id: str = Query(..., min_length=8)):
-    get_project_access(project_id, user_id)
+def run_analysis(project_id: str, payload: AnalysisRequest, current_user: str = Depends(require_auth)):
+    get_project_access(project_id, current_user)
 
     if not payload.equities:
         return {
