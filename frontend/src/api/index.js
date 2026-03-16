@@ -149,9 +149,13 @@ export async function runAnalysis(projectId, payload) {
   }
 }
 
-export async function savePfo(projectId, equities) {
+export async function savePfo(projectId, equities, commissionConfig = null) {
   try {
-    const { data } = await api.put(`/projects/${projectId}/pfo`, { equities }, {
+    const payload = { equities }
+    if (commissionConfig && typeof commissionConfig === 'object') {
+      payload.commission_config = commissionConfig
+    }
+    const { data } = await api.put(`/projects/${projectId}/pfo`, payload, {
       params: withGuest()
     })
     return data

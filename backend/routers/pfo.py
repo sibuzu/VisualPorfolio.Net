@@ -22,6 +22,7 @@ class PfoItem(BaseModel):
 
 class PfoSaveRequest(BaseModel):
     equities: list[PfoItem] = Field(default_factory=list)
+    commission_config: dict[str, float] | None = None
 
 
 @router.get("")
@@ -41,6 +42,10 @@ def put_pfo(project_id: str, payload: PfoSaveRequest, guest_id: str = Query(...,
         raise HTTPException(status_code=403, detail="Read-only project")
 
     path = project_dir(project_id) / "project.pfo"
-    save_pfo(path, [item.model_dump() for item in payload.equities])
+    save_pfo(
+        path,
+        [item.model_dump() for item in payload.equities],
+        commission_config=payload.commission_config,
+    )
     touch_access_time(project_id)
     return {"ok": True, "filename": path.name}

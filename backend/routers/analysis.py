@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.services.commission import build_commission
+from backend.services.commission import CommissionCfg, build_commission
 from backend.services.diversity import build_diversity
 from backend.services.parser import parse_file
 from backend.services.portfolio import merge_trades
@@ -38,6 +38,7 @@ class Options(BaseModel):
     mdd_count: int = Field(default=5, ge=1, le=20)
     div_by_count: bool = False
     commission_per_trade: float = 0.0
+    commission_config: dict[str, float] | None = None
 
 
 class AnalysisRequest(BaseModel):
@@ -108,6 +109,30 @@ def run_analysis(project_id: str, payload: AnalysisRequest, guest_id: str = Quer
 
     touch_access_time(project_id)
 
+    commission_cfg = None
+    if payload.options.commission_config:
+        cfg = payload.options.commission_config
+        commission_cfg = CommissionCfg(
+            ref_capital=float(cfg.get("ref_capital", 840.0)),
+            init_capital=float(cfg.get("init_capital", 840.0)),
+            leverage=float(cfg.get("leverage", 3.0)),
+            fee_rate=float(cfg.get("fee_rate", 0.05)),
+            rebate_rate=float(cfg.get("rebate_rate", 50.0)),
+            quarter_share_rate=float(cfg.get("quarter_share_rate", 30.0)),
+            bonus_thresholds=(
+                float(cfg.get("bonus_threshold1", 100.0)),
+                float(cfg.get("bonus_threshold2", 150.0)),
+                float(cfg.get("bonus_threshold3", 200.0)),
+                float(cfg.get("bonus_threshold4", 0.0)),
+            ),
+            bonus_rates=(
+                float(cfg.get("bonus_rate1", 10.0)),
+                float(cfg.get("bonus_rate2", 20.0)),
+                float(cfg.get("bonus_rate3", 30.0)),
+                float(cfg.get("bonus_rate4", 0.0)),
+            ),
+        )
+
     return {
         "summary": report["summary"],
         "equity_curve": report["equity_curve"],
@@ -116,7 +141,7 @@ def run_analysis(project_id: str, payload: AnalysisRequest, guest_id: str = Quer
         "weekly": report.get("weekly", []),
         "position_analysis": position_analysis,
         "win_loss": build_win_loss(merged),
-        "commission": build_commission(merged, payload.options.commission_per_trade),
+        "commission": build_commission(merged, payload.options.commission_per_trade, cfg=commission_cfg),
         "diversity": build_diversity(merged),
         "mdd_markers": report["mdd_markers"],
     }

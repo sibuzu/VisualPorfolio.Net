@@ -18,7 +18,8 @@ export const usePortfolioStore = defineStore('portfolio', {
     },
     loading: false,
     error: '',
-    updatingConfig: false
+    updatingConfig: false,
+    commissionConfig: null
   }),
   actions: {
     setFilesAsEquities(files) {
@@ -45,35 +46,67 @@ export const usePortfolioStore = defineStore('portfolio', {
       }
 
       const nodes = Array.from(doc.querySelectorAll('Equity'))
-      if (!nodes.length) return
 
-      const saved = nodes.map((n) => ({
-        index: Number(n.getAttribute('Index') ?? -1),
-        filename: n.getAttribute('FileName') || '',
-        color: n.getAttribute('Color') || '',
-        weight: n.getAttribute('Weight') || '',
-        contract: n.getAttribute('Contract') || '',
-        active: (n.getAttribute('Active') || '1') !== '0',
-        name: n.getAttribute('Name') || ''
-      }))
+      if (nodes.length) {
+        const saved = nodes.map((n) => ({
+          index: Number(n.getAttribute('Index') ?? -1),
+          filename: n.getAttribute('FileName') || '',
+          color: n.getAttribute('Color') || '',
+          weight: n.getAttribute('Weight') || '',
+          contract: n.getAttribute('Contract') || '',
+          active: (n.getAttribute('Active') || '1') !== '0',
+          name: n.getAttribute('Name') || ''
+        }))
 
-      const byFile = new Map(saved.map((x) => [x.filename, x]))
-      this.equities = this.equities.map((eq) => {
-        const sv = byFile.get(eq.filename)
-        if (!sv) return eq
-        const weight = Number(sv.weight)
-        const contract = Number(sv.contract)
-        return {
-          ...eq,
-          color: sv.color || eq.color,
-          weight: Number.isFinite(weight) ? weight : eq.weight,
-          contract: Number.isFinite(contract) ? contract : eq.contract,
-          active: typeof sv.active === 'boolean' ? sv.active : eq.active,
-          name: sv.name || eq.name,
-          index: Number.isFinite(sv.index) && sv.index >= 0 ? sv.index : eq.index
+        const byFile = new Map(saved.map((x) => [x.filename, x]))
+        this.equities = this.equities.map((eq) => {
+          const sv = byFile.get(eq.filename)
+          if (!sv) return eq
+          const weight = Number(sv.weight)
+          const contract = Number(sv.contract)
+          return {
+            ...eq,
+            color: sv.color || eq.color,
+            weight: Number.isFinite(weight) ? weight : eq.weight,
+            contract: Number.isFinite(contract) ? contract : eq.contract,
+            active: typeof sv.active === 'boolean' ? sv.active : eq.active,
+            name: sv.name || eq.name,
+            index: Number.isFinite(sv.index) && sv.index >= 0 ? sv.index : eq.index
+          }
+        })
+        this.equities.sort((a, b) => (a.index ?? 9999) - (b.index ?? 9999))
+      }
+
+      const cnode = doc.querySelector('CommissionConfig')
+      if (cnode) {
+        const cfg = {}
+        const keys = [
+          'ref_capital',
+          'init_capital',
+          'leverage',
+          'fee_rate',
+          'rebate_rate',
+          'quarter_share_rate',
+          'bonus_threshold1',
+          'bonus_rate1',
+          'bonus_threshold2',
+          'bonus_rate2',
+          'bonus_threshold3',
+          'bonus_rate3',
+          'bonus_threshold4',
+          'bonus_rate4'
+        ]
+        for (const key of keys) {
+          const raw = cnode.getAttribute(key)
+          const n = Number(raw)
+          if (raw != null && Number.isFinite(n)) {
+            cfg[key] = n
+          }
         }
-      })
-      this.equities.sort((a, b) => (a.index ?? 9999) - (b.index ?? 9999))
+        if (Object.keys(cfg).length) {
+          this.commissionConfig = cfg
+        }
+      }
     },
     async restoreProjectConfig(projectId) {
       try {
@@ -89,17 +122,37 @@ export const usePortfolioStore = defineStore('portfolio', {
       this.loading = true
       this.error = ''
       try {
+        const baseOptions = {
+          risk_free_rate: 0,
+          mdd_count: 5,
+          commission_per_trade: 0
+        }
+        if (this.commissionConfig) {
+          baseOptions.commission_config = this.commissionConfig
+        }
+        const mergedOptions = {
+          ...baseOptions,
+          ...(options.options || {})
+        }
         this.analysis = await runAnalysis(projectId, {
           equities: this.equities,
           date_range: options.date_range || { all: true },
-          options: options.options || { risk_free_rate: 0, mdd_count: 5, commission_per_trade: 0 }
+          options: mergedOptions
         })
+        const cfg = this.analysis?.commission?.config
+        if (cfg && typeof cfg === 'object') {
+          this.commissionConfig = { ...cfg }
+        }
       } catch (e) {
         this.error = e.message
         throw e
       } finally {
         this.loading = false
       }
+    },
+    setCommissionConfig(config) {
+      if (!config || typeof config !== 'object') return
+      this.commissionConfig = { ...config }
     },
     async saveProjectPfo(projectId) {
       this.error = ''
@@ -113,7 +166,7 @@ export const usePortfolioStore = defineStore('portfolio', {
           active: !!eq.active,
           name: eq.name || eq.filename
         }))
-        return savePfo(projectId, items)
+        return savePfo(projectId, items, this.commissionConfig)
       } catch (e) {
         this.error = e.message
         throw e

@@ -7,11 +7,11 @@ from datetime import datetime, timedelta
 
 @dataclass
 class CommissionCfg:
-    ref_capital: float = 1000.0
-    init_capital: float = 1000.0
+    ref_capital: float = 840.0
+    init_capital: float = 840.0
     leverage: float = 3.0
     fee_rate: float = 0.05
-    rebate_rate: float = 30.0
+    rebate_rate: float = 50.0
     quarter_share_rate: float = 30.0
     bonus_thresholds: tuple[float, float, float, float] = (100.0, 150.0, 200.0, 0.0)
     bonus_rates: tuple[float, float, float, float] = (10.0, 20.0, 30.0, 0.0)
@@ -39,8 +39,25 @@ def _year_bonus_rate(cfg: CommissionCfg, perf: float) -> float:
 
 def build_commission(trades: list[dict], rate_per_trade: float = 0.0, cfg: CommissionCfg | None = None) -> dict:
     cfg = cfg or CommissionCfg()
+    cfg_payload = {
+        "ref_capital": cfg.ref_capital,
+        "init_capital": cfg.init_capital,
+        "leverage": cfg.leverage,
+        "fee_rate": cfg.fee_rate,
+        "rebate_rate": cfg.rebate_rate,
+        "quarter_share_rate": cfg.quarter_share_rate,
+        "bonus_threshold1": cfg.bonus_thresholds[0],
+        "bonus_rate1": cfg.bonus_rates[0],
+        "bonus_threshold2": cfg.bonus_thresholds[1],
+        "bonus_rate2": cfg.bonus_rates[1],
+        "bonus_threshold3": cfg.bonus_thresholds[2],
+        "bonus_rate3": cfg.bonus_rates[2],
+        "bonus_threshold4": cfg.bonus_thresholds[3],
+        "bonus_rate4": cfg.bonus_rates[3],
+    }
     if not trades:
         return {
+            "config": cfg_payload,
             "rate_per_trade": rate_per_trade,
             "trade_count": 0,
             "total_commission": 0.0,
@@ -132,6 +149,7 @@ def build_commission(trades: list[dict], rate_per_trade: float = 0.0, cfg: Commi
             )
 
     return {
+        "config": cfg_payload,
         "rate_per_trade": rate_per_trade,
         "trade_count": trade_count,
         "total_commission": simple_total,

@@ -4,7 +4,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
-def load_pfo(path: Path) -> list[dict]:
+def load_pfo(path: Path) -> dict:
     root = ET.parse(path).getroot()
     equities = []
     for node in root.findall("./Equity"):
@@ -19,10 +19,21 @@ def load_pfo(path: Path) -> list[dict]:
                 "name": node.attrib.get("Name", ""),
             }
         )
-    return equities
+    commission_node = root.find("./CommissionConfig")
+    commission_config = {}
+    if commission_node is not None:
+        for k, v in commission_node.attrib.items():
+            try:
+                commission_config[k] = float(v)
+            except ValueError:
+                continue
+    return {
+        "equities": equities,
+        "commission_config": commission_config,
+    }
 
 
-def save_pfo(path: Path, equities: list[dict]) -> None:
+def save_pfo(path: Path, equities: list[dict], commission_config: dict | None = None) -> None:
     root = ET.Element("PortfolioyList")
     for eq in equities:
         ET.SubElement(
@@ -38,6 +49,14 @@ def save_pfo(path: Path, equities: list[dict]) -> None:
                 "Name": str(eq.get("name", "")),
             },
         )
+    if commission_config:
+        attrs = {}
+        for k, v in commission_config.items():
+            if v is None:
+                continue
+            attrs[str(k)] = str(v)
+        if attrs:
+            ET.SubElement(root, "CommissionConfig", attrs)
 
     tree = ET.ElementTree(root)
     path.parent.mkdir(parents=True, exist_ok=True)
