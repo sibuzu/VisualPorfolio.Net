@@ -82,6 +82,69 @@ export async function authMe() {
   }
 }
 
+export async function adminLogin(password) {
+  try {
+    const { data } = await api.post('/auth/admin/login', { password })
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function adminMe() {
+  try {
+    const { data } = await api.get('/auth/admin/me')
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function adminLogout() {
+  try {
+    const { data } = await api.post('/auth/admin/logout')
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function adminListProjects() {
+  try {
+    const { data } = await api.get('/admin/projects')
+    return data.projects || []
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function adminDeleteProject(projectId) {
+  try {
+    const { data } = await api.delete(`/admin/projects/${projectId}`)
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function adminListUsers() {
+  try {
+    const { data } = await api.get('/admin/users')
+    return data.users || []
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function adminDeleteUser(userId) {
+  try {
+    const { data } = await api.delete(`/admin/users/${encodeURIComponent(userId)}`)
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function listProjects() {
   try {
     const { data } = await api.get('/projects')

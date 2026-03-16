@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db.database import init_db
+from backend.routers.admin import router as admin_router
 from backend.routers.auth import router as auth_router
 from backend.routers.analysis import router as analysis_router
 from backend.routers.files import router as files_router
@@ -55,6 +56,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(admin_router)
 app.include_router(projects_router)
 app.include_router(files_router)
 app.include_router(analysis_router)
