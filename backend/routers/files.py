@@ -19,8 +19,8 @@ def _validate_filename(name: str) -> None:
 
 
 @router.get("")
-def list_files(project_id: str, guest_id: str = Query(..., min_length=8)):
-    get_project_access(project_id, guest_id)
+def list_files(project_id: str, user_id: str = Query(..., min_length=8)):
+    get_project_access(project_id, user_id)
     folder = project_dir(project_id)
     folder.mkdir(parents=True, exist_ok=True)
 
@@ -34,8 +34,8 @@ def list_files(project_id: str, guest_id: str = Query(..., min_length=8)):
 
 
 @router.post("")
-async def upload_file(project_id: str, guest_id: str = Query(..., min_length=8), file: UploadFile = File(...)):
-    _, access = get_project_access(project_id, guest_id)
+async def upload_file(project_id: str, user_id: str = Query(..., min_length=8), file: UploadFile = File(...)):
+    _, access = get_project_access(project_id, user_id)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Read-only project")
 
@@ -57,8 +57,8 @@ async def upload_file(project_id: str, guest_id: str = Query(..., min_length=8),
 
 
 @router.delete("/{filename}")
-def delete_file(project_id: str, filename: str, guest_id: str = Query(..., min_length=8)):
-    _, access = get_project_access(project_id, guest_id)
+def delete_file(project_id: str, filename: str, user_id: str = Query(..., min_length=8)):
+    _, access = get_project_access(project_id, user_id)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Read-only project")
 

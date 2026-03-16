@@ -54,8 +54,8 @@ def _parse_date(value: str | None) -> datetime | None:
 
 
 @router.post("")
-def run_analysis(project_id: str, payload: AnalysisRequest, guest_id: str = Query(..., min_length=8)):
-    get_project_access(project_id, guest_id)
+def run_analysis(project_id: str, payload: AnalysisRequest, user_id: str = Query(..., min_length=8)):
+    get_project_access(project_id, user_id)
 
     if not payload.equities:
         return {

@@ -11,7 +11,7 @@ GOLDEN_DIR = Path("backend/tests/golden")
 
 
 def _create_project(client: TestClient, name: str) -> str:
-    resp = client.post("/projects", json={"guest_id": OWNER, "project_name": name})
+    resp = client.post("/projects", json={"user_id": OWNER, "project_name": name})
     assert resp.status_code == 200
     return resp.json()["project_id"]
 
@@ -20,7 +20,7 @@ def _upload(client: TestClient, project_id: str, filename: str) -> None:
     payload = Path(f"ref_result/project/{filename}").read_bytes()
     resp = client.post(
         f"/projects/{project_id}/files",
-        params={"guest_id": OWNER},
+        params={"user_id": OWNER},
         files={"file": (filename, payload, "application/xml")},
     )
     assert resp.status_code == 200
@@ -71,7 +71,7 @@ def test_snapshot_aa1_single_strategy():
         _upload(client, pid, "aa-1.srp")
         resp = client.post(
             f"/projects/{pid}/analysis",
-            params={"guest_id": OWNER},
+            params={"user_id": OWNER},
             json={
                 "equities": [{"filename": "aa-1.srp", "active": True, "contract": 1, "weight": 1, "color": "#0a9396", "name": "AA1"}],
                 "date_range": {"all": True},
@@ -89,7 +89,7 @@ def test_snapshot_aa1_aa2_combo_div_by_count():
         _upload(client, pid, "aa-2.srp")
         resp = client.post(
             f"/projects/{pid}/analysis",
-            params={"guest_id": OWNER},
+            params={"user_id": OWNER},
             json={
                 "equities": [
                     {"filename": "aa-1.srp", "active": True, "contract": 2, "weight": 1.1, "color": "#0a9396", "name": "AA1"},

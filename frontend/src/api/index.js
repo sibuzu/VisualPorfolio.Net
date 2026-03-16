@@ -38,7 +38,7 @@ export function guestId() {
 }
 
 function withGuest(params = {}) {
-  return { ...params, guest_id: guestId() }
+  return { ...params, user_id: guestId() }
 }
 
 export async function listProjects() {
@@ -53,7 +53,7 @@ export async function listProjects() {
 export async function createProject(projectName) {
   try {
     const { data } = await api.post('/projects', {
-      guest_id: guestId(),
+      user_id: guestId(),
       project_name: projectName
     })
     return data
@@ -74,7 +74,7 @@ export async function getProject(projectId) {
 export async function updateProject(projectId, payload) {
   try {
     const { data } = await api.patch(`/projects/${projectId}`, {
-      guest_id: guestId(),
+      user_id: guestId(),
       ...payload
     })
     return data.project
@@ -86,7 +86,7 @@ export async function updateProject(projectId, payload) {
 export async function copyProject(projectId, projectName) {
   try {
     const { data } = await api.post(`/projects/${projectId}/copy`, {
-      guest_id: guestId(),
+      user_id: guestId(),
       project_name: projectName
     })
     return data.project

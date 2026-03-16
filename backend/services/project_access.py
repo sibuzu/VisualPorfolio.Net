@@ -38,7 +38,7 @@ def project_dir(project_id: str) -> Path:
     return DATA_DIR / "projects" / project_id
 
 
-def create_project(guest_id: str, project_name: str) -> dict:
+def create_project(user_id: str, project_name: str) -> dict:
     project_id = generate_unique_project_id()
     ts = now_utc_iso()
     with get_conn() as conn:
@@ -47,14 +47,14 @@ def create_project(guest_id: str, project_name: str) -> dict:
             INSERT INTO projects (project_id, user_id, project_name, create_time, access_time)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (project_id, guest_id, project_name.strip(), ts, ts),
+            (project_id, user_id, project_name.strip(), ts, ts),
         )
         conn.commit()
     project_dir(project_id).mkdir(parents=True, exist_ok=True)
     return get_project(project_id)
 
 
-def list_projects_for_guest(guest_id: str) -> list[dict]:
+def list_projects_for_guest(user_id: str) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             """
@@ -62,7 +62,7 @@ def list_projects_for_guest(guest_id: str) -> list[dict]:
             WHERE user_id = ? OR user_id = 'anonymous'
             ORDER BY access_time DESC
             """,
-            (guest_id,),
+            (user_id,),
         ).fetchall()
     return [row_to_project(r) for r in rows]
 
@@ -77,9 +77,9 @@ def get_project(project_id: str) -> dict:
     return row_to_project(row)
 
 
-def get_project_access(project_id: str, guest_id: str) -> tuple[dict, str]:
+def get_project_access(project_id: str, user_id: str) -> tuple[dict, str]:
     project = get_project(project_id)
-    if project["user_id"] == guest_id:
+    if project["user_id"] == user_id:
         return project, "owner"
     return project, "read_only"
 
@@ -94,8 +94,8 @@ def touch_access_time(project_id: str) -> None:
         conn.commit()
 
 
-def update_project(project_id: str, guest_id: str, project_name: str | None) -> dict:
-    project, access = get_project_access(project_id, guest_id)
+def update_project(project_id: str, user_id: str, project_name: str | None) -> dict:
+    project, access = get_project_access(project_id, user_id)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Read-only project")
 

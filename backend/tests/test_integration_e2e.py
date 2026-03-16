@@ -10,17 +10,17 @@ OWNER = "550e8400-e29b-41d4-a716-446655442222"
 STRANGER = "550e8400-e29b-41d4-a716-446655449999"
 
 
-def _create_project(client: TestClient, guest_id: str, name: str) -> str:
-    resp = client.post("/projects", json={"guest_id": guest_id, "project_name": name})
+def _create_project(client: TestClient, user_id: str, name: str) -> str:
+    resp = client.post("/projects", json={"user_id": user_id, "project_name": name})
     assert resp.status_code == 200
     return resp.json()["project_id"]
 
 
-def _upload(client: TestClient, project_id: str, guest_id: str, filename: str) -> None:
+def _upload(client: TestClient, project_id: str, user_id: str, filename: str) -> None:
     payload = Path(f"ref_result/project/{filename}").read_bytes()
     resp = client.post(
         f"/projects/{project_id}/files",
-        params={"guest_id": guest_id},
+        params={"user_id": user_id},
         files={"file": (filename, payload, "application/xml")},
     )
     assert resp.status_code == 200
@@ -46,7 +46,7 @@ def test_e2e_metric_parity_with_sample_srp():
 
         run = client.post(
             f"/projects/{project_id}/analysis",
-            params={"guest_id": OWNER},
+            params={"user_id": OWNER},
             json={
                 "equities": [
                     {
@@ -86,7 +86,7 @@ def test_e2e_readonly_and_pfo_roundtrip():
 
         save = client.put(
             f"/projects/{project_id}/pfo",
-            params={"guest_id": OWNER},
+            params={"user_id": OWNER},
             json={
                 "equities": [
                     {"index": 0, "filename": "aa-1.srp", "color": "Blue", "weight": 31.7},
@@ -96,24 +96,24 @@ def test_e2e_readonly_and_pfo_roundtrip():
         )
         assert save.status_code == 200
 
-        download = client.get(f"/projects/{project_id}/pfo", params={"guest_id": OWNER})
+        download = client.get(f"/projects/{project_id}/pfo", params={"user_id": OWNER})
         assert download.status_code == 200
         assert "PortfolioyList" in download.text
         assert "aa-1.srp" in download.text
         assert "aa-2.srp" in download.text
 
-        stranger_read = client.get(f"/projects/{project_id}", params={"guest_id": STRANGER})
+        stranger_read = client.get(f"/projects/{project_id}", params={"user_id": STRANGER})
         assert stranger_read.status_code == 200
 
         stranger_patch = client.patch(
             f"/projects/{project_id}",
-            json={"guest_id": STRANGER, "project_name": "hijack"},
+            json={"user_id": STRANGER, "project_name": "hijack"},
         )
         assert stranger_patch.status_code == 403
 
         stranger_pfo_put = client.put(
             f"/projects/{project_id}/pfo",
-            params={"guest_id": STRANGER},
+            params={"user_id": STRANGER},
             json={"equities": [{"index": 0, "filename": "aa-1.srp", "color": "Blue", "weight": 1}]},
         )
         assert stranger_pfo_put.status_code == 403

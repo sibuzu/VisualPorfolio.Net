@@ -9,10 +9,10 @@ OWNER = "550e8400-e29b-41d4-a716-446655440001"
 STRANGER = "550e8400-e29b-41d4-a716-446655440099"
 
 
-def _create_project(client: TestClient, guest_id: str, project_name: str = "test-project") -> str:
+def _create_project(client: TestClient, user_id: str, project_name: str = "test-project") -> str:
     resp = client.post(
         "/projects",
-        json={"guest_id": guest_id, "project_name": project_name},
+        json={"user_id": user_id, "project_name": project_name},
     )
     assert resp.status_code == 200
     return resp.json()["project_id"]
@@ -27,18 +27,18 @@ def test_upload_and_analysis_flow():
 
         up = client.post(
             f"/projects/{project_id}/files",
-            params={"guest_id": OWNER},
+            params={"user_id": OWNER},
             files={"file": ("aa-1.srp", payload, "application/xml")},
         )
         assert up.status_code == 200
 
-        listing = client.get(f"/projects/{project_id}/files", params={"guest_id": OWNER})
+        listing = client.get(f"/projects/{project_id}/files", params={"user_id": OWNER})
         assert listing.status_code == 200
         assert any(x["filename"] == "aa-1.srp" for x in listing.json()["files"])
 
         run = client.post(
             f"/projects/{project_id}/analysis",
-            params={"guest_id": OWNER},
+            params={"user_id": OWNER},
             json={
                 "equities": [
                     {
@@ -77,21 +77,21 @@ def test_owner_edit_other_view_only_access_rules():
         project_id = _create_project(client, OWNER, "access-project")
         up = client.post(
             f"/projects/{project_id}/files",
-            params={"guest_id": OWNER},
+            params={"user_id": OWNER},
             files={"file": ("aa-1.srp", payload, "application/xml")},
         )
         assert up.status_code == 200
 
-        allowed = client.get(f"/projects/{project_id}", params={"guest_id": STRANGER})
+        allowed = client.get(f"/projects/{project_id}", params={"user_id": STRANGER})
         assert allowed.status_code == 200
 
-        stranger_list = client.get("/projects", params={"guest_id": STRANGER})
+        stranger_list = client.get("/projects", params={"user_id": STRANGER})
         assert stranger_list.status_code == 200
         assert all(x["project_id"] != project_id for x in stranger_list.json()["projects"])
 
         readonly_upload = client.post(
             f"/projects/{project_id}/files",
-            params={"guest_id": STRANGER},
+            params={"user_id": STRANGER},
             files={"file": ("aa-1.srp", payload, "application/xml")},
         )
         assert readonly_upload.status_code == 403
