@@ -46,18 +46,28 @@ const metrics = computed(() => diversity.value.metrics || {})
 const metricRows = computed(() => ([
   { key: 'strategy_count', label: '總策略數', value: num(diversity.value.strategy_count) },
   { key: 'N', label: '總交易次數 (N)', value: num(metrics.value.N) },
-  { key: 'avg_amount', label: '平均每次交易金額', value: num(metrics.value.avg_amount) },
-  { key: 'N_eff', label: '有效交易次數 (N_eff)', value: num(metrics.value.N_eff) },
+  { key: 'avg_amount', label: '平均每次交易金額', value: num0(metrics.value.avg_amount) },
+  { key: 'N_eff', label: '有效交易次數 (N_eff)', value: num0(metrics.value.N_eff) },
   { key: 'EER', label: '進場效率比 (EER)', value: pct(metrics.value.EER) },
-  { key: 'RDR', label: '風險分散率 (RDR)', value: num(metrics.value.RDR) },
+  { key: 'RDR', label: '風險分散率 (RDR)', value: num2(metrics.value.RDR) },
   { key: 'DCI', label: '分散相關指數 (DCI)', value: pct(metrics.value.DCI) },
-  { key: 'ISN', label: '獨立策略數 (ISN)', value: num(metrics.value.ISN) },
-  { key: 'DSN', label: '分散策略數 (DSN)', value: num(metrics.value.DSN) }
+  { key: 'ISN', label: '獨立策略數 (ISN)', value: num2(metrics.value.ISN) },
+  { key: 'DSN', label: '分散策略數 (DSN)', value: num2(metrics.value.DSN) }
 ]))
 
 function num(v) {
   const n = Number(v || 0)
   return n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+}
+
+function num0(v) {
+  const n = Math.round(Number(v || 0))
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+}
+
+function num2(v) {
+  const n = Number(v || 0)
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function pct(v) {
