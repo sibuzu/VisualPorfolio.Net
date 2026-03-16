@@ -1,44 +1,22 @@
 <template>
   <section>
-    <div class="period-tabs">
-      <button
-        v-for="opt in periodOptions"
-        :key="opt.value"
-        class="period-btn"
-        :class="{ active: period === opt.value }"
-        @click="period = opt.value"
-      >
-        {{ opt.label }}
-      </button>
-    </div>
-
     <table class="summary-table">
       <thead>
         <tr>
-          <th>勝</th>
-          <th>負</th>
-          <th>總次數</th>
-          <th>勝率</th>
-          <th>總贏</th>
-          <th>總輸</th>
-          <th>平均贏</th>
-          <th>平均輸</th>
-          <th>平均贏輸比</th>
-          <th>全部贏輸比</th>
+          <th>項目</th>
+          <th>日</th>
+          <th>週</th>
+          <th>月</th>
+          <th>年</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>{{ row.wins }}</td>
-          <td>{{ row.losses }}</td>
-          <td>{{ row.total }}</td>
-          <td>{{ pct(row.win_prob) }}</td>
-          <td>{{ num(row.total_win) }}</td>
-          <td>{{ num(row.total_loss) }}</td>
-          <td>{{ num(row.avg_win) }}</td>
-          <td>{{ num(row.avg_loss) }}</td>
-          <td>{{ num(row.avg_win_loss_ratio) }}</td>
-          <td>{{ num(row.total_win_loss_ratio) }}</td>
+        <tr v-for="r in rows" :key="r.key">
+          <td>{{ r.label }}</td>
+          <td>{{ r.day }}</td>
+          <td>{{ r.week }}</td>
+          <td>{{ r.month }}</td>
+          <td>{{ r.year }}</td>
         </tr>
       </tbody>
     </table>
@@ -48,19 +26,10 @@
 <script setup>
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
-import { ref } from 'vue'
 import { usePortfolioStore } from '../stores/portfolio'
 
 const { analysis } = storeToRefs(usePortfolioStore())
-const period = ref('day')
-const periodOptions = [
-  { label: '日', value: 'day' },
-  { label: '週', value: 'week' },
-  { label: '月', value: 'month' },
-  { label: '年', value: 'year' }
-]
-
-const rowMap = computed(() => {
+const wl = computed(() => {
   const wl = analysis.value.win_loss || {}
   return {
     day: wl.day || {},
@@ -69,11 +38,50 @@ const rowMap = computed(() => {
     year: wl.year || {}
   }
 })
-const row = computed(() => rowMap.value[period.value] || {})
+
+function byPeriod(fn) {
+  const src = wl.value
+  return {
+    day: fn(src.day || {}),
+    week: fn(src.week || {}),
+    month: fn(src.month || {}),
+    year: fn(src.year || {})
+  }
+}
+
+const rows = computed(() => {
+  const total = byPeriod((r) => num0(r.total))
+  const wins = byPeriod((r) => num0(r.wins))
+  const losses = byPeriod((r) => num0(r.losses))
+  const winProb = byPeriod((r) => pct(r.win_prob))
+  const avgWin = byPeriod((r) => num0(r.avg_win))
+  const avgLoss = byPeriod((r) => num0(r.avg_loss))
+  const maxWin = byPeriod((r) => num0(r.max_win))
+  const maxLoss = byPeriod((r) => num0(r.max_loss))
+  const avgRatio = byPeriod((r) => num(r.avg_win_loss_ratio))
+  const totalRatio = byPeriod((r) => num(r.total_win_loss_ratio))
+  return [
+    { key: 'total', label: '總次數', ...total },
+    { key: 'wins', label: '贏錢次數', ...wins },
+    { key: 'losses', label: '輸錢次數', ...losses },
+    { key: 'win_prob', label: '贏錢機率', ...winProb },
+    { key: 'avg_win', label: '平均每次贏錢', ...avgWin },
+    { key: 'avg_loss', label: '平均每次輸錢', ...avgLoss },
+    { key: 'max_win', label: '最大贏錢', ...maxWin },
+    { key: 'max_loss', label: '最大輸錢', ...maxLoss },
+    { key: 'avg_ratio', label: '每次贏輸比', ...avgRatio },
+    { key: 'total_ratio', label: '全部贏輸比', ...totalRatio }
+  ]
+})
 
 function num(v) {
   const n = Number(v || 0)
   return n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+}
+
+function num0(v) {
+  const n = Number(v || 0)
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 }
 
 function pct(v) {
@@ -83,22 +91,6 @@ function pct(v) {
 </script>
 
 <style scoped>
-.period-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.period-btn {
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 8px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-.period-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
 .summary-table {
   width: 100%;
   border-collapse: collapse;
@@ -107,5 +99,9 @@ th, td {
   border: 1px solid var(--line);
   padding: 6px;
   text-align: right;
+}
+th:first-child,
+td:first-child {
+  text-align: left;
 }
 </style>

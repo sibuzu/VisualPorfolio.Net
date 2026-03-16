@@ -30,7 +30,7 @@ def _finalize(bucket_profit: float, rec: PeriodRec) -> None:
         rec.wins += 1
         rec.total_win += bucket_profit
         rec.max_win = max(rec.max_win, bucket_profit)
-    elif bucket_profit < 0:
+    else:
         rec.losses += 1
         loss = abs(bucket_profit)
         rec.total_loss += loss
