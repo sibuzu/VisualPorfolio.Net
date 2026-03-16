@@ -24,7 +24,8 @@ import { usePortfolioStore } from '../stores/portfolio'
 
 const chartRef = ref(null)
 let chart
-const { analysis } = storeToRefs(usePortfolioStore())
+const store = usePortfolioStore()
+const { analysis, equities } = storeToRefs(store)
 const mode = ref('total')
 const MAX_POINTS = 2000
 const MAX_SEPARATE_SERIES = 20
@@ -41,34 +42,35 @@ const separateSeries = computed(() => {
   const rows = analysis.value.position_analysis || []
   if (!rows.length) return []
 
-  const byDateByStrategy = new Map()
-  const strategySet = new Set()
+  const tradedSet = new Set(rows.map((r) => Number(r.strategy_index)))
+  const strategyIndices = equities.value
+    .map((_, i) => i)
+    .filter((i) => tradedSet.has(i))
+    .slice(0, MAX_SEPARATE_SERIES)
 
+  const acc = new Map(strategyIndices.map((si) => [si, 0]))
+  const out = strategyIndices.map((si) => {
+    const eq = equities.value[si]
+    return {
+      name: legendName(eq, si),
+      type: 'line',
+      smooth: true,
+      lineStyle: { color: eq?.color || undefined },
+      itemStyle: { color: eq?.color || undefined },
+      data: []
+    }
+  })
+
+  // Keep per-strategy curve aligned to trade sequence (same axis length as total curve).
   for (const row of rows) {
-    const date = String(row.exit || '').slice(0, 10)
-    const si = Number(row.strategy_index)
-    if (!date) continue
-    strategySet.add(si)
-    if (!byDateByStrategy.has(date)) byDateByStrategy.set(date, new Map())
-    const m = byDateByStrategy.get(date)
-    m.set(si, (m.get(si) || 0) + Number(row.pnl || 0))
-  }
-
-  const sortedStrategies = Array.from(strategySet).sort((a, b) => a - b)
-  const acc = new Map(sortedStrategies.map((si) => [si, 0]))
-  const out = sortedStrategies.map((si) => ({
-    name: `策略${si + 1}`,
-    type: 'line',
-    smooth: true,
-    data: []
-  }))
-
-  for (const d of dates.value) {
-    const m = byDateByStrategy.get(d) || new Map()
-    for (let i = 0; i < sortedStrategies.length; i++) {
-      const si = sortedStrategies[i]
-      acc.set(si, (acc.get(si) || 0) + (m.get(si) || 0))
-      out[i].data.push(acc.get(si))
+    const hitSi = Number(row.strategy_index)
+    const pnl = Number(row.pnl || 0)
+    if (acc.has(hitSi)) {
+      acc.set(hitSi, (acc.get(hitSi) || 0) + pnl)
+    }
+    for (let i = 0; i < strategyIndices.length; i++) {
+      const si = strategyIndices[i]
+      out[i].data.push(acc.get(si) || 0)
     }
   }
   return out
@@ -82,7 +84,7 @@ function render() {
     selected.push({ name: '總獲利', type: 'line', data: totalSeries.value, smooth: true, lineStyle: { width: 3 } })
   }
   if (mode.value === 'separate' || mode.value === 'both') {
-    selected.push(...separateSeries.value.slice(0, MAX_SEPARATE_SERIES))
+    selected.push(...separateSeries.value)
   }
   const sampled = downsampleSeries(dates.value, selected, MAX_POINTS)
   const series = sampled.series
@@ -97,6 +99,11 @@ function render() {
     },
     { notMerge: true }
   )
+}
+
+function legendName(eq, si) {
+  const raw = String(eq?.name || eq?.filename || `策略${si + 1}`)
+  return raw.replace(/\.[^.]+$/, '')
 }
 
 function downsampleSeries(sourceDates, sourceSeries, targetCount) {
@@ -148,10 +155,10 @@ function downsampleSeries(sourceDates, sourceSeries, targetCount) {
   return { dates: sampledDates, series: sampledSeries }
 }
 
-watch([() => analysis.value.equity_curve, () => analysis.value.position_analysis, mode], async () => {
+watch([() => analysis.value.equity_curve, () => analysis.value.position_analysis, () => equities.value, mode], async () => {
   await nextTick()
   render()
-})
+}, { deep: true })
 
 onMounted(render)
 onBeforeUnmount(() => chart?.dispose())

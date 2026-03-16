@@ -7,8 +7,20 @@
       </div>
       <p class="muted id-line">
         <span>{{ projectStore.activeProject.project_id }}</span>
+        <button
+          type="button"
+          class="copy-link-btn"
+          title="複製專案連結"
+          aria-label="複製專案連結"
+          @click="copyProjectLink"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8,11h8v2H8V11z M20.1,12H22c0-2.76-2.24-5-5-5h-4v1.9h4C18.71,8.9,20.1,10.29,20.1,12z M3.9,12c0-1.71,1.39-3.1,3.1-3.1h4 V7H7c-2.76,0-5,2.24-5,5s2.24,5,5,5h4v-1.9H7C5.29,15.1,3.9,13.71,3.9,12z M19,12h-2v3h-3v2h3v3h2v-3h3v-2h-3V12z"/>
+          </svg>
+        </button>
         <span class="status-inline">{{ readonly ? '（可檢視）' : '（可編輯）' }}</span>
       </p>
+      <p v-if="copyHint" class="hint">{{ copyHint }}</p>
 
       <div class="equity-manager-wrap">
         <div class="manager-head">
@@ -70,6 +82,7 @@ const guest = ensureGuestId()
 const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '贏輸分析', '分潤退傭', '多樣性分析']
 const activeTab = ref('獲利報表')
 const viewError = ref('')
+const copyHint = ref('')
 const sidebarWidth = ref(390)
 const resizing = ref(false)
 const fileInputRef = ref(null)
@@ -116,6 +129,30 @@ async function upload(event) {
 
 function openFilePicker() {
   fileInputRef.value?.click()
+}
+
+async function copyProjectLink() {
+  const url = `${window.location.origin}/projects/${route.params.projectId}`
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+    } else {
+      const ta = document.createElement('textarea')
+      ta.value = url
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    copyHint.value = '已複製專案連結'
+    setTimeout(() => {
+      copyHint.value = ''
+    }, 1500)
+  } catch (e) {
+    viewError.value = e.message || '複製連結失敗'
+  }
 }
 
 function onMouseMove(event) {
@@ -240,6 +277,35 @@ button.active {
   align-items: center;
   gap: 8px;
   margin: 0 0 4px;
+}
+.copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+.copy-link-btn svg {
+  width: 21px;
+  height: 21px;
+  fill: #6b7280;
+  transition: fill 120ms ease-in-out;
+}
+.copy-link-btn:hover svg,
+.copy-link-btn:focus-visible svg {
+  fill: var(--accent);
+}
+.copy-link-btn:focus-visible {
+  outline: 0;
+}
+.hint {
+  margin: 0 0 4px;
+  color: #0f766e;
+  font-size: 12px;
 }
 .status-inline {
   color: inherit;

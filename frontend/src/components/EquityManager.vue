@@ -21,8 +21,8 @@
               aria-label="刪除策略"
               @click="removeEquity(e)"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z"/>
+              <svg viewBox="0 0 448 512" aria-hidden="true">
+                <path d="M32 464a48 48 0 0 0 48 48h288a48 48 0 0 0 48-48V128H32zm272-256a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zm-96 0a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zm-96 0a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zM432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16z"/>
               </svg>
             </button>
           </td>
@@ -37,8 +37,8 @@
             />
           </td>
           <td class="name-cell" :title="displayName(e.name)">{{ displayName(e.name) }}</td>
-          <td><input :disabled="readonly" type="number" min="0" step="0.1" v-model.number="e.contract" @change="refresh" /></td>
-          <td><input :disabled="readonly" type="number" min="0" step="0.1" v-model.number="e.weight" @change="refresh" /></td>
+          <td><input :disabled="readonly" type="text" inputmode="decimal" v-model="e.contract" @change="refresh" /></td>
+          <td><input :disabled="readonly" type="text" inputmode="decimal" v-model="e.weight" @change="refresh" /></td>
         </tr>
       </tbody>
     </table>
@@ -83,7 +83,7 @@ th, td {
   font-size: 14px;
   word-break: normal;
 }
-input[type='number'] {
+input[type='text'] {
   width: 100%;
 }
 .color-input {
