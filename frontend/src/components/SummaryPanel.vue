@@ -1,6 +1,9 @@
 <template>
   <section>
-    <h3>Summary</h3>
+    <h3>
+      Summary
+      <span v-if="summaryDateSuffix" class="summary-date">{{ summaryDateSuffix }}</span>
+    </h3>
     <div class="cards">
       <div v-for="item in summaryCards" :key="item.label" class="card">
         <div class="label">{{ item.label }}</div>
@@ -132,7 +135,6 @@ const derived = computed(() => {
 
 const summaryCards = computed(() => [
   { label: '期間', value: `${periodYears.value.toFixed(2)} years` },
-  { label: '交易日期', value: tradeDateRange(periodDates.value.start, periodDates.value.end) },
   { label: '交易次數', value: num0(derived.value.tradeCount) },
   { label: '總獲利', value: moneyInt(derived.value.netProfit) },
   { label: '年獲利', value: moneyInt(derived.value.yearProfit) },
@@ -140,16 +142,19 @@ const summaryCards = computed(() => [
   { label: '總獲利/MDD', value: ratio(derived.value.pmr) },
   { label: '年獲利/MDD', value: ratio(derived.value.ypmr) },
   { label: 'Sharpe Ratio', value: ratio(summary.value.sharpe) },
+  { label: 'Sortino Ratio', value: ratio(summary.value.sortino) },
+  { label: '獲利因子', value: ratio(derived.value.profitFactor) },
   { label: '贏錢總金額', value: moneyInt(derived.value.winAmount) },
   { label: '輸錢總金額', value: moneyInt(derived.value.lossAmount) },
-  { label: '獲利因子', value: ratio(derived.value.profitFactor) },
   { label: '贏錢次數', value: num0(derived.value.winCount) },
   { label: '輸錢次數', value: num0(derived.value.lossCount) },
   { label: '贏錢機率', value: `${derived.value.winProb.toFixed(2)}%` },
-  { label: '平均每次贏錢', value: moneyInt(derived.value.avgWin) },
-  { label: '平均每次輸錢', value: moneyInt(derived.value.avgLoss) },
-  { label: '平均每次輸贏', value: moneyInt(derived.value.avgNet) },
 ].filter(Boolean))
+
+const summaryDateSuffix = computed(() => {
+  const txt = tradeDateRange(periodDates.value.start, periodDates.value.end)
+  return txt && txt !== '-' ? `(${txt})` : ''
+})
 
 const mddRows = computed(() =>
   (analysis.value.mdd_markers || []).map((m, i) => {
@@ -247,7 +252,7 @@ function ratio(v) {
 <style scoped>
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -282,10 +287,35 @@ function ratio(v) {
 h3 {
   margin: 8px 0;
 }
+.summary-date {
+  font-size: 0.8em;
+  color: #4b5563;
+  font-weight: 500;
+}
 .row-profit {
   color: #1d4ed8;
 }
 .row-loss {
   color: #b00020;
+}
+@media (max-width: 1400px) {
+  .cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1100px) {
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 800px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
