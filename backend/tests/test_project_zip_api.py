@@ -31,12 +31,20 @@ def _upload_sample_file(client: TestClient, project_id: str, user_id: str, filen
     assert resp.status_code == 200
 
 
+def _make_zip_bytes() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("new.txt", "hello")
+        zf.writestr("nested/path/data.txt", "world")
+    return buf.getvalue()
+
+
 def test_project_download_returns_zip():
     with TestClient(app) as client:
         project_id = _create_project(client, OWNER, "zip-download")
         _upload_sample_file(client, project_id, OWNER, "aa-1.srp")
 
-        resp = client.get(f"/projects/{project_id}/download", params={"user_id": GUEST})
+        resp = client.get(f"/projects/{project_id}/download")
         assert resp.status_code == 200
         assert resp.headers.get("content-type", "").startswith("application/zip")
 
@@ -45,28 +53,23 @@ def test_project_download_returns_zip():
         assert "aa-1.srp" in names
 
 
-def test_project_upload_overwrites_dir_and_sets_anonymous():
+def test_project_upload_overwrites_dir_and_applies_user_id_when_provided():
     with TestClient(app) as client:
         project_id = _create_project(client, OWNER, "zip-upload")
         _upload_sample_file(client, project_id, OWNER, "old.srp")
         assert (project_dir(project_id) / "old.srp").exists()
-
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("new.txt", "hello")
-            zf.writestr("nested/path/data.txt", "world")
-        buf.seek(0)
+        zip_payload = _make_zip_bytes()
 
         upload = client.post(
             f"/projects/{project_id}/upload",
             params={"user_id": GUEST},
             data={"project_name": "Uploaded Project"},
-            files={"file": ("project.zip", buf.read(), "application/zip")},
+            files={"file": ("project.zip", zip_payload, "application/zip")},
         )
         assert upload.status_code == 200
         body = upload.json()
         assert body["ok"] is True
-        assert body["user_id"] == "anonymous"
+        assert body["user_id"] == GUEST
         assert body["project_name"] == "Uploaded Project"
 
         pdir = project_dir(project_id)
@@ -76,8 +79,44 @@ def test_project_upload_overwrites_dir_and_sets_anonymous():
 
         info = client.get(f"/projects/{project_id}", params={"user_id": OWNER})
         assert info.status_code == 200
-        assert info.json()["project"]["user_id"] == "anonymous"
+        assert info.json()["project"]["user_id"] == GUEST
         assert info.json()["project"]["project_name"] == "Uploaded Project"
+
+
+def test_project_upload_without_user_id_keeps_existing_user_id():
+    with TestClient(app) as client:
+        project_id = _create_project(client, OWNER, "zip-upload-keep-owner")
+        _upload_sample_file(client, project_id, OWNER, "old.srp")
+        zip_payload = _make_zip_bytes()
+
+        upload = client.post(
+            f"/projects/{project_id}/upload",
+            data={"project_name": "Keep Owner"},
+            files={"file": ("project.zip", zip_payload, "application/zip")},
+        )
+        assert upload.status_code == 200
+        body = upload.json()
+        assert body["user_id"] == OWNER
+
+        info = client.get(f"/projects/{project_id}", params={"user_id": OWNER})
+        assert info.status_code == 200
+        assert info.json()["project"]["user_id"] == OWNER
+
+
+def test_project_upload_without_user_id_sets_anonymous_when_project_missing():
+    with TestClient(app) as client:
+        seed = _create_project(client, OWNER, "seed")
+        project_id = f"{seed[:4]}UPLD"
+        zip_payload = _make_zip_bytes()
+
+        upload = client.post(
+            f"/projects/{project_id}/upload",
+            data={"project_name": "Anonymous Upload"},
+            files={"file": ("project.zip", zip_payload, "application/zip")},
+        )
+        assert upload.status_code == 200
+        body = upload.json()
+        assert body["user_id"] == "anonymous"
 
         listing = client.get("/projects", params={"user_id": OTHER})
         assert listing.status_code == 200

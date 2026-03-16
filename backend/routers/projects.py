@@ -14,6 +14,7 @@ from backend.models.project import ProjectCopyRequest, ProjectCreateRequest, Pro
 from backend.services.project_access import (
     create_project,
     create_project_with_user,
+    get_project as get_project_record,
     get_project_access,
     list_projects_for_guest,
     now_utc_iso,
@@ -111,8 +112,7 @@ def copy_project(project_id: str, payload: ProjectCopyRequest):
 
 
 @router.get("/{project_id}/download")
-def download_project(project_id: str, user_id: str = Query(..., min_length=8)):
-    get_project_access(project_id, user_id)
+def download_project(project_id: str):
     src_dir = project_dir(project_id)
     if not src_dir.exists():
         raise HTTPException(status_code=404, detail="Project directory not found")
@@ -144,7 +144,7 @@ def upload_project_zip(
     project_id: str,
     file: UploadFile = File(...),
     project_name: str = Form(..., min_length=1),
-    user_id: str = Query(..., min_length=8),
+    user_id: str | None = Query(default=None, min_length=8),
 ):
     project_name = project_name.strip()
     if not project_name:
@@ -153,13 +153,19 @@ def upload_project_zip(
     if not (file.filename or "").lower().endswith(".zip"):
         raise HTTPException(status_code=400, detail="Only .zip is supported")
 
-    # Keep API access pattern consistent with other project endpoints.
-    # Existing project: allow read-only or owner; missing project: create as anonymous.
+    existing = None
     try:
-        get_project_access(project_id, user_id)
+        existing = get_project_record(project_id)
     except HTTPException as e:
         if e.status_code != 404:
             raise
+
+    if user_id:
+        target_user_id = user_id
+    elif existing:
+        target_user_id = existing["user_id"]
+    else:
+        target_user_id = "anonymous"
 
     fd, tmp_name = tempfile.mkstemp(prefix=f"{project_id}_upload_", suffix=".zip")
     os.close(fd)
@@ -195,7 +201,7 @@ def upload_project_zip(
         if row:
             conn.execute(
                 "UPDATE projects SET user_id = ?, project_name = ?, access_time = ? WHERE project_id = ?",
-                ("anonymous", project_name, ts, project_id),
+                (target_user_id, project_name, ts, project_id),
             )
         else:
             conn.execute(
@@ -203,9 +209,9 @@ def upload_project_zip(
                 INSERT INTO projects (project_id, user_id, project_name, create_time, access_time)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (project_id, "anonymous", project_name, ts, ts),
+                (project_id, target_user_id, project_name, ts, ts),
             )
         conn.commit()
 
     touch_access_time(project_id)
-    return {"ok": True, "project_id": project_id, "user_id": "anonymous", "project_name": project_name}
+    return {"ok": True, "project_id": project_id, "user_id": target_user_id, "project_name": project_name}
