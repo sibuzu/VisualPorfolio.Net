@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import uuid
 import zipfile
 from pathlib import Path
 
@@ -10,22 +11,28 @@ from backend.main import app
 from backend.services.project_access import project_dir
 
 
-OWNER = "550e8400-e29b-41d4-a716-446655447777"
-GUEST = "550e8400-e29b-41d4-a716-446655448888"
-OTHER = "550e8400-e29b-41d4-a716-446655449999"
+def _new_user(prefix: str) -> tuple[str, str]:
+    token = uuid.uuid4().hex[:8]
+    return (f"{prefix}_{token}", f"pw_{token}")
 
 
-def _create_project(client: TestClient, user_id: str, name: str) -> str:
-    resp = client.post("/projects", json={"user_id": user_id, "project_name": name})
+def _signup_and_login(client: TestClient, user_id: str, password: str) -> None:
+    signup = client.post("/auth/signup", json={"user_id": user_id, "password": password})
+    assert signup.status_code == 200
+    login = client.post("/auth/login", json={"user_id": user_id, "password": password})
+    assert login.status_code == 200
+
+
+def _create_project(client: TestClient, name: str) -> str:
+    resp = client.post("/projects", json={"project_name": name})
     assert resp.status_code == 200
     return resp.json()["project_id"]
 
 
-def _upload_sample_file(client: TestClient, project_id: str, user_id: str, filename: str) -> None:
+def _upload_sample_file(client: TestClient, project_id: str, filename: str) -> None:
     payload = Path("ref_result/project/aa-1.srp").read_bytes()
     resp = client.post(
         f"/projects/{project_id}/files",
-        params={"user_id": user_id},
         files={"file": (filename, payload, "application/xml")},
     )
     assert resp.status_code == 200
@@ -41,8 +48,10 @@ def _make_zip_bytes() -> bytes:
 
 def test_project_download_returns_zip():
     with TestClient(app) as client:
-        project_id = _create_project(client, OWNER, "zip-download")
-        _upload_sample_file(client, project_id, OWNER, "aa-1.srp")
+        owner_id, owner_pw = _new_user("owner")
+        _signup_and_login(client, owner_id, owner_pw)
+        project_id = _create_project(client, "zip-download")
+        _upload_sample_file(client, project_id, "aa-1.srp")
 
         resp = client.get(f"/projects/{project_id}/download")
         assert resp.status_code == 200
@@ -53,23 +62,39 @@ def test_project_download_returns_zip():
         assert "aa-1.srp" in names
 
 
-def test_project_upload_overwrites_dir_and_applies_user_id_when_provided():
+def test_project_download_forbidden_for_non_owner():
     with TestClient(app) as client:
-        project_id = _create_project(client, OWNER, "zip-upload")
-        _upload_sample_file(client, project_id, OWNER, "old.srp")
+        owner_id, owner_pw = _new_user("owner")
+        other_id, other_pw = _new_user("other")
+
+        _signup_and_login(client, owner_id, owner_pw)
+        project_id = _create_project(client, "zip-download-forbid")
+        _upload_sample_file(client, project_id, "old.srp")
+
+        _signup_and_login(client, other_id, other_pw)
+        deny = client.get(f"/projects/{project_id}/download")
+        assert deny.status_code == 403
+        assert deny.json()["detail"] == "Only owner can download"
+
+
+def test_project_upload_overwrites_dir_and_keeps_current_owner():
+    with TestClient(app) as client:
+        owner_id, owner_pw = _new_user("owner")
+        _signup_and_login(client, owner_id, owner_pw)
+        project_id = _create_project(client, "zip-upload")
+        _upload_sample_file(client, project_id, "old.srp")
         assert (project_dir(project_id) / "old.srp").exists()
         zip_payload = _make_zip_bytes()
 
         upload = client.post(
             f"/projects/{project_id}/upload",
-            params={"user_id": GUEST},
             data={"project_name": "Uploaded Project"},
             files={"file": ("project.zip", zip_payload, "application/zip")},
         )
         assert upload.status_code == 200
         body = upload.json()
         assert body["ok"] is True
-        assert body["user_id"] == GUEST
+        assert body["user_id"] == owner_id
         assert body["project_name"] == "Uploaded Project"
 
         pdir = project_dir(project_id)
@@ -77,48 +102,27 @@ def test_project_upload_overwrites_dir_and_applies_user_id_when_provided():
         assert (pdir / "new.txt").exists()
         assert (pdir / "nested/path/data.txt").exists()
 
-        info = client.get(f"/projects/{project_id}", params={"user_id": OWNER})
+        info = client.get(f"/projects/{project_id}")
         assert info.status_code == 200
-        assert info.json()["project"]["user_id"] == GUEST
+        assert info.json()["project"]["user_id"] == owner_id
         assert info.json()["project"]["project_name"] == "Uploaded Project"
 
 
-def test_project_upload_without_user_id_keeps_existing_user_id():
+def test_project_upload_fails_when_project_belongs_to_other_user():
     with TestClient(app) as client:
-        project_id = _create_project(client, OWNER, "zip-upload-keep-owner")
-        _upload_sample_file(client, project_id, OWNER, "old.srp")
-        zip_payload = _make_zip_bytes()
+        owner_id, owner_pw = _new_user("owner")
+        other_id, other_pw = _new_user("other")
 
+        _signup_and_login(client, owner_id, owner_pw)
+        project_id = _create_project(client, "zip-upload-owner-check")
+        _upload_sample_file(client, project_id, "old.srp")
+
+        _signup_and_login(client, other_id, other_pw)
+        zip_payload = _make_zip_bytes()
         upload = client.post(
             f"/projects/{project_id}/upload",
-            data={"project_name": "Keep Owner"},
+            data={"project_name": "Not Allowed"},
             files={"file": ("project.zip", zip_payload, "application/zip")},
         )
-        assert upload.status_code == 200
-        body = upload.json()
-        assert body["user_id"] == OWNER
-
-        info = client.get(f"/projects/{project_id}", params={"user_id": OWNER})
-        assert info.status_code == 200
-        assert info.json()["project"]["user_id"] == OWNER
-
-
-def test_project_upload_without_user_id_sets_anonymous_when_project_missing():
-    with TestClient(app) as client:
-        seed = _create_project(client, OWNER, "seed")
-        project_id = f"{seed[:4]}UPLD"
-        zip_payload = _make_zip_bytes()
-
-        upload = client.post(
-            f"/projects/{project_id}/upload",
-            data={"project_name": "Anonymous Upload"},
-            files={"file": ("project.zip", zip_payload, "application/zip")},
-        )
-        assert upload.status_code == 200
-        body = upload.json()
-        assert body["user_id"] == "anonymous"
-
-        listing = client.get("/projects", params={"user_id": OTHER})
-        assert listing.status_code == 200
-        ids = [x["project_id"] for x in listing.json()["projects"]]
-        assert project_id in ids
+        assert upload.status_code == 403
+        assert upload.json()["detail"] == "Project already owned by another user"

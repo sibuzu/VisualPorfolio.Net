@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia'
 import { getPfo, runAnalysis, savePfo } from '../api'
 
+function normalizeFileKey(v) {
+  if (!v) return ''
+  const s = String(v).trim().replace(/\\/g, '/')
+  const parts = s.split('/')
+  return (parts[parts.length - 1] || '').toLowerCase()
+}
+
 export const usePortfolioStore = defineStore('portfolio', {
   state: () => ({
     equities: [],
@@ -53,14 +60,22 @@ export const usePortfolioStore = defineStore('portfolio', {
           filename: n.getAttribute('FileName') || '',
           color: n.getAttribute('Color') || '',
           weight: n.getAttribute('Weight') || '',
-          contract: n.getAttribute('Contract') || '',
+          contract: n.getAttribute('Count') || '1',
           active: (n.getAttribute('Active') || '1') !== '0',
           name: n.getAttribute('Name') || ''
         }))
 
-        const byFile = new Map(saved.map((x) => [x.filename, x]))
+        const byFile = new Map()
+        for (const item of saved) {
+          const raw = String(item.filename || '')
+          if (raw) byFile.set(raw, item)
+          const base = normalizeFileKey(raw)
+          if (base) byFile.set(base, item)
+        }
         this.equities = this.equities.map((eq) => {
-          const sv = byFile.get(eq.filename)
+          const eqRaw = String(eq.filename || '')
+          const eqBase = normalizeFileKey(eqRaw)
+          const sv = byFile.get(eqRaw) || byFile.get(eqBase)
           if (!sv) return eq
           const weight = Number(sv.weight)
           const contract = Number(sv.contract)

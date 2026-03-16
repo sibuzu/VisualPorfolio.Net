@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 import os
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
@@ -116,6 +116,9 @@ def copy_project(project_id: str, payload: ProjectCopyRequest, current_user: str
 
 @router.get("/{project_id}/download")
 def download_project(project_id: str, current_user: str = Depends(require_auth)):
+    _, access = get_project_access(project_id, current_user)
+    if access != "owner":
+        raise HTTPException(status_code=403, detail="Only owner can download")
     src_dir = project_dir(project_id)
     if not src_dir.exists():
         raise HTTPException(status_code=404, detail="Project directory not found")
@@ -147,7 +150,6 @@ def upload_project_zip(
     project_id: str,
     file: UploadFile = File(...),
     project_name: str = Form(..., min_length=1),
-    user_id: str | None = Query(default=None, min_length=8),
     current_user: str = Depends(require_auth),
 ):
     project_name = project_name.strip()
@@ -164,14 +166,10 @@ def upload_project_zip(
         if e.status_code != 404:
             raise
 
-    if user_id:
-        if user_id != current_user:
-            raise HTTPException(status_code=403, detail="user_id mismatch with auth user")
-        target_user_id = user_id
-    elif existing:
-        target_user_id = existing["user_id"]
-    else:
-        target_user_id = "anonymous"
+    if existing and existing["user_id"] != current_user:
+        raise HTTPException(status_code=403, detail="Project already owned by another user")
+
+    target_user_id = current_user
 
     fd, tmp_name = tempfile.mkstemp(prefix=f"{project_id}_upload_", suffix=".zip")
     os.close(fd)

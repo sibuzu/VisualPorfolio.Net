@@ -24,10 +24,11 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { authLogin, authSignUp } from '../api'
 
 const router = useRouter()
+const route = useRoute()
 const mode = ref('login')
 const userId = ref('')
 const password = ref('')
@@ -54,7 +55,9 @@ async function submit() {
       await authSignUp(userId.value, password.value)
     }
     await authLogin(userId.value, password.value)
-    await router.replace('/')
+    const q = route.query.redirect
+    const redirectPath = typeof q === 'string' && q.startsWith('/') ? q : '/'
+    await router.replace(redirectPath)
   } catch (e) {
     error.value = e.message || 'Authentication failed'
   } finally {

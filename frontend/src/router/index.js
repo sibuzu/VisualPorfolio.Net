@@ -21,7 +21,10 @@ router.beforeEach(async (to) => {
     await authMe()
     return true
   } catch {
-    return '/login'
+    return {
+      path: '/login',
+      query: { redirect: to.fullPath }
+    }
   }
 })
 
