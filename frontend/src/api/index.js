@@ -83,6 +83,18 @@ export async function updateProject(projectId, payload) {
   }
 }
 
+export async function copyProject(projectId, projectName) {
+  try {
+    const { data } = await api.post(`/projects/${projectId}/copy`, {
+      guest_id: guestId(),
+      project_name: projectName
+    })
+    return data.project
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function deleteProject(projectId) {
   try {
     const { data } = await api.delete(`/projects/${projectId}`, { params: withGuest() })
@@ -141,6 +153,18 @@ export async function savePfo(projectId, equities) {
   try {
     const { data } = await api.put(`/projects/${projectId}/pfo`, { equities }, {
       params: withGuest()
+    })
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function getPfo(projectId) {
+  try {
+    const { data } = await api.get(`/projects/${projectId}/pfo`, {
+      params: withGuest(),
+      responseType: 'text'
     })
     return data
   } catch (error) {

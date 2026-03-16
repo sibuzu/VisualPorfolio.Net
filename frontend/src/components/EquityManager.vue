@@ -60,14 +60,14 @@ function displayName(name) {
 }
 
 async function refresh() {
-  await store.analyze(route.params.projectId)
+  await store.persistAndAnalyze(route.params.projectId)
 }
 
 async function removeEquity(equity) {
   if (!confirm(`確定要刪除策略檔案「${equity.filename}」嗎？`)) return
   await projectStore.deleteFile(route.params.projectId, equity.filename)
   store.setFilesAsEquities(projectStore.files)
-  await refresh()
+  await store.persistAndAnalyze(route.params.projectId)
 }
 </script>
 

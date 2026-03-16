@@ -15,6 +15,11 @@ class ProjectPatchRequest(BaseModel):
     project_name: str | None = Field(default=None, min_length=1, max_length=120)
 
 
+class ProjectCopyRequest(BaseModel):
+    guest_id: str = Field(min_length=8)
+    project_name: str = Field(min_length=1, max_length=120)
+
+
 class ProjectResponse(BaseModel):
     project_id: str
     user_id: str

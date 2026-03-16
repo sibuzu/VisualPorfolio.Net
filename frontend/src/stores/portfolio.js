@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { runAnalysis, savePfo } from '../api'
+import { getPfo, runAnalysis, savePfo } from '../api'
 
 export const usePortfolioStore = defineStore('portfolio', {
   state: () => ({
@@ -17,7 +17,8 @@ export const usePortfolioStore = defineStore('portfolio', {
       mdd_markers: []
     },
     loading: false,
-    error: ''
+    error: '',
+    updatingConfig: false
   }),
   actions: {
     setFilesAsEquities(files) {
@@ -33,6 +34,56 @@ export const usePortfolioStore = defineStore('portfolio', {
           name: existingByFile.get(f.filename)?.name ?? f.filename,
           index: i
         }))
+    },
+    applySavedConfigFromXml(xmlText) {
+      if (!xmlText || typeof DOMParser === 'undefined') return
+      let doc
+      try {
+        doc = new DOMParser().parseFromString(xmlText, 'application/xml')
+      } catch {
+        return
+      }
+
+      const nodes = Array.from(doc.querySelectorAll('Equity'))
+      if (!nodes.length) return
+
+      const saved = nodes.map((n) => ({
+        index: Number(n.getAttribute('Index') ?? -1),
+        filename: n.getAttribute('FileName') || '',
+        color: n.getAttribute('Color') || '',
+        weight: n.getAttribute('Weight') || '',
+        contract: n.getAttribute('Contract') || '',
+        active: (n.getAttribute('Active') || '1') !== '0',
+        name: n.getAttribute('Name') || ''
+      }))
+
+      const byFile = new Map(saved.map((x) => [x.filename, x]))
+      this.equities = this.equities.map((eq) => {
+        const sv = byFile.get(eq.filename)
+        if (!sv) return eq
+        const weight = Number(sv.weight)
+        const contract = Number(sv.contract)
+        return {
+          ...eq,
+          color: sv.color || eq.color,
+          weight: Number.isFinite(weight) ? weight : eq.weight,
+          contract: Number.isFinite(contract) ? contract : eq.contract,
+          active: typeof sv.active === 'boolean' ? sv.active : eq.active,
+          name: sv.name || eq.name,
+          index: Number.isFinite(sv.index) && sv.index >= 0 ? sv.index : eq.index
+        }
+      })
+      this.equities.sort((a, b) => (a.index ?? 9999) - (b.index ?? 9999))
+    },
+    async restoreProjectConfig(projectId) {
+      try {
+        const xml = await getPfo(projectId)
+        this.applySavedConfigFromXml(xml)
+      } catch (e) {
+        if (!/PFO not found/i.test(String(e?.message || ''))) {
+          this.error = e.message || '載入策略設定失敗'
+        }
+      }
     },
     async analyze(projectId, options = {}) {
       this.loading = true
@@ -57,12 +108,28 @@ export const usePortfolioStore = defineStore('portfolio', {
           index: i,
           filename: eq.filename,
           color: eq.color,
-          weight: eq.weight
+          weight: Number(eq.weight || 0),
+          contract: Number(eq.contract || 0),
+          active: !!eq.active,
+          name: eq.name || eq.filename
         }))
         return savePfo(projectId, items)
       } catch (e) {
         this.error = e.message
         throw e
+      }
+    },
+    async persistAndAnalyze(projectId, options = {}) {
+      this.updatingConfig = true
+      this.error = ''
+      try {
+        await this.saveProjectPfo(projectId)
+        await this.analyze(projectId, options)
+      } catch (e) {
+        this.error = e.message
+        throw e
+      } finally {
+        this.updatingConfig = false
       }
     }
   }

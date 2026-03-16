@@ -19,16 +19,33 @@
           </svg>
         </button>
         <span class="status-inline">{{ readonly ? '（可檢視）' : '（可編輯）' }}</span>
+        <span class="id-line-spacer"></span>
+        <button
+          type="button"
+          class="copy-project-btn"
+          @click="copyProjectWithPrompt"
+        >
+          <svg viewBox="0 0 512 512" aria-hidden="true">
+            <path d="M464 0H144c-26.51 0-48 21.49-48 48v48H48c-26.51 0-48 21.49-48 48v320c0 26.51 21.49 48 48 48h320c26.51 0 48-21.49 48-48v-48h48c26.51 0 48-21.49 48-48V48c0-26.51-21.49-48-48-48zM362 464H54a6 6 0 0 1-6-6V150a6 6 0 0 1 6-6h42v224c0 26.51 21.49 48 48 48h224v42a6 6 0 0 1-6 6zm96-96H150a6 6 0 0 1-6-6V54a6 6 0 0 1 6-6h308a6 6 0 0 1 6 6v308a6 6 0 0 1-6 6z"/>
+          </svg>
+          <span>複製專案</span>
+        </button>
       </p>
       <p v-if="copyHint" class="hint">{{ copyHint }}</p>
 
       <div class="equity-manager-wrap">
         <div class="manager-head">
           <h3 class="manager-title">策略組合管理</h3>
-          <button type="button" class="file-btn" :disabled="readonly" @click="openFilePicker">選擇檔案</button>
+          <button type="button" class="copy-project-btn file-btn" :disabled="readonly" @click="openFilePicker">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M16,13 L13,13 L13,16 C13,16.55 12.55,17 12,17 C11.45,17 11,16.55 11,16 L11,13 L8,13 C7.45,13 7,12.55 7,12 C7,11.45 7.45,11 8,11 L11,11 L11,8 C11,7.45 11.45,7 12,7 C12.55,7 13,7.45 13,8 L13,11 L16,11 C16.55,11 17,11.45 17,12 C17,12.55 16.55,13 16,13 Z"/>
+            </svg>
+            <span>新增績效</span>
+          </button>
           <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp" multiple :disabled="readonly" @change="upload" />
         </div>
         <EquityManager :readonly="readonly" />
+        <p v-if="portfolioStore.updatingConfig" class="updating-hint">更新中...</p>
       </div>
     </aside>
 
@@ -98,6 +115,7 @@ async function loadAll() {
   try {
     await projectStore.loadProject(route.params.projectId)
     portfolioStore.setFilesAsEquities(projectStore.files)
+    await portfolioStore.restoreProjectConfig(route.params.projectId)
     await refreshAnalysis()
   } catch (e) {
     viewError.value = e.message || '載入專案失敗'
@@ -120,7 +138,7 @@ async function upload(event) {
   try {
     await projectStore.uploadFiles(route.params.projectId, files)
     portfolioStore.setFilesAsEquities(projectStore.files)
-    await refreshAnalysis()
+    await portfolioStore.persistAndAnalyze(route.params.projectId)
   } catch (e) {
     viewError.value = e.message || '上傳失敗'
   }
@@ -152,6 +170,32 @@ async function copyProjectLink() {
     }, 1500)
   } catch (e) {
     viewError.value = e.message || '複製連結失敗'
+  }
+}
+
+async function copyProjectWithPrompt() {
+  const base = projectStore.activeProject?.project_name || 'Project'
+  const defaultName = (() => {
+    const m = String(base).match(/^(.*)-(\d+)$/)
+    if (m) return `${m[1]}-${Number(m[2]) + 1}`
+    return `${base}-1`
+  })()
+  const name = prompt('請輸入複製後的新專案名稱', defaultName)
+  if (name == null) return
+  const newName = name.trim()
+  if (!newName) return
+
+  viewError.value = ''
+  try {
+    const project = await projectStore.copy(route.params.projectId, newName)
+    const targetPath = `/projects/${project.project_id}`
+    const targetUrl = `${window.location.origin}${targetPath}`
+    const win = window.open(targetUrl, '_blank', 'noopener,noreferrer')
+    if (!win) {
+      viewError.value = '瀏覽器已阻擋新分頁，請允許彈出視窗後再試'
+    }
+  } catch (e) {
+    viewError.value = e.message || '複製專案失敗'
   }
 }
 
@@ -278,6 +322,9 @@ button.active {
   gap: 8px;
   margin: 0 0 4px;
 }
+.id-line-spacer {
+  flex: 1 1 auto;
+}
 .copy-link-btn {
   display: inline-flex;
   align-items: center;
@@ -302,10 +349,34 @@ button.active {
 .copy-link-btn:focus-visible {
   outline: 0;
 }
+.copy-project-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.copy-project-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+.copy-project-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .hint {
   margin: 0 0 4px;
   color: #0f766e;
   font-size: 12px;
+}
+.updating-hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 .status-inline {
   color: inherit;

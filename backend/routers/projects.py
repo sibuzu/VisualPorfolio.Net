@@ -4,9 +4,10 @@ import shutil
 
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.models.project import ProjectCreateRequest, ProjectListResponse, ProjectPatchRequest
+from backend.models.project import ProjectCopyRequest, ProjectCreateRequest, ProjectListResponse, ProjectPatchRequest
 from backend.services.project_access import (
     create_project,
+    create_project_with_user,
     get_project_access,
     list_projects_for_guest,
     project_dir,
@@ -55,3 +56,17 @@ def delete_project(project_id: str, guest_id: str = Query(..., min_length=8)):
 
     shutil.rmtree(project_dir(project_id), ignore_errors=True)
     return {"deleted": True, "project_id": project_id, "project_name": project["project_name"]}
+
+
+@router.post("/{project_id}/copy")
+def copy_project(project_id: str, payload: ProjectCopyRequest):
+    source, _ = get_project_access(project_id, payload.guest_id)
+
+    # Copy always creates a new owner project for the caller.
+    cloned = create_project_with_user(payload.guest_id, payload.project_name)
+    src_dir = project_dir(project_id)
+    dst_dir = project_dir(cloned["project_id"])
+    if src_dir.exists():
+        shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
+
+    return {"project_id": cloned["project_id"], "project": cloned}

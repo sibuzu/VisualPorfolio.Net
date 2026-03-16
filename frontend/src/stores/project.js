@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import {
   createProject,
+  copyProject,
   deleteProject,
   deleteProjectFile,
   getProject,
@@ -82,6 +83,17 @@ export const useProjectStore = defineStore('project', {
       try {
         this.activeProject = await updateProject(projectId, payload)
         await this.loadProjects()
+      } catch (e) {
+        this.error = e.message
+        throw e
+      }
+    },
+    async copy(projectId, projectName) {
+      this.error = ''
+      try {
+        const project = await copyProject(projectId, projectName)
+        await this.loadProjects()
+        return project
       } catch (e) {
         this.error = e.message
         throw e

@@ -108,3 +108,19 @@ def update_project(project_id: str, guest_id: str, project_name: str | None) -> 
         )
         conn.commit()
     return get_project(project_id)
+
+
+def create_project_with_user(user_id: str, project_name: str) -> dict:
+    project_id = generate_unique_project_id()
+    ts = now_utc_iso()
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO projects (project_id, user_id, project_name, create_time, access_time)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (project_id, user_id, project_name.strip(), ts, ts),
+        )
+        conn.commit()
+    project_dir(project_id).mkdir(parents=True, exist_ok=True)
+    return get_project(project_id)

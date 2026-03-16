@@ -15,6 +15,9 @@ class PfoItem(BaseModel):
     filename: str
     color: str = "Blue"
     weight: float = 1.0
+    contract: float = 1.0
+    active: bool = True
+    name: str = ""
 
 
 class PfoSaveRequest(BaseModel):
