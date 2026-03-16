@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -38,6 +39,17 @@ def project_dir(project_id: str) -> Path:
     return DATA_DIR / "projects" / project_id
 
 
+def write_project_config(project_id: str, project_name: str, user_id: str) -> None:
+    pdir = project_dir(project_id)
+    pdir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "project_id": project_id,
+        "project_name": project_name,
+        "user_id": user_id,
+    }
+    (pdir / "config.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def create_project(user_id: str, project_name: str) -> dict:
     project_id = generate_unique_project_id()
     ts = now_utc_iso()
@@ -51,6 +63,7 @@ def create_project(user_id: str, project_name: str) -> dict:
         )
         conn.commit()
     project_dir(project_id).mkdir(parents=True, exist_ok=True)
+    write_project_config(project_id, project_name.strip(), user_id)
     return get_project(project_id)
 
 
@@ -107,6 +120,7 @@ def update_project(project_id: str, user_id: str, project_name: str | None) -> d
             (new_name, now_utc_iso(), project_id),
         )
         conn.commit()
+    write_project_config(project_id, new_name, project["user_id"])
     return get_project(project_id)
 
 
@@ -123,4 +137,5 @@ def create_project_with_user(user_id: str, project_name: str) -> dict:
         )
         conn.commit()
     project_dir(project_id).mkdir(parents=True, exist_ok=True)
+    write_project_config(project_id, project_name.strip(), user_id)
     return get_project(project_id)

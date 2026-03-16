@@ -22,6 +22,7 @@ from backend.services.project_access import (
     project_dir,
     touch_access_time,
     update_project,
+    write_project_config,
 )
 from backend.db.database import get_conn
 
@@ -108,6 +109,7 @@ def copy_project(project_id: str, payload: ProjectCopyRequest, current_user: str
     dst_dir = project_dir(cloned["project_id"])
     if src_dir.exists():
         shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
+    write_project_config(cloned["project_id"], cloned["project_name"], cloned["user_id"])
 
     return {"project_id": cloned["project_id"], "project": cloned}
 
