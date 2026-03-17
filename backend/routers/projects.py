@@ -103,6 +103,8 @@ def delete_project(project_id: str, current_user: str = Depends(require_auth)):
 
 @router.post("/{project_id}/copy")
 def copy_project(project_id: str, payload: ProjectCopyRequest, current_user: str = Depends(require_auth)):
+    if current_user == "guest":
+        raise HTTPException(status_code=403, detail="guest cannot clone project")
     source, _ = get_project_access(project_id, current_user)
 
     # Copy always creates a new owner project for the caller.

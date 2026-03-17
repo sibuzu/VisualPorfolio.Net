@@ -23,6 +23,7 @@
         <button
           type="button"
           class="copy-project-btn"
+          :disabled="!canCloneProject"
           @click="copyProjectWithPrompt"
         >
           <svg viewBox="0 0 512 512" aria-hidden="true">
@@ -109,6 +110,7 @@ const readonly = computed(() => {
   if (!p) return true
   return p.user_id !== currentUser.value
 })
+const canCloneProject = computed(() => currentUser.value !== 'guest')
 
 async function loadAll() {
   viewError.value = ''
@@ -174,6 +176,7 @@ async function copyProjectLink() {
 }
 
 async function copyProjectWithPrompt() {
+  if (!canCloneProject.value) return
   const base = projectStore.activeProject?.project_name || 'Project'
   const defaultName = (() => {
     const m = String(base).match(/^(.*)-(\d+)$/)

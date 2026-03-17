@@ -7,7 +7,7 @@ PREFIX = "VP"
 
 
 def new_project_id() -> str:
-    return f"{PREFIX}{_letters(2)}-{_letters(4)}"
+    return f"{PREFIX}-{_letters(6)}"
 
 
 def _letters(n: int) -> str:
