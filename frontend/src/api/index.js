@@ -288,13 +288,39 @@ export function getProjectAttachmentUrl(projectId, filename) {
   return `${api.defaults.baseURL}/projects/${projectId}/files/attachments/${encodeURIComponent(filename)}`
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function shouldRetryAnalysis(error) {
+  const code = String(error?.code || '')
+  const msg = String(error?.message || '').toLowerCase()
+  if (code === 'ECONNABORTED') return true
+  if (code === 'ERR_NETWORK') return true
+  if (msg.includes('timeout')) return true
+  if (!error?.response) return true
+  return false
+}
+
 export async function runAnalysis(projectId, payload) {
-  try {
-    const { data } = await api.post(`/projects/${projectId}/analysis`, payload)
-    return data
-  } catch (error) {
-    throw toError(error)
+  const url = `/projects/${projectId}/analysis`
+  const timeoutMs = 60000
+  const maxAttempts = 2
+
+  let lastError
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { data } = await api.post(url, payload, { timeout: timeoutMs })
+      return data
+    } catch (error) {
+      lastError = error
+      if (attempt >= maxAttempts || !shouldRetryAnalysis(error)) {
+        throw toError(error)
+      }
+      await sleep(800)
+    }
   }
+  throw toError(lastError)
 }
 
 export async function savePfo(projectId, equities, commissionConfig = null, description = '') {
