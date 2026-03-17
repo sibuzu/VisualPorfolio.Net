@@ -137,6 +137,15 @@ export async function adminDeleteProject(projectId) {
   }
 }
 
+export async function adminSetDemoProject(projectId) {
+  try {
+    const { data } = await api.post(`/admin/projects/${projectId}/set-demo`)
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function adminListUsers() {
   try {
     const { data } = await api.get('/admin/users')

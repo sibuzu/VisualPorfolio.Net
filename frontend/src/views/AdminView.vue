@@ -28,7 +28,11 @@
             <td>{{ p.project_name }}</td>
             <td>{{ p.user_id }}</td>
             <td>{{ p.access_time }}</td>
-            <td><button @click="removeProject(p.project_id)">Delete</button></td>
+            <td class="action-cell">
+              <button @click="openProject(p.project_id)">Open</button>
+              <button @click="setDemo(p.project_id)">Set Demo</button>
+              <button @click="removeProject(p.project_id)">Delete</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -68,6 +72,7 @@ import {
   adminDeleteProject,
   adminDeleteUser,
   adminListProjects,
+  adminSetDemoProject,
   adminListUsers,
   adminLogin,
   adminLogout,
@@ -113,6 +118,22 @@ async function removeProject(projectId) {
     await load()
   } catch (e) {
     error.value = e.message || 'Delete project failed'
+  }
+}
+
+function openProject(projectId) {
+  const url = `${window.location.origin}/projects/${projectId}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+async function setDemo(projectId) {
+  if (!confirm(`Set ${projectId} as demo project VP-ZDEMOZ?`)) return
+  error.value = ''
+  try {
+    await adminSetDemoProject(projectId)
+    await load()
+  } catch (e) {
+    error.value = e.message || 'Set demo failed'
   }
 }
 
@@ -164,6 +185,9 @@ th, td {
   padding: 6px;
   text-align: left;
 }
+.action-cell {
+  white-space: nowrap;
+}
 button {
   padding: 6px 10px;
   border: 1px solid var(--accent);
@@ -171,6 +195,10 @@ button {
   background: var(--accent);
   color: white;
   cursor: pointer;
+  margin-right: 6px;
+}
+.action-cell button:last-child {
+  margin-right: 0;
 }
 .muted {
   color: var(--muted);

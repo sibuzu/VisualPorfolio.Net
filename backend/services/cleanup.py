@@ -20,9 +20,11 @@ def cleanup_stale_projects(hours: int = 72) -> int:
     deleted = 0
 
     with get_conn() as conn:
-        rows = conn.execute("SELECT project_id, access_time FROM projects").fetchall()
+        rows = conn.execute("SELECT project_id, user_id, access_time FROM projects").fetchall()
         stale_ids: list[str] = []
         for row in rows:
+            if str(row["user_id"]) == "admin":
+                continue
             try:
                 access_time = _iso_to_dt(row["access_time"])
             except Exception:

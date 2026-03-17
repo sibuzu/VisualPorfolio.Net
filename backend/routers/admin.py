@@ -7,9 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.db.database import get_conn
 from backend.services.auth import USERS_DB_PATH, require_admin
-from backend.services.project_access import project_dir
+from backend.services.project_access import now_utc_iso, project_dir, write_project_config
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+DEMO_PROJECT_ID = "VP-ZDEMOZ"
+DEMO_PROJECT_NAME = "DEMO"
+DEMO_USER_ID = "admin"
 
 
 def _users_conn() -> sqlite3.Connection:
@@ -38,6 +41,64 @@ def admin_delete_project(project_id: str, _: bool = Depends(require_admin)):
         conn.commit()
     shutil.rmtree(project_dir(project_id), ignore_errors=True)
     return {"ok": True, "project_id": project_id, "project_name": row["project_name"]}
+
+
+@router.post("/projects/{project_id}/set-demo")
+def admin_set_demo(project_id: str, _: bool = Depends(require_admin)):
+    with get_conn() as conn:
+        src = conn.execute(
+            "SELECT project_id, project_name FROM projects WHERE project_id = ?",
+            (project_id,),
+        ).fetchone()
+        if not src:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+    src_dir = project_dir(project_id)
+    dst_dir = project_dir(DEMO_PROJECT_ID)
+
+    if project_id != DEMO_PROJECT_ID:
+        shutil.rmtree(dst_dir, ignore_errors=True)
+        if src_dir.exists():
+            shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
+        else:
+            dst_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        dst_dir.mkdir(parents=True, exist_ok=True)
+
+    write_project_config(DEMO_PROJECT_ID, DEMO_PROJECT_NAME, DEMO_USER_ID)
+
+    ts = now_utc_iso()
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT project_id FROM projects WHERE project_id = ?",
+            (DEMO_PROJECT_ID,),
+        ).fetchone()
+        if row:
+            conn.execute(
+                """
+                UPDATE projects
+                SET user_id = ?, project_name = ?, create_time = ?, access_time = ?
+                WHERE project_id = ?
+                """,
+                (DEMO_USER_ID, DEMO_PROJECT_NAME, ts, ts, DEMO_PROJECT_ID),
+            )
+        else:
+            conn.execute(
+                """
+                INSERT INTO projects (project_id, user_id, project_name, create_time, access_time)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (DEMO_PROJECT_ID, DEMO_USER_ID, DEMO_PROJECT_NAME, ts, ts),
+            )
+        conn.commit()
+
+    return {
+        "ok": True,
+        "source_project_id": project_id,
+        "project_id": DEMO_PROJECT_ID,
+        "project_name": DEMO_PROJECT_NAME,
+        "user_id": DEMO_USER_ID,
+    }
 
 
 @router.get("/users")

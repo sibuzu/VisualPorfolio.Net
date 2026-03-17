@@ -34,12 +34,13 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { authLogout, authMe } from '../api'
 import { useProjectStore } from '../stores/project'
 
 const store = useProjectStore()
 const router = useRouter()
+const route = useRoute()
 const userId = ref('')
 const newProjectName = ref('')
 const isGuest = ref(false)
@@ -83,8 +84,14 @@ onMounted(() => {
   authMe().then((m) => {
     userId.value = m.user_id || ''
     isGuest.value = userId.value === 'guest'
-  }).catch(() => {})
-  store.loadProjects()
+    if (isGuest.value) {
+      router.replace({ path: '/login', query: { redirect: route.fullPath || '/' } })
+      return
+    }
+    store.loadProjects()
+  }).catch(() => {
+    router.replace({ path: '/login', query: { redirect: route.fullPath || '/' } })
+  })
 })
 </script>
 
