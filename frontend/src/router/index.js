@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import ProjectView from '../views/ProjectView.vue'
 import LoginView from '../views/LoginView.vue'
 import AdminView from '../views/AdminView.vue'
+import DocsView from '../views/DocsView.vue'
 import { authGuest, authMe } from '../api'
 
 const router = createRouter({
@@ -10,13 +11,14 @@ const router = createRouter({
   routes: [
     { path: '/login', component: LoginView },
     { path: '/admin', component: AdminView },
+    { path: '/docs', component: DocsView },
     { path: '/', component: HomeView },
     { path: '/projects/:projectId', component: ProjectView }
   ]
 })
 
 router.beforeEach(async (to) => {
-  if (to.path === '/login' || to.path === '/admin') return true
+  if (to.path === '/login' || to.path === '/admin' || to.path === '/docs') return true
   try {
     const me = await authMe()
     if (me?.user_id === 'guest' && !to.path.startsWith('/projects/')) {
