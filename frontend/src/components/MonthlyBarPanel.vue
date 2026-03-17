@@ -24,18 +24,30 @@
         {{ opt.label }}
       </button>
     </div>
-    <div ref="chartRef" class="chart"></div>
+    <div class="chart-wrap">
+      <canvas ref="chartRef" class="chart"></canvas>
+    </div>
   </section>
 </template>
 
 <script setup>
-import * as echarts from 'echarts'
+import {
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  Legend,
+  LinearScale,
+  Tooltip
+} from 'chart.js'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { usePortfolioStore } from '../stores/portfolio'
 
+Chart.register(CategoryScale, LinearScale, BarController, BarElement, Tooltip, Legend)
+
 const chartRef = ref(null)
-let chart
+let chart = null
 const store = usePortfolioStore()
 const { analysis, equities } = storeToRefs(store)
 const interval = ref(12)
@@ -107,13 +119,11 @@ const separateBucketSeries = computed(() => {
   return sortedSi.map((si) => {
     const eq = equities.value[si]
     const name = String(eq?.name || eq?.filename || `策略${si + 1}`).replace(/\.[^.]+$/, '')
-    const color = eq?.color
+    const color = eq?.color || '#6b7280'
     const dataByPeriod = bySiByPeriod.get(si) || new Map()
     return {
       name,
-      type: 'bar',
-      itemStyle: color ? { color } : undefined,
-      barGap: '0%',
+      color,
       data: periods.map((p) => Number(dataByPeriod.get(p) || 0))
     }
   })
@@ -121,74 +131,128 @@ const separateBucketSeries = computed(() => {
 
 function render() {
   if (!chartRef.value) return
-  if (!chart) chart = echarts.init(chartRef.value)
-  let legend = ['獲利']
-  let series = [{
-    name: '獲利',
-    type: 'bar',
-    itemStyle: { color: PROFIT_COLOR },
-    barGap: '0%',
-    data: bucketedRows.value.map((m) => m.profit)
-  }]
+
+  let datasets = [
+    {
+      label: '獲利',
+      data: bucketedRows.value.map((m) => m.profit),
+      backgroundColor: PROFIT_COLOR
+    }
+  ]
+
   if (category.value === 'profit_mdd') {
-    legend = ['獲利', 'MDD']
-    series = [
+    datasets = [
       {
-        name: '獲利',
-        type: 'bar',
-        itemStyle: { color: PROFIT_COLOR },
-        barGap: '0%',
-        data: bucketedRows.value.map((m) => m.profit)
+        label: '獲利',
+        data: bucketedRows.value.map((m) => m.profit),
+        backgroundColor: PROFIT_COLOR
       },
       {
-        name: 'MDD',
-        type: 'bar',
-        itemStyle: { color: MDD_COLOR },
-        barGap: '0%',
-        data: bucketedRows.value.map((m) => m.mdd)
+        label: 'MDD',
+        data: bucketedRows.value.map((m) => m.mdd),
+        backgroundColor: MDD_COLOR
       }
     ]
   } else if (category.value === 'profit_separate') {
-    series = separateBucketSeries.value
-    legend = series.map((s) => s.name)
+    datasets = separateBucketSeries.value.map((s) => ({
+      label: s.name,
+      data: s.data,
+      backgroundColor: s.color
+    }))
   }
-  const [yMin, yMax] = calcYRange(series)
-  chart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: legend },
-    xAxis: { type: 'category', data: bucketedRows.value.map((m) => m.period) },
-    yAxis: {
-      type: 'value',
-      min: yMin,
-      max: yMax,
-      axisLabel: {
-        formatter: (v) => Math.round(Number(v || 0)).toLocaleString('en-US')
-      }
+
+  const [yMin, yMax] = calcYRange(datasets)
+
+  if (chart) {
+    chart.destroy()
+    chart = null
+  }
+
+  chart = new Chart(chartRef.value, {
+    type: 'bar',
+    data: {
+      labels: bucketedRows.value.map((m) => m.period),
+      datasets: datasets.map((ds) => ({
+        ...ds,
+        borderWidth: 0,
+        categoryPercentage: 1,
+        barPercentage: 1,
+        barThickness: 'flex',
+        maxBarThickness: 44
+      }))
     },
-    series,
-    barCategoryGap: '30%'
-  }, { notMerge: true })
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const y = Number(ctx.parsed.y || 0)
+              return `${ctx.dataset.label}: ${Math.round(y).toLocaleString('en-US')}`
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: false,
+          grid: {
+            color: '#e5e7eb'
+          },
+          ticks: {
+            color: '#4b5563'
+          }
+        },
+        y: {
+          stacked: false,
+          min: yMin,
+          max: yMax,
+          grid: {
+            color: '#d9e1e8'
+          },
+          ticks: {
+            color: '#4b5563',
+            callback(v) {
+              return Math.round(Number(v || 0)).toLocaleString('en-US')
+            }
+          }
+        }
+      }
+    }
+  })
 }
 
-function calcYRange(series) {
+function calcYRange(datasets) {
   const vals = []
-  for (const s of series || []) {
-    for (const v of s.data || []) {
+  for (const ds of datasets || []) {
+    for (const v of ds.data || []) {
       const n = Number(v)
       if (Number.isFinite(n)) vals.push(n)
     }
   }
   if (!vals.length) return [0, 1]
+
   let min = Math.min(...vals)
   let max = Math.max(...vals)
   if (min === max) {
     const d = Math.max(1, Math.abs(min) * 0.1)
     return [Math.floor(min - d), Math.ceil(max + d)]
   }
+
   const pad = (max - min) * 0.08
   min -= pad
   max += pad
   return [Math.floor(min), Math.ceil(max)]
+}
+
+function onResize() {
+  chart?.resize()
 }
 
 watch([() => analysis.value.monthly, () => analysis.value.position_analysis, () => equities.value, interval, category], async () => {
@@ -196,8 +260,15 @@ watch([() => analysis.value.monthly, () => analysis.value.position_analysis, () 
   render()
 }, { deep: true })
 
-onMounted(render)
-onBeforeUnmount(() => chart?.dispose())
+onMounted(() => {
+  render()
+  window.addEventListener('resize', onResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize)
+  chart?.destroy()
+})
 </script>
 
 <style scoped>
@@ -222,8 +293,12 @@ onBeforeUnmount(() => chart?.dispose())
   border-color: var(--accent);
   color: var(--accent);
 }
-.chart {
+.chart-wrap {
   width: 100%;
   height: 420px;
+}
+.chart {
+  width: 100%;
+  height: 100%;
 }
 </style>
