@@ -25,7 +25,7 @@
         <li v-for="p in store.projects" :key="p.project_id" class="project-item">
           <div>
             <strong>{{ p.project_name }}</strong>
-            <p class="muted">{{ p.project_id }}</p>
+            <p class="muted">{{ p.project_id }} <span v-if="formatDate(p.create_time)" class="create-date">({{ formatDate(p.create_time) }})</span></p>
           </div>
           <div class="row">
             <button @click="openProject(p.project_id)">開啟</button>
@@ -75,6 +75,16 @@ async function renameProject(project) {
 
 function openProject(projectId) {
   router.push(`/projects/${projectId}`)
+}
+
+function formatDate(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 async function switchUser() {
@@ -178,6 +188,9 @@ button:disabled {
 }
 .muted {
   color: var(--muted);
+}
+.create-date {
+  font-size: 12px;
 }
 .error {
   color: #b00020;
