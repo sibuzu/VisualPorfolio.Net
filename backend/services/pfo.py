@@ -27,13 +27,21 @@ def load_pfo(path: Path) -> dict:
                 commission_config[k] = float(v)
             except ValueError:
                 continue
+    desc_node = root.find("./description")
+    description = (desc_node.text or "") if desc_node is not None else ""
     return {
         "equities": equities,
         "commission_config": commission_config,
+        "description": description,
     }
 
 
-def save_pfo(path: Path, equities: list[dict], commission_config: dict | None = None) -> None:
+def save_pfo(
+    path: Path,
+    equities: list[dict],
+    commission_config: dict | None = None,
+    description: str | None = None,
+) -> None:
     root = ET.Element("PortfolioyList")
     for eq in equities:
         ET.SubElement(
@@ -57,6 +65,8 @@ def save_pfo(path: Path, equities: list[dict], commission_config: dict | None = 
             attrs[str(k)] = str(v)
         if attrs:
             ET.SubElement(root, "CommissionConfig", attrs)
+    desc_el = ET.SubElement(root, "description")
+    desc_el.text = str(description or "")
 
     tree = ET.ElementTree(root)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -25,10 +25,15 @@ def init_db() -> None:
                 user_id TEXT NOT NULL,
                 project_name TEXT NOT NULL,
                 create_time TEXT NOT NULL,
-                access_time TEXT NOT NULL
+                access_time TEXT NOT NULL,
+                never_expires INTEGER NOT NULL DEFAULT 0
             )
             """
         )
+        cols = conn.execute("PRAGMA table_info(projects)").fetchall()
+        has_never_expires = any(str(c["name"]) == "never_expires" for c in cols)
+        if not has_never_expires:
+            conn.execute("ALTER TABLE projects ADD COLUMN never_expires INTEGER NOT NULL DEFAULT 0")
         conn.commit()
 
 

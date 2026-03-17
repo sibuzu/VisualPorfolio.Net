@@ -26,7 +26,8 @@ export const usePortfolioStore = defineStore('portfolio', {
     loading: false,
     error: '',
     updatingConfig: false,
-    commissionConfig: null
+    commissionConfig: null,
+    strategyDescription: ''
   }),
   actions: {
     setFilesAsEquities(files) {
@@ -122,8 +123,12 @@ export const usePortfolioStore = defineStore('portfolio', {
           this.commissionConfig = cfg
         }
       }
+
+      const dnode = doc.querySelector('description')
+      this.strategyDescription = dnode?.textContent || ''
     },
     async restoreProjectConfig(projectId) {
+      this.strategyDescription = ''
       try {
         const xml = await getPfo(projectId)
         this.applySavedConfigFromXml(xml)
@@ -169,6 +174,9 @@ export const usePortfolioStore = defineStore('portfolio', {
       if (!config || typeof config !== 'object') return
       this.commissionConfig = { ...config }
     },
+    setStrategyDescription(text) {
+      this.strategyDescription = String(text || '')
+    },
     async saveProjectPfo(projectId) {
       this.error = ''
       try {
@@ -181,7 +189,7 @@ export const usePortfolioStore = defineStore('portfolio', {
           active: !!eq.active,
           name: eq.name || eq.filename
         }))
-        return savePfo(projectId, items, this.commissionConfig)
+        return savePfo(projectId, items, this.commissionConfig, this.strategyDescription)
       } catch (e) {
         this.error = e.message
         throw e

@@ -76,6 +76,11 @@
       <WinLossPanel v-if="activeTab === '贏輸分析'" />
       <CommissionPanel v-if="activeTab === '分潤退傭'" :readonly="readonly" />
       <DiversityPanel v-if="activeTab === '多樣性分析'" />
+      <StrategyDescriptionPanel
+        v-if="activeTab === '其他'"
+        :readonly="readonly"
+        :project-id="String(route.params.projectId || '')"
+      />
     </section>
   </main>
 
@@ -99,13 +104,14 @@ import MonthlyBarPanel from '../components/MonthlyBarPanel.vue'
 import WinLossPanel from '../components/WinLossPanel.vue'
 import CommissionPanel from '../components/CommissionPanel.vue'
 import DiversityPanel from '../components/DiversityPanel.vue'
+import StrategyDescriptionPanel from '../components/StrategyDescriptionPanel.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
 const portfolioStore = usePortfolioStore()
 const currentUser = ref(currentUserId())
 
-const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '贏輸分析', '分潤退傭', '多樣性分析']
+const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '贏輸分析', '分潤退傭', '多樣性分析', '其他']
 const activeTab = ref('獲利報表')
 const viewError = ref('')
 const copyHint = ref('')

@@ -262,12 +262,13 @@ export async function runAnalysis(projectId, payload) {
   }
 }
 
-export async function savePfo(projectId, equities, commissionConfig = null) {
+export async function savePfo(projectId, equities, commissionConfig = null, description = '') {
   try {
     const payload = { equities }
     if (commissionConfig && typeof commissionConfig === 'object') {
       payload.commission_config = commissionConfig
     }
+    payload.description = String(description || '')
     const { data } = await api.put(`/projects/${projectId}/pfo`, payload)
     return data
   } catch (error) {

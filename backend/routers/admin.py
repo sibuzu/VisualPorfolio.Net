@@ -25,7 +25,7 @@ def _users_conn() -> sqlite3.Connection:
 def admin_list_projects(_: bool = Depends(require_admin)):
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT project_id, user_id, project_name, create_time, access_time FROM projects ORDER BY access_time DESC"
+            "SELECT project_id, user_id, project_name, create_time, access_time, never_expires FROM projects ORDER BY access_time DESC"
         ).fetchall()
     projects = [dict(r) for r in rows]
     return {"projects": projects}
@@ -77,7 +77,7 @@ def admin_set_demo(project_id: str, _: bool = Depends(require_admin)):
             conn.execute(
                 """
                 UPDATE projects
-                SET user_id = ?, project_name = ?, create_time = ?, access_time = ?
+                SET user_id = ?, project_name = ?, create_time = ?, access_time = ?, never_expires = 0
                 WHERE project_id = ?
                 """,
                 (DEMO_USER_ID, DEMO_PROJECT_NAME, ts, ts, DEMO_PROJECT_ID),

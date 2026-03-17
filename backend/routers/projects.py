@@ -83,7 +83,7 @@ def get_project(project_id: str, current_user: str = Depends(require_auth)):
 
 @router.patch("/{project_id}")
 def patch_project(project_id: str, payload: ProjectPatchRequest, current_user: str = Depends(require_auth)):
-    project = update_project(project_id, current_user, payload.project_name)
+    project = update_project(project_id, current_user, payload.project_name, payload.never_expires)
     return {"project": project}
 
 

@@ -22,6 +22,7 @@ def row_to_project(row) -> dict:
         "project_name": row["project_name"],
         "create_time": datetime.fromisoformat(row["create_time"]),
         "access_time": datetime.fromisoformat(row["access_time"]),
+        "never_expires": bool(row["never_expires"]) if "never_expires" in row.keys() else False,
     }
 
 
@@ -71,8 +72,8 @@ def create_project(user_id: str, project_name: str) -> dict:
     with get_conn() as conn:
         conn.execute(
             """
-            INSERT INTO projects (project_id, user_id, project_name, create_time, access_time)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO projects (project_id, user_id, project_name, create_time, access_time, never_expires)
+            VALUES (?, ?, ?, ?, ?, 0)
             """,
             (project_id, user_id, project_name.strip(), ts, ts),
         )
@@ -122,17 +123,24 @@ def touch_access_time(project_id: str) -> None:
         conn.commit()
 
 
-def update_project(project_id: str, user_id: str, project_name: str | None) -> dict:
+def update_project(
+    project_id: str,
+    user_id: str,
+    project_name: str | None,
+    never_expires: bool | None = None,
+) -> dict:
     project, access = get_project_access(project_id, user_id)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Read-only project")
 
     new_name = project_name.strip() if isinstance(project_name, str) else project["project_name"]
 
+    new_never_expires = project["never_expires"] if never_expires is None else bool(never_expires)
+
     with get_conn() as conn:
         conn.execute(
-            "UPDATE projects SET project_name = ?, access_time = ? WHERE project_id = ?",
-            (new_name, now_utc_iso(), project_id),
+            "UPDATE projects SET project_name = ?, never_expires = ?, access_time = ? WHERE project_id = ?",
+            (new_name, 1 if new_never_expires else 0, now_utc_iso(), project_id),
         )
         conn.commit()
     # Best-effort sync to config.json: project rename must not fail if file permission is broken.
@@ -149,8 +157,8 @@ def create_project_with_user(user_id: str, project_name: str) -> dict:
     with get_conn() as conn:
         conn.execute(
             """
-            INSERT INTO projects (project_id, user_id, project_name, create_time, access_time)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO projects (project_id, user_id, project_name, create_time, access_time, never_expires)
+            VALUES (?, ?, ?, ?, ?, 0)
             """,
             (project_id, user_id, project_name.strip(), ts, ts),
         )

@@ -24,6 +24,7 @@ class PfoItem(BaseModel):
 class PfoSaveRequest(BaseModel):
     equities: list[PfoItem] = Field(default_factory=list)
     commission_config: dict[str, float] | None = None
+    description: str | None = None
 
 
 @router.get("")
@@ -47,6 +48,7 @@ def put_pfo(project_id: str, payload: PfoSaveRequest, current_user: str = Depend
         path,
         [item.model_dump() for item in payload.equities],
         commission_config=payload.commission_config,
+        description=payload.description,
     )
     touch_access_time(project_id)
     return {"ok": True, "filename": path.name}
