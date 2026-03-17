@@ -21,11 +21,11 @@
       </thead>
       <tbody>
         <tr v-for="d in details" :key="d.strategy_index">
-          <td>策略{{ Number(d.strategy_index) + 1 }}</td>
+          <td>{{ strategyName(d.strategy_index) }}</td>
           <td>{{ pct(d.amount_share) }}</td>
           <td>{{ num(d.trade_count) }}</td>
-          <td>{{ num(d.total_amount) }}</td>
-          <td>{{ num(d.avg_amount) }}</td>
+          <td>{{ num0(d.total_amount) }}</td>
+          <td>{{ num0(d.avg_amount) }}</td>
           <td>{{ pct(d.avg_correlation) }}</td>
         </tr>
       </tbody>
@@ -38,7 +38,7 @@ import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { usePortfolioStore } from '../stores/portfolio'
 
-const { analysis } = storeToRefs(usePortfolioStore())
+const { analysis, equities } = storeToRefs(usePortfolioStore())
 const diversity = computed(() => analysis.value.diversity || {})
 const details = computed(() => diversity.value.details || [])
 const metrics = computed(() => diversity.value.metrics || {})
@@ -73,6 +73,15 @@ function num2(v) {
 function pct(v) {
   const n = Number(v || 0) * 100
   return `${n.toFixed(2)}%`
+}
+
+function strategyName(strategyIndex) {
+  const idx = Number(strategyIndex)
+  if (!Number.isFinite(idx) || idx < 0) return '策略'
+  const eq = equities.value?.[idx]
+  if (!eq) return `策略${idx + 1}`
+  const raw = String(eq.name || eq.filename || `策略${idx + 1}`)
+  return raw.replace(/\.[^.]+$/, '')
 }
 </script>
 

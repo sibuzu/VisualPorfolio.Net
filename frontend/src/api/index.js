@@ -253,6 +253,41 @@ export async function deleteProjectFile(projectId, filename) {
   }
 }
 
+export async function listProjectAttachments(projectId) {
+  try {
+    const { data } = await api.get(`/projects/${projectId}/files/attachments`)
+    return data.attachments || []
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function uploadProjectAttachment(projectId, file) {
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await api.post(`/projects/${projectId}/files/attachments`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function deleteProjectAttachment(projectId, filename) {
+  try {
+    const { data } = await api.delete(`/projects/${projectId}/files/attachments/${encodeURIComponent(filename)}`)
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export function getProjectAttachmentUrl(projectId, filename) {
+  return `${api.defaults.baseURL}/projects/${projectId}/files/attachments/${encodeURIComponent(filename)}`
+}
+
 export async function runAnalysis(projectId, payload) {
   try {
     const { data } = await api.post(`/projects/${projectId}/analysis`, payload)
