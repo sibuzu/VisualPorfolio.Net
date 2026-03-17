@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VisualPortfolio.Net 使用手冊</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --line: #dbe3ee;
+      --accent: #0f7890;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 60%);
+      line-height: 1.7;
+    }
+    .wrap {
+      max-width: 1080px;
+      margin: 24px auto;
+      padding: 0 16px 48px;
+    }
+    .hero, .section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(2, 6, 23, .03);
+    }
+    h1, h2, h3 { margin: 0 0 10px; line-height: 1.35; }
+    h1 { font-size: 36px; }
+    h2 { font-size: 26px; margin-top: 4px; }
+    h3 { font-size: 20px; margin-top: 8px; }
+    p, li { color: var(--muted); }
+    ol, ul { margin-top: 6px; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    img {
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      display: block;
+      margin: 8px 0;
+    }
+    code {
+      background: #e9eef7;
+      border-radius: 6px;
+      padding: 1px 6px;
+      color: #0b3c5f;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px;
+      text-align: left;
+      color: var(--muted);
+    }
+    th { background: #f8fbff; color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>VisualPortfolio.Net 使用手冊</h1>
+      <p>VisualPortfolio.Net 是策略組合報表（Visual Portfolio）的網路版，提供免安裝、可分享連結、可與桌面版互通的使用方式。</p>
+      <div class="toc">
+        <strong>目錄</strong>
+        <ol>
+          <li><a href="#features">系統特色</a></li>
+          <li><a href="#auth">帳號與權限</a></li>
+          <li><a href="#quickstart">快速上手流程</a></li>
+          <li><a href="#project">專案頁操作說明</a></li>
+          <li><a href="#tabs">分析分頁說明</a></li>
+          <li><a href="#desktop">Desktop 上傳/下載</a></li>
+          <li><a href="#cleanup">系統清理規則</a></li>
+          <li><a href="#faq">常見問題</a></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <h2>1. 系統特色</h2>
+      <ol>
+        <li>網頁即開即用：<a href="https://visualportfolio.sibuzu.com/">https://visualportfolio.sibuzu.com/</a></li>
+        <li>專案可直接分享：例如 <code>/projects/VP-ZDEMOZ</code></li>
+        <li>Desktop VisualPortfolio 可直接下載/上傳網路版專案資料。</li>
+        <li>專案資料超過 72 小時未被存取會自動清理（<code>admin</code> 專案不清理）。</li>
+      </ol>
+    </section>
+
+    <section id="auth" class="section">
+      <h2>2. 帳號與權限</h2>
+      <h3>2.1 帳號類型</h3>
+      <ul>
+        <li>一般使用者：可建立、編輯、刪除自己的專案。</li>
+        <li><code>guest</code>：可由 project 連結進入瀏覽，但不可建立/上傳/複製專案。</li>
+        <li><code>admin</code>：獨立 <code>/admin</code> 登入流程，用於維運管理。</li>
+      </ul>
+      <h3>2.2 保留名稱</h3>
+      <p><code>admin</code>、<code>guest</code> 不能註冊為一般帳號。</p>
+      <h3>2.3 權限矩陣</h3>
+      <table>
+        <thead><tr><th>功能</th><th>owner</th><th>read-only</th><th>guest</th></tr></thead>
+        <tbody>
+          <tr><td>看專案內容</td><td>Y</td><td>Y</td><td>Y</td></tr>
+          <tr><td>新增績效 / 刪除策略</td><td>Y</td><td>N</td><td>N</td></tr>
+          <tr><td>建立新專案</td><td>Y</td><td>Y</td><td>N</td></tr>
+          <tr><td>複製專案</td><td>Y</td><td>Y</td><td>N</td></tr>
+          <tr><td>上傳 ZIP</td><td>Y</td><td>N</td><td>N</td></tr>
+          <tr><td>下載 ZIP</td><td>Y</td><td>Y</td><td>Y（不需登入）</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="quickstart" class="section">
+      <h2>3. 快速上手流程</h2>
+      <ol>
+        <li>打開首頁 <a href="https://visualportfolio.sibuzu.com/">visualportfolio.sibuzu.com</a>。</li>
+        <li>第一次會進入 Login / Sign up。</li>
+      </ol>
+      <img src="../img/login.png" alt="login" />
+      <ol start="3">
+        <li>建立帳號後登入，進入主頁。</li>
+      </ol>
+      <img src="../img/main.png" alt="main" />
+      <ol start="4">
+        <li>建立專案或開啟既有專案。</li>
+      </ol>
+      <img src="../img/project.png" alt="project" />
+    </section>
+
+    <section id="project" class="section">
+      <h2>4. 專案頁操作說明</h2>
+      <ul>
+        <li>owner 顯示 <code>（可編輯）</code>，非 owner 顯示 <code>（可檢視）</code>。</li>
+        <li>可檢視模式不可新增/刪除策略，但可調整啟動、顏色、口數、權重、分潤設定做本地重算。</li>
+        <li>可檢視模式的調整不會寫入 server，Reload 後回復原值。</li>
+        <li>可透過「複製專案」建立自己的可編輯副本（guest 不可複製）。</li>
+      </ul>
+    </section>
+
+    <section id="tabs" class="section">
+      <h2>5. 分析分頁說明</h2>
+      <h3>5.1 獲利曲線</h3>
+      <img src="../img/獲利曲線.png" alt="獲利曲線" />
+      <h3>5.2 逐年獲利</h3>
+      <img src="../img/逐年獲利.png" alt="逐年獲利" />
+      <h3>5.3 贏輸分析</h3>
+      <img src="../img/贏輸分析.png" alt="贏輸分析" />
+      <h3>5.4 分潤退傭</h3>
+      <img src="../img/分潤退傭.png" alt="分潤退傭" />
+      <h3>5.5 多樣性分析</h3>
+      <img src="../img/多樣性分析.png" alt="多樣性分析" />
+      <p>主要指標包含：N、N_eff、EER、RDR、DCI、ISN、DSN；Summary 含 MDD、Sharpe、Sortino、獲利因子等。</p>
+    </section>
+
+    <section id="desktop" class="section">
+      <h2>6. Desktop VisualPortfolio 上傳/下載</h2>
+      <p>請使用 VisualPortfolio.exe v26.03.17.23964 以上版本。</p>
+      <img src="../img/vp-desktop.png" alt="vp desktop" />
+      <h3>6.1 上傳</h3>
+      <img src="../img/vp-upload.png" alt="vp upload" />
+      <ul>
+        <li>上傳需要登入。</li>
+        <li>project 已存在時必須同 owner 才能覆蓋。</li>
+        <li><code>guest</code> 不可上傳。</li>
+      </ul>
+      <h3>6.2 下載</h3>
+      <img src="../img/vp-download.png" alt="vp download" />
+      <ul>
+        <li>下載不需要登入。</li>
+        <li>可直接輸入 project-id 或 project URL。</li>
+      </ul>
+    </section>
+
+    <section id="cleanup" class="section">
+      <h2>7. 系統清理規則</h2>
+      <ol>
+        <li>服務啟動時先檢查一次。</li>
+        <li>之後每 1 小時檢查一次。</li>
+        <li>專案超過 72 小時未 access 會刪除。</li>
+        <li><code>user_id=admin</code> 的專案不會被清理。</li>
+      </ol>
+    </section>
+
+    <section id="faq" class="section">
+      <h2>8. 常見問題</h2>
+      <h3>Q1. 為什麼可檢視模式還能改口數/權重？</h3>
+      <p>那是本地試算，僅影響當下畫面，不會存回 server。</p>
+      <h3>Q2. 為什麼 Reload 後值又變回來？</h3>
+      <p>因為可檢視模式不會寫入 server，Reload 會回復原始設定。</p>
+      <h3>Q3. Help icon 行為？</h3>
+      <p>點擊會開啟 <code>/docs</code>，且重用同一個 docs 分頁。</p>
+    </section>
+  </div>
+</body>
+</html>
