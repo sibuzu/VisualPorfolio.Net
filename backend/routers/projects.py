@@ -119,10 +119,7 @@ def copy_project(project_id: str, payload: ProjectCopyRequest, current_user: str
 
 
 @router.get("/{project_id}/download")
-def download_project(project_id: str, current_user: str = Depends(require_auth)):
-    _, access = get_project_access(project_id, current_user)
-    if access != "owner":
-        raise HTTPException(status_code=403, detail="Only owner can download")
+def download_project(project_id: str):
     src_dir = project_dir(project_id)
     if not src_dir.exists():
         raise HTTPException(status_code=404, detail="Project directory not found")
@@ -156,6 +153,9 @@ def upload_project_zip(
     project_name: str = Form(..., min_length=1),
     current_user: str = Depends(require_auth),
 ):
+    if current_user == "guest":
+        raise HTTPException(status_code=403, detail="guest cannot upload project")
+
     project_name = project_name.strip()
     if not project_name:
         raise HTTPException(status_code=400, detail="project_name cannot be empty")
