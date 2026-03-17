@@ -26,10 +26,9 @@
               </svg>
             </button>
           </td>
-          <td><input :disabled="readonly" type="checkbox" v-model="e.active" @change="refresh" /></td>
+          <td><input type="checkbox" v-model="e.active" @change="refresh" /></td>
           <td>
             <input
-              :disabled="readonly"
               class="color-input"
               type="color"
               v-model="e.color"
@@ -37,8 +36,8 @@
             />
           </td>
           <td class="name-cell" :title="displayName(e.name)">{{ displayName(e.name) }}</td>
-          <td><input :disabled="readonly" type="text" inputmode="decimal" v-model="e.contract" @change="refresh" /></td>
-          <td><input :disabled="readonly" type="text" inputmode="decimal" v-model="e.weight" @change="refresh" /></td>
+          <td><input type="text" inputmode="decimal" v-model="e.contract" @change="refresh" /></td>
+          <td><input type="text" inputmode="decimal" v-model="e.weight" @change="refresh" /></td>
         </tr>
       </tbody>
     </table>
@@ -50,7 +49,7 @@ import { useRoute } from 'vue-router'
 import { usePortfolioStore } from '../stores/portfolio'
 import { useProjectStore } from '../stores/project'
 
-defineProps({ readonly: Boolean })
+const props = defineProps({ readonly: Boolean })
 const route = useRoute()
 const store = usePortfolioStore()
 const projectStore = useProjectStore()
@@ -60,10 +59,15 @@ function displayName(name) {
 }
 
 async function refresh() {
+  if (props.readonly) {
+    await store.analyze(route.params.projectId)
+    return
+  }
   await store.persistAndAnalyze(route.params.projectId)
 }
 
 async function removeEquity(equity) {
+  if (props.readonly) return
   if (!confirm(`確定要刪除策略檔案「${equity.filename}」嗎？`)) return
   await projectStore.deleteFile(route.params.projectId, equity.filename)
   store.setFilesAsEquities(projectStore.files)
@@ -112,6 +116,13 @@ input[type='text'] {
 }
 .delete-btn:hover svg {
   fill: #b00020;
+}
+.delete-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.delete-btn:disabled svg {
+  fill: #9ca3af;
 }
 th:nth-child(1), td:nth-child(1) { width: 40px; text-align: center; }
 th:nth-child(2), td:nth-child(2) { width: 44px; text-align: center; }

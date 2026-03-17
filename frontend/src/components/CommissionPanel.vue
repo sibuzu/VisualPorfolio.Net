@@ -3,7 +3,7 @@
     <h4>Config</h4>
     <div class="config-cards">
       <div class="config-card" v-for="c in configRows" :key="c.key">
-        <button v-if="!readonly" type="button" class="edit-btn" title="編輯" aria-label="編輯" @click="startEdit(c)">
+        <button type="button" class="edit-btn" title="編輯" aria-label="編輯" @click="startEdit(c)">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l8.06-8.06.92.92L5.92 19.58zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
           </svg>
@@ -187,7 +187,6 @@ function intNum(v) {
 }
 
 function startEdit(row) {
-  if (props.readonly) return
   configError.value = ''
   editingKey.value = row.key
   draftValue.value = String(normalizedConfig.value[row.key] ?? 0)
@@ -201,7 +200,6 @@ function startEdit(row) {
 }
 
 async function saveEdit(row) {
-  if (props.readonly) return
   committingByEnter.value = true
   const n = Number(draftValue.value)
   if (!Number.isFinite(n)) {
@@ -218,7 +216,11 @@ async function saveEdit(row) {
   draftValue.value = ''
   try {
     portfolioStore.setCommissionConfig(next)
-    await portfolioStore.persistAndAnalyze(route.params.projectId)
+    if (props.readonly) {
+      await portfolioStore.analyze(route.params.projectId)
+    } else {
+      await portfolioStore.persistAndAnalyze(route.params.projectId)
+    }
   } catch (e) {
     configError.value = e.message || '更新分潤設定失敗'
   } finally {
