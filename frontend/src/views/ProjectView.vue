@@ -65,6 +65,7 @@
         </svg>
       </a>
       <p v-if="viewError" class="error">{{ viewError }}</p>
+      <RouterLink v-if="showBackHome" class="error-back-link" to="/">&lt;back to home&gt;</RouterLink>
       <div class="tabs">
         <button v-for="tab in tabs" :key="tab" :class="{ active: activeTab === tab }" @click="activeTab = tab">{{ tab }}</button>
       </div>
@@ -80,6 +81,7 @@
 
   <main v-else class="loading">
     <p v-if="viewError" class="error">{{ viewError }}</p>
+    <RouterLink v-if="showBackHome" class="error-back-link" to="/">&lt;back to home&gt;</RouterLink>
     <p v-else>載入專案中...</p>
   </main>
 </template>
@@ -117,6 +119,7 @@ const readonly = computed(() => {
   return p.user_id !== currentUser.value
 })
 const canCloneProject = computed(() => currentUser.value !== 'guest')
+const showBackHome = computed(() => /Project not found/i.test(String(viewError.value || '')))
 
 async function loadAll() {
   viewError.value = ''
@@ -425,6 +428,12 @@ button.active {
 }
 .error {
   color: #b00020;
+}
+.error-back-link {
+  color: var(--accent);
+  text-decoration: underline;
+  display: inline-block;
+  margin: 4px 0 8px;
 }
 @media (max-width: 900px) {
   .wrap {

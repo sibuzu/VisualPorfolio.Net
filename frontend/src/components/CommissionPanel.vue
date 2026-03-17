@@ -75,9 +75,9 @@ const props = defineProps({
 
 const route = useRoute()
 const portfolioStore = usePortfolioStore()
-const { analysis } = storeToRefs(portfolioStore)
+const { analysis, commissionConfig } = storeToRefs(portfolioStore)
 const commission = computed(() => analysis.value.commission || {})
-const commissionCfg = computed(() => commission.value.config || {})
+const commissionCfg = computed(() => commissionConfig.value || commission.value.config || {})
 const editingKey = ref('')
 const draftValue = ref('')
 const configError = ref('')
