@@ -110,6 +110,7 @@ const route = useRoute()
 const projectStore = useProjectStore()
 const portfolioStore = usePortfolioStore()
 const currentUser = ref(currentUserId())
+const DEFAULT_TITLE = 'VisualPortfolio.Net'
 
 const tabs = ['獲利報表', '獲利曲線', '逐年獲利', '贏輸分析', '分潤退傭', '多樣性分析', '其他']
 const activeTab = ref('獲利報表')
@@ -127,14 +128,21 @@ const readonly = computed(() => {
 const canCloneProject = computed(() => currentUser.value !== 'guest')
 const showBackHome = computed(() => /Project not found/i.test(String(viewError.value || '')))
 
+function updateDocumentTitle() {
+  const name = String(projectStore.activeProject?.project_name || '').trim()
+  document.title = name || DEFAULT_TITLE
+}
+
 async function loadAll() {
   viewError.value = ''
   try {
     await projectStore.loadProject(route.params.projectId)
+    updateDocumentTitle()
     portfolioStore.setFilesAsEquities(projectStore.files)
     await portfolioStore.restoreProjectConfig(route.params.projectId)
     await refreshAnalysis()
   } catch (e) {
+    document.title = DEFAULT_TITLE
     viewError.value = e.message || '載入專案失敗'
   }
 }
@@ -254,6 +262,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', stopResize)
+  document.title = DEFAULT_TITLE
 })
 </script>
 

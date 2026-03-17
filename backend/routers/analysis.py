@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Lock
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -16,6 +19,10 @@ from backend.services.summary_report import build_report
 from backend.services.win_loss import build_win_loss
 
 router = APIRouter(prefix="/projects/{project_id}/analysis", tags=["analysis"])
+_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="analysis-job")
+_jobs_lock = Lock()
+_jobs: dict[str, dict] = {}
+_JOB_TTL_HOURS = 24
 
 
 class EquityConfig(BaseModel):
@@ -48,29 +55,30 @@ class AnalysisRequest(BaseModel):
     options: Options = Options()
 
 
+def _empty_analysis() -> dict:
+    return {
+        "summary": {},
+        "equity_curve": [],
+        "monthly": [],
+        "annual": [],
+        "weekly": [],
+        "position_analysis": [],
+        "win_loss": {},
+        "commission": {},
+        "diversity": {},
+        "mdd_markers": [],
+    }
+
+
 def _parse_date(value: str | None) -> datetime | None:
     if not value:
         return None
     return datetime.strptime(value, "%Y-%m-%d")
 
 
-@router.post("")
-def run_analysis(project_id: str, payload: AnalysisRequest, current_user: str = Depends(require_auth)):
-    get_project_access(project_id, current_user)
-
+def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
     if not payload.equities:
-        return {
-            "summary": {},
-            "equity_curve": [],
-            "monthly": [],
-            "annual": [],
-            "weekly": [],
-            "position_analysis": [],
-            "win_loss": {},
-            "commission": {},
-            "diversity": {},
-            "mdd_markers": [],
-        }
+        return _empty_analysis()
 
     folder = project_dir(project_id)
     strategy_trades: list[tuple[list, dict]] = []
@@ -134,7 +142,7 @@ def run_analysis(project_id: str, payload: AnalysisRequest, current_user: str = 
             ),
         )
 
-    return {
+    result = {
         "summary": report["summary"],
         "equity_curve": report["equity_curve"],
         "monthly": report["monthly"],
@@ -146,3 +154,142 @@ def run_analysis(project_id: str, payload: AnalysisRequest, current_user: str = 
         "diversity": build_diversity(merged),
         "mdd_markers": report["mdd_markers"],
     }
+    return result
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _prune_jobs() -> None:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=_JOB_TTL_HOURS)
+    with _jobs_lock:
+        stale = []
+        for jid, job in _jobs.items():
+            status = str(job.get("status", ""))
+            if status not in {"done", "failed"}:
+                continue
+            ts = job.get("finished_at") or job.get("updated_at") or job.get("created_at")
+            try:
+                dt = datetime.fromisoformat(str(ts))
+            except Exception:
+                stale.append(jid)
+                continue
+            if dt < cutoff:
+                stale.append(jid)
+        for jid in stale:
+            _jobs.pop(jid, None)
+
+
+def _run_job(job_id: str, project_id: str, payload_data: dict) -> None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if not job:
+            return
+        job["status"] = "running"
+        job["updated_at"] = _now_iso()
+
+    try:
+        payload = AnalysisRequest.model_validate(payload_data)
+        result = _build_analysis(project_id, payload)
+    except HTTPException as e:
+        with _jobs_lock:
+            job = _jobs.get(job_id)
+            if job:
+                job["status"] = "failed"
+                job["error"] = str(e.detail)
+                job["updated_at"] = _now_iso()
+                job["finished_at"] = _now_iso()
+        return
+    except Exception as e:
+        with _jobs_lock:
+            job = _jobs.get(job_id)
+            if job:
+                job["status"] = "failed"
+                job["error"] = str(e)
+                job["updated_at"] = _now_iso()
+                job["finished_at"] = _now_iso()
+        return
+
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job:
+            job["status"] = "done"
+            job["result"] = result
+            job["updated_at"] = _now_iso()
+            job["finished_at"] = _now_iso()
+
+
+def _get_job_or_404(project_id: str, job_id: str, current_user: str) -> dict:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Analysis job not found")
+    if job.get("project_id") != project_id:
+        raise HTTPException(status_code=404, detail="Analysis job not found")
+    if job.get("user_id") != current_user:
+        raise HTTPException(status_code=403, detail="Analysis job is owned by another user")
+    return job
+
+
+@router.post("")
+def run_analysis(project_id: str, payload: AnalysisRequest, current_user: str = Depends(require_auth)):
+    get_project_access(project_id, current_user)
+    result = _build_analysis(project_id, payload)
+    touch_access_time(project_id)
+    return result
+
+
+@router.post("/jobs")
+def create_analysis_job(project_id: str, payload: AnalysisRequest, current_user: str = Depends(require_auth)):
+    get_project_access(project_id, current_user)
+    _prune_jobs()
+
+    job_id = uuid4().hex
+    now = _now_iso()
+    with _jobs_lock:
+        _jobs[job_id] = {
+            "job_id": job_id,
+            "project_id": project_id,
+            "user_id": current_user,
+            "status": "queued",
+            "created_at": now,
+            "updated_at": now,
+            "finished_at": None,
+            "error": "",
+            "result": None,
+        }
+
+    _executor.submit(_run_job, job_id, project_id, payload.model_dump())
+    touch_access_time(project_id)
+    return {"job_id": job_id, "status": "queued"}
+
+
+@router.get("/jobs/{job_id}")
+def get_analysis_job(project_id: str, job_id: str, current_user: str = Depends(require_auth)):
+    get_project_access(project_id, current_user)
+    _prune_jobs()
+    job = _get_job_or_404(project_id, job_id, current_user)
+    touch_access_time(project_id)
+    return {
+        "job_id": job["job_id"],
+        "status": job["status"],
+        "error": job.get("error", ""),
+        "created_at": job.get("created_at"),
+        "updated_at": job.get("updated_at"),
+        "finished_at": job.get("finished_at"),
+    }
+
+
+@router.get("/jobs/{job_id}/result")
+def get_analysis_job_result(project_id: str, job_id: str, current_user: str = Depends(require_auth)):
+    get_project_access(project_id, current_user)
+    _prune_jobs()
+    job = _get_job_or_404(project_id, job_id, current_user)
+    status = job.get("status")
+    if status == "failed":
+        raise HTTPException(status_code=400, detail=job.get("error") or "Analysis job failed")
+    if status != "done":
+        raise HTTPException(status_code=409, detail="Analysis job not completed")
+    touch_access_time(project_id)
+    return job.get("result") or _empty_analysis()

@@ -303,21 +303,41 @@ function shouldRetryAnalysis(error) {
 }
 
 export async function runAnalysis(projectId, payload) {
-  const url = `/projects/${projectId}/analysis`
-  const timeoutMs = 60000
+  const createUrl = `/projects/${projectId}/analysis/jobs`
   const maxAttempts = 2
+  const pollIntervalMs = 1200
+  const pollMaxMs = 8 * 60 * 1000
 
-  let lastError
+  let lastError = null
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const { data } = await api.post(url, payload, { timeout: timeoutMs })
-      return data
+      const createResp = await api.post(createUrl, payload)
+      const jobId = createResp?.data?.job_id
+      if (!jobId) {
+        throw new Error('Analysis job_id missing')
+      }
+
+      const start = Date.now()
+      while (Date.now() - start < pollMaxMs) {
+        const { data: statusData } = await api.get(`/projects/${projectId}/analysis/jobs/${encodeURIComponent(jobId)}`)
+        const status = String(statusData?.status || '')
+        if (status === 'done') {
+          const { data } = await api.get(`/projects/${projectId}/analysis/jobs/${encodeURIComponent(jobId)}/result`)
+          return data
+        }
+        if (status === 'failed') {
+          throw new Error(statusData?.error || 'Analysis job failed')
+        }
+        await sleep(pollIntervalMs)
+      }
+
+      throw new Error('Analysis polling timeout')
     } catch (error) {
       lastError = error
       if (attempt >= maxAttempts || !shouldRetryAnalysis(error)) {
         throw toError(error)
       }
-      await sleep(800)
+      await sleep(1000)
     }
   }
   throw toError(lastError)
