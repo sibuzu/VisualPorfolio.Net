@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import logging
 import shutil
 import tempfile
 import zipfile
 from pathlib import Path
 import os
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse
 from starlette.background import BackgroundTask
 
 from backend.models.project import ProjectCopyRequest, ProjectCreateRequest, ProjectListResponse, ProjectPatchRequest
@@ -27,6 +28,7 @@ from backend.services.project_access import (
 from backend.db.database import get_conn
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+_og_logger = logging.getLogger("uvicorn.error")
 
 
 def _cleanup_temp_file(path: Path) -> None:
@@ -93,6 +95,59 @@ def get_project(project_id: str, current_user: str = Depends(require_auth)):
     project, _ = get_project_access(project_id, current_user)
     touch_access_time(project_id)
     return {"project": project}
+
+
+@router.get("/{project_id}/og-preview", response_class=HTMLResponse)
+def og_preview(project_id: str, request: Request):
+    """Return an HTML page with Open Graph meta tags for social media crawlers (Line, FB, etc.).
+    Real browsers are immediately redirected back to the SPA via JavaScript.
+    """
+    try:
+        project = get_project_record(project_id)
+        project_name = project["project_name"]
+    except HTTPException:
+        project_name = "VisualPortfolio.Net"
+
+    site_url = "https://visualportfolio.sibuzu.com"
+    page_url = f"{site_url}/projects/{project_id}"
+    description = f"VisualPortfolio.Net - {project_name}"
+    ua = request.headers.get("user-agent", "")
+    xff = request.headers.get("x-forwarded-for", "")
+    host = request.headers.get("host", "")
+    _og_logger.info(
+        "og-preview hit project_id=%s project_name=%s host=%s ua=%s xff=%s",
+        project_id,
+        project_name,
+        host,
+        ua,
+        xff,
+    )
+
+    html = f"""<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{project_name}</title>
+    <meta name="description" content="{description}" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{page_url}" />
+    <meta property="og:title" content="{project_name}" />
+    <meta property="og:description" content="{description}" />
+    <meta property="og:site_name" content="VisualPortfolio.Net" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="{project_name}" />
+    <meta name="twitter:description" content="{description}" />
+    <!-- Redirect real browsers back to SPA -->
+    <script>window.location.replace("{page_url}");</script>
+  </head>
+  <body>
+    <p>Redirecting to <a href="{page_url}">{project_name}</a>…</p>
+  </body>
+</html>"""
+    return HTMLResponse(content=html)
 
 
 @router.patch("/{project_id}")

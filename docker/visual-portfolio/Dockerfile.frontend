@@ -19,11 +19,38 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy built Vue app
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# nginx config: SPA fallback to index.html
+# ── Nginx config files ────────────────────────────────────────────────────────
+# 1. Bot UA map (must be at http context level; conf.d/*.conf is included there)
+RUN printf 'map $http_user_agent $is_og_bot {\n\
+    default              0;\n\
+    "~*Linespider"       1;\n\
+    "~*LineBot"          1;\n\
+    "~*\\bLine\\b"       1;\n\
+    "~*facebookexternalhit" 1;\n\
+    "~*Facebot"          1;\n\
+    "~*Twitterbot"       1;\n\
+    "~*TelegramBot"      1;\n\
+    "~*Slackbot"         1;\n\
+    "~*WhatsApp"         1;\n\
+    "~*LinkedInBot"      1;\n\
+    "~*Discordbot"       1;\n\
+    "~*pinterest"        1;\n\
+    }\n' > /etc/nginx/conf.d/00_og_map.conf
+
+# 2. Main server block
+#    Social crawlers visiting /projects/{id} are redirected to the backend
+#    OG-preview endpoint (302 so crawlers follow it; no JS required by them).
 RUN printf 'server {\n\
     listen 80;\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
+    \n\
+    location ~ ^/projects/([^/]+)$ {\n\
+    if ($is_og_bot) {\n\
+    return 302 https://api-visualportfolio.sibuzu.com$uri/og-preview;\n\
+    }\n\
+    try_files $uri $uri/ /index.html;\n\
+    }\n\
     \n\
     location / {\n\
     try_files $uri $uri/ /index.html;\n\
