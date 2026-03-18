@@ -33,7 +33,10 @@ export const usePortfolioStore = defineStore('portfolio', {
     setFilesAsEquities(files) {
       const existingByFile = new Map(this.equities.map((x) => [x.filename, x]))
       this.equities = files
-        .filter((f) => f.filename.endsWith('.srp') || f.filename.endsWith('.xrp'))
+        .filter((f) => {
+          const name = String(f.filename || '').toLowerCase()
+          return name.endsWith('.srp') || name.endsWith('.xrp') || name.endsWith('.xml')
+        })
         .map((f, i) => ({
           filename: f.filename,
           active: true,

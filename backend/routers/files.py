@@ -13,7 +13,7 @@ from backend.services.auth import require_auth
 
 router = APIRouter(prefix="/projects/{project_id}/files", tags=["files"])
 
-_ALLOWED = {".srp", ".xrp"}
+_ALLOWED = {".srp", ".xrp", ".xml"}
 _ATTACHMENT_ALLOWED = {".png", ".jpg", ".jpeg"}
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -21,7 +21,7 @@ _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 def _validate_filename(name: str) -> None:
     ext = Path(name).suffix.lower()
     if ext not in _ALLOWED:
-        raise HTTPException(status_code=400, detail="Only .srp/.xrp are allowed")
+        raise HTTPException(status_code=400, detail="Only .srp/.xrp/.xml are allowed")
 
 
 def _sanitize_filename(name: str, allowed_ext: set[str]) -> str:

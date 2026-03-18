@@ -43,7 +43,7 @@
             </svg>
             <span>新增績效</span>
           </button>
-          <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp" multiple :disabled="readonly" @change="upload" />
+          <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp,.xml" multiple :disabled="readonly" @change="upload" />
         </div>
         <EquityManager :readonly="readonly" />
         <p v-if="portfolioStore.updatingConfig" class="updating-hint">更新中...</p>

@@ -51,13 +51,27 @@ def _safe_extract_zip(zip_path: Path, dst: Path) -> None:
     root = dst.resolve()
     with zipfile.ZipFile(zip_path, "r") as zf:
         for member in zf.infolist():
-            name = member.filename or ""
-            if not name or name.endswith("/"):
+            raw_name = member.filename or ""
+            if not raw_name:
                 continue
-            target = (dst / name).resolve()
+            # Normalize Windows-style separators inside zip entries.
+            normalized = raw_name.replace("\\", "/")
+            parts = [p for p in normalized.split("/") if p not in {"", "."}]
+            if not parts:
+                continue
+            if any(p == ".." for p in parts):
+                raise HTTPException(status_code=400, detail="Invalid zip path")
+            rel_name = "/".join(parts)
+
+            target = (dst / rel_name).resolve()
             if root not in target.parents and target != root:
                 raise HTTPException(status_code=400, detail="Invalid zip path")
-        zf.extractall(dst)
+            if member.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(member, "r") as src, target.open("wb") as out:
+                shutil.copyfileobj(src, out)
 
 
 @router.get("", response_model=ProjectListResponse)
