@@ -18,6 +18,7 @@ from backend.services.project_access import (
     create_project_with_user,
     get_project as get_project_record,
     get_project_access,
+    list_important_projects,
     list_projects_for_guest,
     now_utc_iso,
     project_dir,
@@ -79,6 +80,13 @@ def _safe_extract_zip(zip_path: Path, dst: Path) -> None:
 @router.get("", response_model=ProjectListResponse)
 def list_projects(current_user: str = Depends(require_auth)):
     projects = list_projects_for_guest(current_user)
+    return {"projects": projects}
+
+
+@router.get("/important", response_model=ProjectListResponse)
+def important_projects(current_user: str = Depends(require_auth)):
+    _ = current_user
+    projects = list_important_projects()
     return {"projects": projects}
 
 
@@ -152,7 +160,13 @@ def og_preview(project_id: str, request: Request):
 
 @router.patch("/{project_id}")
 def patch_project(project_id: str, payload: ProjectPatchRequest, current_user: str = Depends(require_auth)):
-    project = update_project(project_id, current_user, payload.project_name, payload.never_expires)
+    project = update_project(
+        project_id,
+        current_user,
+        payload.project_name,
+        payload.never_expires,
+        payload.important,
+    )
     return {"project": project}
 
 

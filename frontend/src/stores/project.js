@@ -5,6 +5,7 @@ import {
   deleteProject,
   deleteProjectFile,
   getProject,
+  listImportantProjects,
   listProjectFiles,
   listProjects,
   updateProject,
@@ -14,6 +15,7 @@ import {
 export const useProjectStore = defineStore('project', {
   state: () => ({
     projects: [],
+    importantProjects: [],
     activeProject: null,
     files: [],
     loading: false,
@@ -31,10 +33,16 @@ export const useProjectStore = defineStore('project', {
       this.loading = true
       this.error = ''
       try {
-        this.projects = await this._withTimeout(
+        const projects = await this._withTimeout(
           listProjects(),
           15000,
           '載入專案逾時，請檢查 API 網址與 Tunnel 設定'
+        )
+        this.projects = projects
+        this.importantProjects = await this._withTimeout(
+          listImportantProjects(),
+          15000,
+          '載入重要列表逾時，請檢查 API 網址與 Tunnel 設定'
         )
       } catch (e) {
         this.error = e.message

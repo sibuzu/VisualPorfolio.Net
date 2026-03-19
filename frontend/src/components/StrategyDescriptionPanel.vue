@@ -2,15 +2,26 @@
   <section class="panel-wrap">
     <div class="block">
       <h3 class="block-title">設定</h3>
-      <label class="setting-item">
-        <input
-          v-model="neverExpires"
-          type="checkbox"
-          :disabled="readonly || settingSaving"
-          @change="onToggleNeverExpires"
-        />
-        <span>never expires</span>
-      </label>
+      <div class="setting-list">
+        <label class="setting-item">
+          <input
+            v-model="neverExpires"
+            type="checkbox"
+            :disabled="readonly || settingSaving"
+            @change="onToggleNeverExpires"
+          />
+          <span>never expires</span>
+        </label>
+        <label class="setting-item">
+          <input
+            v-model="important"
+            type="checkbox"
+            :disabled="readonly || settingSaving"
+            @change="onToggleImportant"
+          />
+          <span>important</span>
+        </label>
+      </div>
     </div>
 
     <div class="block">
@@ -132,6 +143,7 @@ const { activeProject } = storeToRefs(projectStore)
 
 const draft = ref('')
 const neverExpires = ref(false)
+const important = ref(false)
 const saving = ref(false)
 const settingSaving = ref(false)
 const savedOk = ref(false)
@@ -161,6 +173,7 @@ watch(
   activeProject,
   (p) => {
     neverExpires.value = !!p?.never_expires
+    important.value = !!p?.important
   },
   { immediate: true }
 )
@@ -204,6 +217,21 @@ async function onToggleNeverExpires() {
     await projectStore.loadProjects()
   } catch (e) {
     neverExpires.value = !!activeProject.value?.never_expires
+    error.value = e?.message || '更新設定失敗'
+  } finally {
+    settingSaving.value = false
+  }
+}
+
+async function onToggleImportant() {
+  if (props.readonly) return
+  settingSaving.value = true
+  error.value = ''
+  try {
+    await projectStore.patchProject(props.projectId, { important: !!important.value })
+    await projectStore.loadProjects()
+  } catch (e) {
+    important.value = !!activeProject.value?.important
     error.value = e?.message || '更新設定失敗'
   } finally {
     settingSaving.value = false
@@ -374,6 +402,11 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   font-size: 15px;
+}
+.setting-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .dropzone {
   border: 1px dashed #b6c2cf;

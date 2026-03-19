@@ -173,6 +173,15 @@ export async function listProjects() {
   }
 }
 
+export async function listImportantProjects() {
+  try {
+    const { data } = await api.get('/projects/important')
+    return data.projects || []
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function createProject(projectName) {
   try {
     const { data } = await api.post('/projects', {

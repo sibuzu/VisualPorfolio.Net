@@ -19,7 +19,24 @@
     </section>
 
     <section class="panel card">
-      <h2>專案列表</h2>
+      <h2>重要專案</h2>
+      <p v-if="store.loading">載入中...</p>
+      <ul v-else class="list">
+        <li v-for="p in store.importantProjects" :key="`important-${p.project_id}`" class="project-item">
+          <div>
+            <strong>{{ p.project_name }}</strong>
+            <p class="muted">{{ p.project_id }} <span v-if="formatDate(p.create_time)" class="create-date">({{ formatDate(p.create_time) }})</span></p>
+          </div>
+          <div class="row">
+            <button @click="openProject(p.project_id)">開啟</button>
+          </div>
+        </li>
+      </ul>
+      <p v-if="!store.loading && !store.importantProjects.length" class="muted">目前沒有重要專案</p>
+    </section>
+
+    <section class="panel card">
+      <h2>個人專案</h2>
       <p v-if="store.loading">載入中...</p>
       <ul v-else class="list">
         <li v-for="p in store.projects" :key="p.project_id" class="project-item">

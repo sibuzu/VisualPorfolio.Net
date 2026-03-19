@@ -1,5 +1,23 @@
 <template>
   <main class="admin-wrap">
+    <div v-if="showLoginDialog" class="login-overlay" @click.self="cancelLogin">
+      <div class="login-card">
+        <h3>Admin Login</h3>
+        <p class="muted">User: admin</p>
+        <input
+          ref="pwdInputRef"
+          v-model="adminPassword"
+          type="password"
+          placeholder="請輸入管理者密碼"
+          @keyup.enter="submitLogin"
+        />
+        <div class="login-actions">
+          <button class="cancel-btn" @click="cancelLogin">取消</button>
+          <button @click="submitLogin">登入</button>
+        </div>
+      </div>
+    </div>
+
     <section class="panel admin-card">
       <div class="head">
         <h1>Admin</h1>
@@ -66,7 +84,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   adminDeleteProject,
@@ -83,6 +101,9 @@ const router = useRouter()
 const projects = ref([])
 const users = ref([])
 const error = ref('')
+const showLoginDialog = ref(false)
+const adminPassword = ref('')
+const pwdInputRef = ref(null)
 
 async function load() {
   const [p, u] = await Promise.all([adminListProjects(), adminListUsers()])
@@ -95,19 +116,30 @@ async function ensureAdmin() {
     await adminMe()
     await load()
   } catch {
-    const pwd = prompt('Admin password')
-    if (!pwd) {
-      router.replace('/')
-      return
-    }
-    try {
-      await adminLogin(pwd)
-      await load()
-    } catch (e) {
-      error.value = e.message || 'Admin login failed'
-      router.replace('/')
-    }
+    showLoginDialog.value = true
+    await nextTick()
+    pwdInputRef.value?.focus()
   }
+}
+
+async function submitLogin() {
+  const pwd = String(adminPassword.value || '').trim()
+  if (!pwd) return
+  try {
+    await adminLogin(pwd)
+    showLoginDialog.value = false
+    adminPassword.value = ''
+    await load()
+  } catch (e) {
+    error.value = e.message || 'Admin login failed'
+    router.replace('/')
+  }
+}
+
+function cancelLogin() {
+  showLoginDialog.value = false
+  adminPassword.value = ''
+  router.replace('/')
 }
 
 async function removeProject(projectId) {
@@ -161,6 +193,44 @@ onMounted(() => {
 <style scoped>
 .admin-wrap {
   padding: 16px;
+}
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-card {
+  width: min(92vw, 360px);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+.login-card h3 {
+  margin: 0 0 6px;
+}
+.login-card input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 8px;
+  box-sizing: border-box;
+}
+.login-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.cancel-btn {
+  background: #fff;
+  color: var(--accent);
+  border-color: var(--line);
 }
 .admin-card {
   padding: 16px;

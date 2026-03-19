@@ -12,6 +12,7 @@ class ProjectCreateRequest(BaseModel):
 class ProjectPatchRequest(BaseModel):
     project_name: str | None = Field(default=None, min_length=1, max_length=120)
     never_expires: bool | None = None
+    important: bool | None = None
 
 
 class ProjectCopyRequest(BaseModel):
@@ -25,6 +26,7 @@ class ProjectResponse(BaseModel):
     create_time: datetime
     access_time: datetime
     never_expires: bool = False
+    important: bool = False
 
 
 class ProjectListResponse(BaseModel):

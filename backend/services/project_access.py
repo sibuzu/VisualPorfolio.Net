@@ -23,6 +23,7 @@ def row_to_project(row) -> dict:
         "create_time": datetime.fromisoformat(row["create_time"]),
         "access_time": datetime.fromisoformat(row["access_time"]),
         "never_expires": bool(row["never_expires"]) if "never_expires" in row.keys() else False,
+        "important": bool(row["important"]) if "important" in row.keys() else False,
     }
 
 
@@ -96,6 +97,18 @@ def list_projects_for_guest(user_id: str) -> list[dict]:
     return [row_to_project(r) for r in rows]
 
 
+def list_important_projects() -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM projects
+            WHERE important = 1
+            ORDER BY access_time DESC
+            """
+        ).fetchall()
+    return [row_to_project(r) for r in rows]
+
+
 def get_project(project_id: str) -> dict:
     with get_conn() as conn:
         row = conn.execute(
@@ -128,6 +141,7 @@ def update_project(
     user_id: str,
     project_name: str | None,
     never_expires: bool | None = None,
+    important: bool | None = None,
 ) -> dict:
     project, access = get_project_access(project_id, user_id)
     if access != "owner":
@@ -136,11 +150,12 @@ def update_project(
     new_name = project_name.strip() if isinstance(project_name, str) else project["project_name"]
 
     new_never_expires = project["never_expires"] if never_expires is None else bool(never_expires)
+    new_important = project["important"] if important is None else bool(important)
 
     with get_conn() as conn:
         conn.execute(
-            "UPDATE projects SET project_name = ?, never_expires = ?, access_time = ? WHERE project_id = ?",
-            (new_name, 1 if new_never_expires else 0, now_utc_iso(), project_id),
+            "UPDATE projects SET project_name = ?, never_expires = ?, important = ?, access_time = ? WHERE project_id = ?",
+            (new_name, 1 if new_never_expires else 0, 1 if new_important else 0, now_utc_iso(), project_id),
         )
         conn.commit()
     # Best-effort sync to config.json: project rename must not fail if file permission is broken.
