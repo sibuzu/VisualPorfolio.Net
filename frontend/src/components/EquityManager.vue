@@ -91,9 +91,9 @@ input[type='text'] {
   width: 100%;
 }
 .color-input {
-  width: 30px;
+  width: 28px;
   height: 30px;
-  padding: 0;
+  padding: 1px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #fff;
@@ -127,10 +127,17 @@ input[type='text'] {
 th:nth-child(1), td:nth-child(1) { width: 40px; text-align: center; }
 th:nth-child(2), td:nth-child(2) { width: 44px; text-align: center; }
 th:nth-child(3), td:nth-child(3) { width: 44px; text-align: center; }
-th:nth-child(4), td:nth-child(4) { min-width: 15ch; }
+th:nth-child(4), td:nth-child(4) {
+  min-width: 10ch;
+  width: 12ch;
+  max-width: 15ch;
+}
 th:nth-child(5), td:nth-child(5) { width: 52px; }
 th:nth-child(6), td:nth-child(6) { width: 52px; }
 .name-cell {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.3;
 }
 </style>

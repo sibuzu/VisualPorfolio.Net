@@ -8,6 +8,31 @@ function normalizeFileKey(v) {
   return (parts[parts.length - 1] || '').toLowerCase()
 }
 
+function normalizeColor(value, fallback = '#0a9396') {
+  const raw = String(value || '').trim()
+  if (!raw) return fallback
+  const hexMatch = raw.match(/^#([0-9a-fA-F]{6})$/)
+  if (hexMatch) return `#${hexMatch[1].toLowerCase()}`
+  if (typeof document !== 'undefined') {
+    const el = document.createElement('div')
+    el.style.color = ''
+    el.style.color = raw
+    if (el.style.color) {
+      document.body.appendChild(el)
+      const rgb = getComputedStyle(el).color
+      document.body.removeChild(el)
+      const m = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i)
+      if (m) {
+        const r = Number(m[1]).toString(16).padStart(2, '0')
+        const g = Number(m[2]).toString(16).padStart(2, '0')
+        const b = Number(m[3]).toString(16).padStart(2, '0')
+        return `#${r}${g}${b}`
+      }
+    }
+  }
+  return fallback
+}
+
 export const usePortfolioStore = defineStore('portfolio', {
   state: () => ({
     equities: [],
@@ -94,7 +119,7 @@ export const usePortfolioStore = defineStore('portfolio', {
           const contract = Number(sv.contract)
           return {
             ...eq,
-            color: sv.color || eq.color,
+            color: normalizeColor(sv.color, eq.color),
             weight: Number.isFinite(weight) ? weight : eq.weight,
             contract: Number.isFinite(contract) ? contract : eq.contract,
             active: typeof sv.active === 'boolean' ? sv.active : eq.active,
