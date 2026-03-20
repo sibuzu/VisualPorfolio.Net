@@ -41,7 +41,7 @@ class DateRange(BaseModel):
 
 
 class Options(BaseModel):
-    capital: float = 100.0
+    capital: float = 1_000_000.0
     risk_free_rate: float = 0.0
     mdd_count: int = Field(default=5, ge=1, le=20)
     div_by_count: bool = False
@@ -103,6 +103,7 @@ def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
         merged,
         risk_free_rate=payload.options.risk_free_rate,
         mdd_count=payload.options.mdd_count,
+        capital=payload.options.capital,
     )
 
     position_analysis = [

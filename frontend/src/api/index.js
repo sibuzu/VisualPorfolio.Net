@@ -352,7 +352,14 @@ export async function runAnalysis(projectId, payload) {
   throw toError(lastError)
 }
 
-export async function savePfo(projectId, equities, commissionConfig = null, description = '', dateRangeConfig = null) {
+export async function savePfo(
+  projectId,
+  equities,
+  commissionConfig = null,
+  description = '',
+  dateRangeConfig = null,
+  sharpeConfig = null
+) {
   try {
     const payload = { equities }
     if (commissionConfig && typeof commissionConfig === 'object') {
@@ -364,6 +371,12 @@ export async function savePfo(projectId, equities, commissionConfig = null, desc
         enabled: !!dateRangeConfig.enabled,
         start: String(dateRangeConfig.start || ''),
         end: String(dateRangeConfig.end || '')
+      }
+    }
+    if (sharpeConfig && typeof sharpeConfig === 'object') {
+      payload.sharpe_config = {
+        capital: Number(sharpeConfig.capital || 0),
+        risk_free_rate: Number(sharpeConfig.risk_free_rate || 0)
       }
     }
     const { data } = await api.put(`/projects/${projectId}/pfo`, payload)

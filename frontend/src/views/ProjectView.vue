@@ -99,7 +99,7 @@
         <button v-for="tab in tabs" :key="tab" :class="{ active: activeTab === tab }" @click="activeTab = tab">{{ tab }}</button>
       </div>
 
-      <SummaryPanel v-if="activeTab === '獲利報表'" />
+      <SummaryPanel v-if="activeTab === '獲利報表'" :readonly="readonly" />
       <EquityCurvePanel v-if="activeTab === '獲利曲線'" />
       <MonthlyBarPanel v-if="activeTab === '逐年獲利'" />
       <WinLossPanel v-if="activeTab === '贏輸分析'" />

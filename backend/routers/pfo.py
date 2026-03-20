@@ -26,6 +26,7 @@ class PfoSaveRequest(BaseModel):
     commission_config: dict[str, float] | None = None
     description: str | None = None
     date_range_config: dict | None = None
+    sharpe_config: dict | None = None
 
 
 @router.get("")
@@ -51,6 +52,7 @@ def put_pfo(project_id: str, payload: PfoSaveRequest, current_user: str = Depend
         commission_config=payload.commission_config,
         description=payload.description,
         date_range_config=payload.date_range_config,
+        sharpe_config=payload.sharpe_config,
     )
     touch_access_time(project_id)
     return {"ok": True, "filename": path.name}

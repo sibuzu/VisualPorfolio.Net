@@ -75,7 +75,12 @@ def _calc_year_month_profit(
     return years, months, year_profits, month_profits, year_mdd, month_mdd
 
 
-def build_report(trades: list[dict], risk_free_rate: float = 0.0, mdd_count: int = 5) -> dict:
+def build_report(
+    trades: list[dict],
+    risk_free_rate: float = 0.0,
+    mdd_count: int = 5,
+    capital: float = 1_000_000.0,
+) -> dict:
     if not trades:
         return {
             "summary": {
@@ -162,8 +167,8 @@ def build_report(trades: list[dict], risk_free_rate: float = 0.0, mdd_count: int
     ep = list(by_day.values())
     n = len(ep) / years if years > 0 else len(ep)
     rf = (risk_free_rate * 0.01) / n if n > 0 else 0.0
-    capital = 1_000_000.0  # equivalent to default 100 * 10000 in C#
-    ep_adj = [(x / capital) - rf for x in ep]
+    used_capital = float(capital) if float(capital) > 0 else 1_000_000.0
+    ep_adj = [(x / used_capital) - rf for x in ep]
     ep_mean = sum(ep_adj) / len(ep_adj) if ep_adj else 0.0
     ep_std = _std(ep_adj)
     sharpe = (sqrt(n) * ep_mean / ep_std) if ep_std > 0 and n > 0 else 0.0

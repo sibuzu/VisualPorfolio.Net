@@ -32,6 +32,10 @@ export const usePortfolioStore = defineStore('portfolio', {
       enabled: false,
       start: '',
       end: ''
+    },
+    sharpeConfig: {
+      capital: 1000000,
+      risk_free_rate: 0
     }
   }),
   actions: {
@@ -146,10 +150,23 @@ export const usePortfolioStore = defineStore('portfolio', {
       } else {
         this.dateRangeConfig = { enabled: false, start: '', end: '' }
       }
+
+      const snode = doc.querySelector('SharpeConfig')
+      if (snode) {
+        const capital = Number(snode.getAttribute('capital'))
+        const rf = Number(snode.getAttribute('risk_free_rate'))
+        this.sharpeConfig = {
+          capital: Number.isFinite(capital) && capital > 0 ? capital : 1000000,
+          risk_free_rate: Number.isFinite(rf) ? rf : 0
+        }
+      } else {
+        this.sharpeConfig = { capital: 1000000, risk_free_rate: 0 }
+      }
     },
     async restoreProjectConfig(projectId) {
       this.strategyDescription = ''
       this.dateRangeConfig = { enabled: false, start: '', end: '' }
+      this.sharpeConfig = { capital: 1000000, risk_free_rate: 0 }
       try {
         const xml = await getPfo(projectId)
         this.applySavedConfigFromXml(xml)
@@ -164,7 +181,8 @@ export const usePortfolioStore = defineStore('portfolio', {
       this.error = ''
       try {
         const baseOptions = {
-          risk_free_rate: 0,
+          risk_free_rate: Number(this.sharpeConfig?.risk_free_rate || 0),
+          capital: Number(this.sharpeConfig?.capital || 1000000),
           mdd_count: 5,
           commission_per_trade: 0
         }
@@ -206,6 +224,14 @@ export const usePortfolioStore = defineStore('portfolio', {
         end: String(config?.end || '')
       }
     },
+    setSharpeConfig(config) {
+      const capital = Number(config?.capital)
+      const riskFree = Number(config?.risk_free_rate)
+      this.sharpeConfig = {
+        capital: Number.isFinite(capital) && capital > 0 ? capital : 1000000,
+        risk_free_rate: Number.isFinite(riskFree) ? riskFree : 0
+      }
+    },
     _toDateRangePayload(config) {
       if (!config?.enabled) return { all: true }
       return {
@@ -231,7 +257,8 @@ export const usePortfolioStore = defineStore('portfolio', {
           items,
           this.commissionConfig,
           this.strategyDescription,
-          this.dateRangeConfig
+          this.dateRangeConfig,
+          this.sharpeConfig
         )
       } catch (e) {
         this.error = e.message

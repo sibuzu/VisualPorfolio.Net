@@ -5,11 +5,40 @@
       <span v-if="summaryDateSuffix" class="summary-date">{{ summaryDateSuffix }}</span>
     </h3>
     <div class="cards">
-      <div v-for="item in summaryCards" :key="item.label" class="card">
+      <div v-for="item in summaryCards" :key="item.label" class="card" :class="{ 'card-editable': item.editable }">
+        <button
+          v-if="item.editable"
+          type="button"
+          class="card-edit-btn"
+          title="編輯 Sharpe 設定"
+          aria-label="編輯 Sharpe 設定"
+          @click="editSharpeConfig"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0L14.71 5.37l3.75 3.75 2.25-2.25z"/>
+          </svg>
+        </button>
         <div class="label">{{ item.label }}</div>
         <div class="value">{{ item.value }}</div>
       </div>
     </div>
+    <dialog ref="sharpeDialogRef" class="sharpe-dialog">
+      <form method="dialog" class="sharpe-form" @submit.prevent="confirmSharpeDialog">
+        <h4>Sharpe 設定</h4>
+        <label class="sharpe-field">
+          <span>本金（萬元）</span>
+          <input v-model="sharpeDraftCapitalWan" type="number" step="0.01" min="0" />
+        </label>
+        <label class="sharpe-field">
+          <span>無風險利率（年化 %）</span>
+          <input v-model="sharpeDraftRiskFreeRate" type="number" step="0.01" />
+        </label>
+        <div class="sharpe-actions">
+          <button type="button" @click="closeSharpeDialog">取消</button>
+          <button type="submit">確定</button>
+        </div>
+      </form>
+    </dialog>
 
     <h3>MDD</h3>
     <table class="grid">
@@ -81,10 +110,20 @@
 
 <script setup>
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { usePortfolioStore } from '../stores/portfolio'
 
-const { analysis } = storeToRefs(usePortfolioStore())
+const props = defineProps({
+  readonly: { type: Boolean, default: false }
+})
+
+const route = useRoute()
+const portfolioStore = usePortfolioStore()
+const { analysis } = storeToRefs(portfolioStore)
+const sharpeDialogRef = ref(null)
+const sharpeDraftCapitalWan = ref('')
+const sharpeDraftRiskFreeRate = ref('')
 const summary = computed(() => analysis.value.summary || {})
 const trades = computed(() => analysis.value.position_analysis || [])
 const periodDates = computed(() => parsePeriod(summary.value.period))
@@ -141,7 +180,7 @@ const summaryCards = computed(() => [
   { label: 'MDD', value: moneyInt(derived.value.mdd) },
   { label: '總獲利/MDD', value: ratio(derived.value.pmr) },
   { label: '年獲利/MDD', value: ratio(derived.value.ypmr) },
-  { label: 'Sharpe Ratio', value: ratio(summary.value.sharpe) },
+  { label: 'Sharpe Ratio', value: ratio(summary.value.sharpe), editable: true },
   { label: 'Sortino Ratio', value: ratio(summary.value.sortino) },
   { label: '獲利因子', value: ratio(derived.value.profitFactor) },
   { label: '贏錢總金額', value: moneyInt(derived.value.winAmount) },
@@ -247,6 +286,114 @@ function ratio(v) {
   const n = Number(v || 0)
   return n.toFixed(2).replace(/\.?0+$/, '')
 }
+
+async function editSharpeConfig() {
+  const currentCapital = Number(portfolioStore.sharpeConfig?.capital || 1000000)
+  const currentRf = Number(portfolioStore.sharpeConfig?.risk_free_rate || 0)
+  sharpeDraftCapitalWan.value = String(currentCapital / 10000)
+  sharpeDraftRiskFreeRate.value = String(currentRf)
+  sharpeDialogRef.value?.showModal()
+}
+
+function closeSharpeDialog() {
+  sharpeDialogRef.value?.close()
+}
+
+async function confirmSharpeDialog() {
+  const capitalWan = Number(String(sharpeDraftCapitalWan.value || '').replace(/,/g, '').trim())
+  const riskFreeRate = Number(String(sharpeDraftRiskFreeRate.value || '').replace(/,/g, '').trim())
+  if (!Number.isFinite(capitalWan) || capitalWan <= 0) {
+    alert('本金（萬元）必須是大於 0 的數字')
+    return
+  }
+  if (!Number.isFinite(riskFreeRate)) {
+    alert('無風險利率必須是數字')
+    return
+  }
+
+  const capital = capitalWan * 10000
+  const prevCapital = Number(portfolioStore.sharpeConfig?.capital || 1000000)
+  const prevRf = Number(portfolioStore.sharpeConfig?.risk_free_rate || 0)
+  const changed = Math.abs(capital - prevCapital) > 1e-9 || Math.abs(riskFreeRate - prevRf) > 1e-9
+  if (!changed) {
+    closeSharpeDialog()
+    return
+  }
+
+  portfolioStore.setSharpeConfig({
+    capital,
+    risk_free_rate: riskFreeRate
+  })
+
+  recalcSharpeOnly(capital, riskFreeRate)
+
+  if (!props.readonly) {
+    try {
+      await portfolioStore.saveProjectPfo(route.params.projectId)
+    } catch (e) {
+      alert(e?.message || '儲存 Sharpe 設定失敗')
+    }
+  }
+
+  closeSharpeDialog()
+}
+
+function recalcSharpeOnly(capital, riskFreeRate) {
+  const rows = analysis.value.position_analysis || []
+  if (!rows.length) {
+    portfolioStore.analysis.summary = {
+      ...(portfolioStore.analysis.summary || {}),
+      sharpe: 0
+    }
+    return
+  }
+
+  const dayPnl = new Map()
+  const dates = []
+  for (const r of rows) {
+    const d = String(r?.exit || '').slice(0, 10)
+    if (!d) continue
+    const pnl = Number(r?.pnl || 0)
+    dayPnl.set(d, Number(dayPnl.get(d) || 0) + pnl)
+    dates.push(d)
+  }
+  if (!dates.length || dayPnl.size === 0) {
+    portfolioStore.analysis.summary = {
+      ...(portfolioStore.analysis.summary || {}),
+      sharpe: 0
+    }
+    return
+  }
+
+  dates.sort()
+  const start = new Date(dates[0])
+  const end = new Date(dates[dates.length - 1])
+  const years = Math.max(((end - start) / 86400000 + 1) / 365.25, 1e-9)
+  const ep = Array.from(dayPnl.values())
+  const n = years > 0 ? ep.length / years : ep.length
+  const rf = n > 0 ? (riskFreeRate * 0.01) / n : 0
+  const usedCapital = capital > 0 ? capital : 1000000
+  const adjusted = ep.map((x) => (x / usedCapital) - rf)
+  const mean = adjusted.length ? adjusted.reduce((a, b) => a + b, 0) / adjusted.length : 0
+  const std = stdPop(adjusted)
+  const sharpe = std > 0 && n > 0 ? (Math.sqrt(n) * mean) / std : 0
+
+  portfolioStore.analysis.summary = {
+    ...(portfolioStore.analysis.summary || {}),
+    sharpe: round6(sharpe)
+  }
+}
+
+function stdPop(values) {
+  if (!values.length) return 0
+  const mean = values.reduce((a, b) => a + b, 0) / values.length
+  const variance = values.reduce((s, x) => s + (x - mean) * (x - mean), 0) / values.length
+  return Math.sqrt(variance)
+}
+
+function round6(v) {
+  return Math.round(Number(v || 0) * 1e6) / 1e6
+}
 </script>
 
 <style scoped>
@@ -260,6 +407,68 @@ function ratio(v) {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
+  position: relative;
+}
+.card-editable {
+  padding-right: 34px;
+}
+.card-edit-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b7280;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-edit-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+.card-edit-btn:hover,
+.card-edit-btn:focus-visible {
+  color: var(--accent);
+  background: #eef2ff;
+}
+.sharpe-dialog {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0;
+  max-width: 420px;
+  width: calc(100% - 24px);
+}
+.sharpe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+.sharpe-form h4 {
+  margin: 0 0 2px;
+}
+.sharpe-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.sharpe-field input {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.sharpe-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
 }
 .label {
   color: var(--muted);

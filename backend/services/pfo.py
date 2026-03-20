@@ -42,11 +42,30 @@ def load_pfo(path: Path) -> dict:
         date_range_config["enabled"] = enabled_raw in {"1", "true", "True"}
         date_range_config["start"] = str(date_range_node.attrib.get("start", "") or "")
         date_range_config["end"] = str(date_range_node.attrib.get("end", "") or "")
+    sharpe_node = root.find("./SharpeConfig")
+    sharpe_config = {
+        "capital": 1_000_000.0,
+        "risk_free_rate": 0.0,
+    }
+    if sharpe_node is not None:
+        raw_capital = sharpe_node.attrib.get("capital", "")
+        raw_rf = sharpe_node.attrib.get("risk_free_rate", "")
+        try:
+            capital = float(raw_capital)
+            if capital > 0:
+                sharpe_config["capital"] = capital
+        except (TypeError, ValueError):
+            pass
+        try:
+            sharpe_config["risk_free_rate"] = float(raw_rf)
+        except (TypeError, ValueError):
+            pass
     return {
         "equities": equities,
         "commission_config": commission_config,
         "description": description,
         "date_range_config": date_range_config,
+        "sharpe_config": sharpe_config,
     }
 
 
@@ -56,6 +75,7 @@ def save_pfo(
     commission_config: dict | None = None,
     description: str | None = None,
     date_range_config: dict | None = None,
+    sharpe_config: dict | None = None,
 ) -> None:
     root = ET.Element("PortfolioyList")
     for eq in equities:
@@ -90,6 +110,15 @@ def save_pfo(
                 "enabled": "1" if bool(date_range_config.get("enabled", False)) else "0",
                 "start": str(date_range_config.get("start", "") or ""),
                 "end": str(date_range_config.get("end", "") or ""),
+            },
+        )
+    if sharpe_config is not None:
+        ET.SubElement(
+            root,
+            "SharpeConfig",
+            {
+                "capital": str(sharpe_config.get("capital", 1_000_000.0)),
+                "risk_free_rate": str(sharpe_config.get("risk_free_rate", 0.0)),
             },
         )
 
