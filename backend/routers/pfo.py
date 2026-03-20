@@ -25,6 +25,7 @@ class PfoSaveRequest(BaseModel):
     equities: list[PfoItem] = Field(default_factory=list)
     commission_config: dict[str, float] | None = None
     description: str | None = None
+    date_range_config: dict | None = None
 
 
 @router.get("")
@@ -49,6 +50,7 @@ def put_pfo(project_id: str, payload: PfoSaveRequest, current_user: str = Depend
         [item.model_dump() for item in payload.equities],
         commission_config=payload.commission_config,
         description=payload.description,
+        date_range_config=payload.date_range_config,
     )
     touch_access_time(project_id)
     return {"ok": True, "filename": path.name}

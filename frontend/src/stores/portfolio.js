@@ -27,7 +27,12 @@ export const usePortfolioStore = defineStore('portfolio', {
     error: '',
     updatingConfig: false,
     commissionConfig: null,
-    strategyDescription: ''
+    strategyDescription: '',
+    dateRangeConfig: {
+      enabled: false,
+      start: '',
+      end: ''
+    }
   }),
   actions: {
     setFilesAsEquities(files) {
@@ -129,9 +134,22 @@ export const usePortfolioStore = defineStore('portfolio', {
 
       const dnode = doc.querySelector('description')
       this.strategyDescription = dnode?.textContent || ''
+
+      const rnode = doc.querySelector('DateRangeConfig')
+      if (rnode) {
+        const enabledRaw = String(rnode.getAttribute('enabled') ?? rnode.getAttribute('use_range') ?? '0')
+        this.dateRangeConfig = {
+          enabled: enabledRaw === '1' || enabledRaw.toLowerCase() === 'true',
+          start: String(rnode.getAttribute('start') || ''),
+          end: String(rnode.getAttribute('end') || '')
+        }
+      } else {
+        this.dateRangeConfig = { enabled: false, start: '', end: '' }
+      }
     },
     async restoreProjectConfig(projectId) {
       this.strategyDescription = ''
+      this.dateRangeConfig = { enabled: false, start: '', end: '' }
       try {
         const xml = await getPfo(projectId)
         this.applySavedConfigFromXml(xml)
@@ -157,9 +175,10 @@ export const usePortfolioStore = defineStore('portfolio', {
           ...baseOptions,
           ...(options.options || {})
         }
+        const activeDateRange = options.date_range || this._toDateRangePayload(this.dateRangeConfig)
         this.analysis = await runAnalysis(projectId, {
           equities: this.equities,
-          date_range: options.date_range || { all: true },
+          date_range: activeDateRange,
           options: mergedOptions
         })
         const cfg = this.analysis?.commission?.config
@@ -180,6 +199,21 @@ export const usePortfolioStore = defineStore('portfolio', {
     setStrategyDescription(text) {
       this.strategyDescription = String(text || '')
     },
+    setDateRangeConfig(config) {
+      this.dateRangeConfig = {
+        enabled: !!config?.enabled,
+        start: String(config?.start || ''),
+        end: String(config?.end || '')
+      }
+    },
+    _toDateRangePayload(config) {
+      if (!config?.enabled) return { all: true }
+      return {
+        all: false,
+        start: config.start || null,
+        end: config.end || null
+      }
+    },
     async saveProjectPfo(projectId) {
       this.error = ''
       try {
@@ -192,7 +226,13 @@ export const usePortfolioStore = defineStore('portfolio', {
           active: !!eq.active,
           name: eq.name || eq.filename
         }))
-        return savePfo(projectId, items, this.commissionConfig, this.strategyDescription)
+        return savePfo(
+          projectId,
+          items,
+          this.commissionConfig,
+          this.strategyDescription,
+          this.dateRangeConfig
+        )
       } catch (e) {
         this.error = e.message
         throw e

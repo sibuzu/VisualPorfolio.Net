@@ -352,13 +352,20 @@ export async function runAnalysis(projectId, payload) {
   throw toError(lastError)
 }
 
-export async function savePfo(projectId, equities, commissionConfig = null, description = '') {
+export async function savePfo(projectId, equities, commissionConfig = null, description = '', dateRangeConfig = null) {
   try {
     const payload = { equities }
     if (commissionConfig && typeof commissionConfig === 'object') {
       payload.commission_config = commissionConfig
     }
     payload.description = String(description || '')
+    if (dateRangeConfig && typeof dateRangeConfig === 'object') {
+      payload.date_range_config = {
+        enabled: !!dateRangeConfig.enabled,
+        start: String(dateRangeConfig.start || ''),
+        end: String(dateRangeConfig.end || '')
+      }
+    }
     const { data } = await api.put(`/projects/${projectId}/pfo`, payload)
     return data
   } catch (error) {

@@ -45,8 +45,37 @@
           </button>
           <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp,.xml" multiple :disabled="readonly" @change="upload" />
         </div>
+        <div class="manager-range-row">
+          <label class="range-check-label">
+            <input type="checkbox" :checked="dateRangeEnabled" @change="onDateRangeEnabledChange" />
+            <span>指定範圍</span>
+          </label>
+          <input
+            type="date"
+            class="range-date-input"
+            :value="dateRangeStart"
+            :disabled="!dateRangeEnabled"
+            inputmode="none"
+            @keydown="blockDateTyping"
+            @paste.prevent
+            @drop.prevent
+            @change="onDateRangeStartChange"
+          />
+          <span class="range-sep">~</span>
+          <input
+            type="date"
+            class="range-date-input"
+            :value="dateRangeEnd"
+            :disabled="!dateRangeEnabled"
+            inputmode="none"
+            @keydown="blockDateTyping"
+            @paste.prevent
+            @drop.prevent
+            @change="onDateRangeEndChange"
+          />
+        </div>
         <EquityManager :readonly="readonly" />
-        <p v-if="portfolioStore.updatingConfig" class="updating-hint">更新中...</p>
+        <p v-if="portfolioStore.updatingConfig || portfolioStore.loading" class="updating-hint">更新計算中...</p>
       </div>
     </aside>
 
@@ -127,6 +156,9 @@ const readonly = computed(() => {
 })
 const canCloneProject = computed(() => currentUser.value !== 'guest')
 const showBackHome = computed(() => /Project not found/i.test(String(viewError.value || '')))
+const dateRangeEnabled = computed(() => !!portfolioStore.dateRangeConfig?.enabled)
+const dateRangeStart = computed(() => String(portfolioStore.dateRangeConfig?.start || ''))
+const dateRangeEnd = computed(() => String(portfolioStore.dateRangeConfig?.end || ''))
 
 function updateDocumentTitle() {
   const name = String(projectStore.activeProject?.project_name || '').trim()
@@ -154,6 +186,88 @@ async function refreshAnalysis() {
   } catch (e) {
     viewError.value = e.message || '執行分析失敗'
   }
+}
+
+function parsePeriodRange() {
+  const period = String(portfolioStore.analysis?.summary?.period || '')
+  const m = period.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/)
+  if (!m) return { start: '', end: '' }
+  return { start: m[1], end: m[2] }
+}
+
+function ensureDateRangeDefaults(cfg) {
+  const next = {
+    enabled: !!cfg.enabled,
+    start: String(cfg.start || ''),
+    end: String(cfg.end || '')
+  }
+  if (!next.enabled) return next
+  const period = parsePeriodRange()
+  if (!next.start) next.start = period.start
+  if (!next.end) next.end = period.end
+  return next
+}
+
+function validateDateRange(cfg) {
+  if (!cfg.enabled) return ''
+  if (!cfg.start || !cfg.end) {
+    return '指定範圍啟用時，請輸入開始與結束日期'
+  }
+  if (cfg.start > cfg.end) {
+    return '指定範圍的開始日期不可晚於結束日期'
+  }
+  return ''
+}
+
+async function applyDateRangeChange(nextConfig) {
+  const next = ensureDateRangeDefaults(nextConfig)
+  portfolioStore.setDateRangeConfig(next)
+  const err = validateDateRange(next)
+  if (err) {
+    viewError.value = err
+    return
+  }
+
+  viewError.value = ''
+  try {
+    if (readonly.value) {
+      await portfolioStore.analyze(route.params.projectId)
+    } else {
+      await portfolioStore.persistAndAnalyze(route.params.projectId)
+    }
+  } catch (e) {
+    viewError.value = e.message || '更新日期範圍失敗'
+  }
+}
+
+async function onDateRangeEnabledChange(event) {
+  const enabled = !!event?.target?.checked
+  await applyDateRangeChange({
+    ...portfolioStore.dateRangeConfig,
+    enabled
+  })
+}
+
+async function onDateRangeStartChange(event) {
+  const start = String(event?.target?.value || '')
+  await applyDateRangeChange({
+    ...portfolioStore.dateRangeConfig,
+    start
+  })
+}
+
+async function onDateRangeEndChange(event) {
+  const end = String(event?.target?.value || '')
+  await applyDateRangeChange({
+    ...portfolioStore.dateRangeConfig,
+    end
+  })
+}
+
+function blockDateTyping(event) {
+  // Keep keyboard navigation (Tab) but force value changes via date picker only.
+  if (event.key === 'Tab') return
+  event.preventDefault()
 }
 
 async function upload(event) {
@@ -365,6 +479,28 @@ button.active {
   margin: 0;
   font-size: 18px;
   line-height: 1.2;
+}
+.manager-range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.range-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.range-date-input {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 13px;
+}
+.range-sep {
+  color: var(--muted);
 }
 .id-line {
   display: flex;

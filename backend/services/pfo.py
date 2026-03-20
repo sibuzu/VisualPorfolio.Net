@@ -29,10 +29,24 @@ def load_pfo(path: Path) -> dict:
                 continue
     desc_node = root.find("./description")
     description = (desc_node.text or "") if desc_node is not None else ""
+    date_range_node = root.find("./DateRangeConfig")
+    date_range_config = {
+        "enabled": False,
+        "start": "",
+        "end": "",
+    }
+    if date_range_node is not None:
+        enabled_raw = str(
+            date_range_node.attrib.get("enabled", date_range_node.attrib.get("use_range", "0"))
+        )
+        date_range_config["enabled"] = enabled_raw in {"1", "true", "True"}
+        date_range_config["start"] = str(date_range_node.attrib.get("start", "") or "")
+        date_range_config["end"] = str(date_range_node.attrib.get("end", "") or "")
     return {
         "equities": equities,
         "commission_config": commission_config,
         "description": description,
+        "date_range_config": date_range_config,
     }
 
 
@@ -41,6 +55,7 @@ def save_pfo(
     equities: list[dict],
     commission_config: dict | None = None,
     description: str | None = None,
+    date_range_config: dict | None = None,
 ) -> None:
     root = ET.Element("PortfolioyList")
     for eq in equities:
@@ -67,6 +82,16 @@ def save_pfo(
             ET.SubElement(root, "CommissionConfig", attrs)
     desc_el = ET.SubElement(root, "description")
     desc_el.text = str(description or "")
+    if date_range_config is not None:
+        ET.SubElement(
+            root,
+            "DateRangeConfig",
+            {
+                "enabled": "1" if bool(date_range_config.get("enabled", False)) else "0",
+                "start": str(date_range_config.get("start", "") or ""),
+                "end": str(date_range_config.get("end", "") or ""),
+            },
+        )
 
     tree = ET.ElementTree(root)
     path.parent.mkdir(parents=True, exist_ok=True)
