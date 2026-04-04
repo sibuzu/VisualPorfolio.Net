@@ -53,6 +53,8 @@ def _safe_extract_zip(zip_path: Path, dst: Path) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     root = dst.resolve()
     with zipfile.ZipFile(zip_path, "r") as zf:
+        members: list[tuple[zipfile.ZipInfo, list[str]]] = []
+        first_parts: list[str] = []
         for member in zf.infolist():
             raw_name = member.filename or ""
             if not raw_name:
@@ -64,7 +66,16 @@ def _safe_extract_zip(zip_path: Path, dst: Path) -> None:
                 continue
             if any(p == ".." for p in parts):
                 raise HTTPException(status_code=400, detail="Invalid zip path")
-            rel_name = "/".join(parts)
+            members.append((member, parts))
+            first_parts.append(parts[0])
+
+        strip_root = bool(first_parts) and all(p == first_parts[0] for p in first_parts)
+
+        for member, parts in members:
+            effective_parts = parts[1:] if strip_root and len(parts) >= 2 else parts
+            if not effective_parts:
+                continue
+            rel_name = "/".join(effective_parts)
 
             target = (dst / rel_name).resolve()
             if root not in target.parents and target != root:

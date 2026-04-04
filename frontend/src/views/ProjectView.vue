@@ -322,6 +322,13 @@ function openProjectUploadPicker() {
 async function uploadProjectPackageFile(event) {
   const file = Array.from(event?.target?.files || [])[0]
   if (!file) return
+  if (projectStore.files.length > 0) {
+    const ok = window.confirm('上傳專案將會覆蓋目前專案，是否進行')
+    if (!ok) {
+      event.target.value = ''
+      return
+    }
+  }
   viewError.value = ''
   try {
     await uploadProjectPackage(route.params.projectId, String(projectStore.activeProject?.project_name || 'Project'), file)
@@ -337,7 +344,6 @@ async function uploadProjectPackageFile(event) {
 }
 
 async function downloadProject() {
-  if (readonly.value) return
   viewError.value = ''
   try {
     const { blob, filename } = await downloadProjectPackage(route.params.projectId)

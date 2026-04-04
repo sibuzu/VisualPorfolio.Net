@@ -46,6 +46,15 @@ def _make_gsea_bytes() -> bytes:
     return buf.getvalue()
 
 
+def _make_gsea_with_root_dir_bytes() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("BatchRun/strategy.toml", "[strategy]\nname='BatchRun'\n")
+        zf.writestr("BatchRun/group.json", '{"group":[{"project":"BatchRun-1"}]}')
+        zf.writestr("BatchRun/BatchRun-1.sea", b"dummy")
+    return buf.getvalue()
+
+
 def test_project_download_returns_zip():
     with TestClient(app) as client:
         owner_id, owner_pw = _new_user("owner")
@@ -121,8 +130,28 @@ def test_project_upload_rejects_zip_extension():
             data={"project_name": "Uploaded GSEA"},
             files={"file": ("project.zip", zip_payload, "application/zip")},
         )
-        assert upload.status_code == 400
-        assert upload.json()["detail"] == "Only .gsea is supported"
+    assert upload.status_code == 400
+    assert upload.json()["detail"] == "Only .gsea is supported"
+
+
+def test_project_upload_strips_single_root_folder():
+    with TestClient(app) as client:
+        owner_id, owner_pw = _new_user("owner")
+        _signup_and_login(client, owner_id, owner_pw)
+        project_id = _create_project(client, "gsea-root-folder")
+        payload = _make_gsea_with_root_dir_bytes()
+
+        upload = client.post(
+            f"/projects/{project_id}/upload",
+            data={"project_name": "RootFolder"},
+            files={"file": ("BatchRun.gsea", payload, "application/zip")},
+        )
+        assert upload.status_code == 200
+
+        pdir = project_dir(project_id)
+        assert (pdir / "strategy.toml").exists()
+        assert (pdir / "group.json").exists()
+        assert (pdir / "BatchRun-1.sea").exists()
 
 
 def test_project_upload_fails_when_project_belongs_to_other_user():
