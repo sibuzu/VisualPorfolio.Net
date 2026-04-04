@@ -198,12 +198,12 @@ def test_project_upload_keeps_group_weight_count():
     with TestClient(app) as client:
         owner_id, owner_pw = _new_user("owner")
         _signup_and_login(client, owner_id, owner_pw)
-        project_id = _create_project(client, "gsea-pfo-group")
+        project_id = _create_project(client, "gsea-group-config")
         payload = _make_group_weight_count_gsea_bytes()
 
         upload = client.post(
             f"/projects/{project_id}/upload",
-            data={"project_name": "GroupPfo"},
+            data={"project_name": "GroupConfig"},
             files={"file": ("BatchRun.gsea", payload, "application/zip")},
         )
         assert upload.status_code == 200

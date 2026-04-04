@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
-from backend.services.group_config import load_group_equities, load_project_config, save_group_equities, save_project_config
-from backend.services.pfo import render_pfo_xml
+from backend.services.group_config import save_group_equities, save_project_config
 from backend.services.project_access import get_project_access, project_dir, touch_access_time
 from backend.services.auth import require_auth
 
-router = APIRouter(prefix="/projects/{project_id}/pfo", tags=["pfo"])
+router = APIRouter(prefix="/projects/{project_id}/gsea-group", tags=["gsea-group"])
 
 
-class PfoItem(BaseModel):
+class GseaGroupItem(BaseModel):
     index: int
     filename: str
     color: str = "Blue"
@@ -22,8 +20,8 @@ class PfoItem(BaseModel):
     name: str = ""
 
 
-class PfoSaveRequest(BaseModel):
-    equities: list[PfoItem] = Field(default_factory=list)
+class GseaGroupSaveRequest(BaseModel):
+    equities: list[GseaGroupItem] = Field(default_factory=list)
     commission_config: dict[str, float] | None = None
     description: str | None = None
     date_range_config: dict | None = None
@@ -31,31 +29,18 @@ class PfoSaveRequest(BaseModel):
 
 
 @router.get("")
-def get_pfo(project_id: str, current_user: str = Depends(require_auth)):
+def get_gsea_group(project_id: str, current_user: str = Depends(require_auth)):
     get_project_access(project_id, current_user)
     folder = project_dir(project_id)
-    legacy_path = folder / "project.pfo"
-    if legacy_path.exists():
-        touch_access_time(project_id)
-        return FileResponse(path=legacy_path, media_type="application/xml", filename="project.pfo")
-
-    equities = load_group_equities(folder)
-    if not equities:
-        raise HTTPException(status_code=404, detail="PFO not found")
-    cfg = load_project_config(folder)
-    xml = render_pfo_xml(
-        equities,
-        commission_config=cfg.get("commission_config"),
-        description=cfg.get("description", ""),
-        date_range_config=cfg.get("date_range_config"),
-        sharpe_config=cfg.get("sharpe_config"),
-    )
+    group_path = folder / "group.json"
+    if not group_path.exists():
+        raise HTTPException(status_code=404, detail="group.json not found")
     touch_access_time(project_id)
-    return Response(content=xml, media_type="application/xml")
+    return group_path.read_text(encoding="utf-8-sig")
 
 
 @router.put("")
-def put_pfo(project_id: str, payload: PfoSaveRequest, current_user: str = Depends(require_auth)):
+def put_gsea_group(project_id: str, payload: GseaGroupSaveRequest, current_user: str = Depends(require_auth)):
     _, access = get_project_access(project_id, current_user)
     if access != "owner":
         raise HTTPException(status_code=403, detail="Read-only project")
@@ -70,6 +55,5 @@ def put_pfo(project_id: str, payload: PfoSaveRequest, current_user: str = Depend
         date_range_config=payload.date_range_config,
         sharpe_config=payload.sharpe_config,
     )
-    (folder / "project.pfo").unlink(missing_ok=True)
     touch_access_time(project_id)
     return {"ok": True, "filename": "group.json"}

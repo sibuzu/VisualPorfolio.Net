@@ -194,7 +194,7 @@ function onInput() {
     saving.value = true
     error.value = ''
     try {
-      await portfolioStore.saveProjectPfo(props.projectId)
+      await portfolioStore.saveGseaGroup(props.projectId)
       savedOk.value = true
       if (savedHintTimer) clearTimeout(savedHintTimer)
       savedHintTimer = setTimeout(() => {

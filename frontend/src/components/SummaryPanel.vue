@@ -329,7 +329,7 @@ async function confirmSharpeDialog() {
 
   if (!props.readonly) {
     try {
-      await portfolioStore.saveProjectPfo(route.params.projectId)
+      await portfolioStore.saveGseaGroup(route.params.projectId)
     } catch (e) {
       alert(e?.message || '儲存 Sharpe 設定失敗')
     }

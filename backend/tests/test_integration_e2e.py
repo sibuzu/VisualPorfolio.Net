@@ -78,14 +78,14 @@ def test_e2e_metric_parity_with_sample_srp():
         assert isinstance(body["commission"]["years"], list)
 
 
-def test_e2e_readonly_and_pfo_roundtrip():
+def test_e2e_readonly_and_gsea_group_roundtrip():
     with TestClient(app) as client:
-        project_id = _create_project(client, OWNER, "shared-pfo")
+        project_id = _create_project(client, OWNER, "shared-gsea-group")
         _upload(client, project_id, OWNER, "aa-1.srp")
         _upload(client, project_id, OWNER, "aa-2.srp")
 
         save = client.put(
-            f"/projects/{project_id}/pfo",
+            f"/projects/{project_id}/gsea-group",
             params={"user_id": OWNER},
             json={
                 "equities": [
@@ -96,11 +96,11 @@ def test_e2e_readonly_and_pfo_roundtrip():
         )
         assert save.status_code == 200
 
-        download = client.get(f"/projects/{project_id}/pfo", params={"user_id": OWNER})
+        download = client.get(f"/projects/{project_id}/gsea-group", params={"user_id": OWNER})
         assert download.status_code == 200
-        assert "PortfolioyList" in download.text
-        assert "aa-1.sea" in download.text
-        assert "aa-2.sea" in download.text
+        assert '"group"' in download.text
+        assert '"project": "aa-1"' in download.text
+        assert '"project": "aa-2"' in download.text
 
         stranger_read = client.get(f"/projects/{project_id}", params={"user_id": STRANGER})
         assert stranger_read.status_code == 200
@@ -111,9 +111,9 @@ def test_e2e_readonly_and_pfo_roundtrip():
         )
         assert stranger_patch.status_code == 403
 
-        stranger_pfo_put = client.put(
-            f"/projects/{project_id}/pfo",
+        stranger_gsea_group_put = client.put(
+            f"/projects/{project_id}/gsea-group",
             params={"user_id": STRANGER},
             json={"equities": [{"index": 0, "filename": "aa-1.sea", "color": "Blue", "weight": 1}]},
         )
-        assert stranger_pfo_put.status_code == 403
+        assert stranger_gsea_group_put.status_code == 403

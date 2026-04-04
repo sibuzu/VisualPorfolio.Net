@@ -11,7 +11,7 @@ from backend.routers.admin import router as admin_router
 from backend.routers.auth import router as auth_router
 from backend.routers.analysis import router as analysis_router
 from backend.routers.files import router as files_router
-from backend.routers.pfo import router as pfo_router
+from backend.routers.gsea_group import router as gsea_group_router
 from backend.routers.projects import router as projects_router
 from backend.services.auth import init_users_db
 from backend.services.cleanup import cleanup_loop, cleanup_stale_projects
@@ -60,7 +60,7 @@ app.include_router(admin_router)
 app.include_router(projects_router)
 app.include_router(files_router)
 app.include_router(analysis_router)
-app.include_router(pfo_router)
+app.include_router(gsea_group_router)
 
 
 @app.get("/healthz")

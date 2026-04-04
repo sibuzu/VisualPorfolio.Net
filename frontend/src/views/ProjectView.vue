@@ -198,7 +198,7 @@ async function loadAll() {
     await projectStore.loadProject(route.params.projectId)
     updateDocumentTitle()
     portfolioStore.setFilesAsEquities(projectStore.files)
-    await portfolioStore.restoreProjectConfig(route.params.projectId)
+    await portfolioStore.restoreGseaGroupConfig(route.params.projectId)
     await refreshAnalysis()
   } catch (e) {
     document.title = DEFAULT_TITLE

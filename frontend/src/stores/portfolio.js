@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getPfo, runAnalysis, savePfo } from '../api'
+import { getGseaGroup, runAnalysis, saveGseaGroup } from '../api'
 
 function normalizeFileKey(v) {
   if (!v) return ''
@@ -188,15 +188,93 @@ export const usePortfolioStore = defineStore('portfolio', {
         this.sharpeConfig = { capital: 1000000, risk_free_rate: 0 }
       }
     },
-    async restoreProjectConfig(projectId) {
+    applySavedConfigFromGroupJson(groupText) {
+      if (!groupText) return
+      let doc
+      try {
+        const cleaned = String(groupText).replace(/,(\s*[}\]])/g, '$1')
+        doc = JSON.parse(cleaned)
+      } catch {
+        return
+      }
+      const groupItems = Array.isArray(doc?.group) ? doc.group : []
+      if (groupItems.length) {
+        const saved = groupItems.map((item, i) => {
+          const project = String(item?.project || '')
+          const projectName = String(item?.project_name || '') || project
+          const metadata = item?.metadata && typeof item.metadata === 'object' ? item.metadata : {}
+          return {
+            index: Number(i),
+            filename: `${project}.sea`,
+            color: String(metadata?.color || ''),
+            weight: item?.weight,
+            contract: item?.count,
+            active: metadata?.active !== false,
+            name: projectName
+          }
+        })
+
+        const byFile = new Map()
+        for (const item of saved) {
+          const raw = String(item.filename || '')
+          if (raw) byFile.set(raw, item)
+          const base = normalizeFileKey(raw)
+          if (base) byFile.set(base, item)
+        }
+
+        this.equities = this.equities.map((eq) => {
+          const eqRaw = String(eq.filename || '')
+          const eqBase = normalizeFileKey(eqRaw)
+          const sv = byFile.get(eqRaw) || byFile.get(eqBase)
+          if (!sv) return eq
+          const weight = Number(sv.weight)
+          const contract = Number(sv.contract)
+          return {
+            ...eq,
+            color: normalizeColor(sv.color, eq.color),
+            weight: Number.isFinite(weight) ? weight : eq.weight,
+            contract: Number.isFinite(contract) ? contract : eq.contract,
+            active: typeof sv.active === 'boolean' ? sv.active : eq.active,
+            name: sv.name || eq.name,
+            index: Number.isFinite(sv.index) && sv.index >= 0 ? sv.index : eq.index
+          }
+        })
+        this.equities.sort((a, b) => (a.index ?? 9999) - (b.index ?? 9999))
+      }
+
+      const cfg = doc?.project_config && typeof doc.project_config === 'object' ? doc.project_config : {}
+      if (cfg.commission_config && typeof cfg.commission_config === 'object') {
+        this.commissionConfig = { ...cfg.commission_config }
+      }
+      this.strategyDescription = String(cfg.description || '')
+      const dateRange = cfg.date_range_config && typeof cfg.date_range_config === 'object' ? cfg.date_range_config : {}
+      this.dateRangeConfig = {
+        enabled: !!dateRange.enabled,
+        start: String(dateRange.start || ''),
+        end: String(dateRange.end || '')
+      }
+      const sharpe = cfg.sharpe_config && typeof cfg.sharpe_config === 'object' ? cfg.sharpe_config : {}
+      const capital = Number(sharpe.capital)
+      const rf = Number(sharpe.risk_free_rate)
+      this.sharpeConfig = {
+        capital: Number.isFinite(capital) && capital > 0 ? capital : 1000000,
+        risk_free_rate: Number.isFinite(rf) ? rf : 0
+      }
+    },
+    async restoreGseaGroupConfig(projectId) {
       this.strategyDescription = ''
       this.dateRangeConfig = { enabled: false, start: '', end: '' }
       this.sharpeConfig = { capital: 1000000, risk_free_rate: 0 }
       try {
-        const xml = await getPfo(projectId)
-        this.applySavedConfigFromXml(xml)
+        const raw = await getGseaGroup(projectId)
+        const text = String(raw || '')
+        if (text.trim().startsWith('<')) {
+          this.applySavedConfigFromXml(text)
+        } else {
+          this.applySavedConfigFromGroupJson(text)
+        }
       } catch (e) {
-        if (!/PFO not found/i.test(String(e?.message || ''))) {
+        if (!/group\\.json not found/i.test(String(e?.message || ''))) {
           this.error = e.message || '載入策略設定失敗'
         }
       }
@@ -265,7 +343,7 @@ export const usePortfolioStore = defineStore('portfolio', {
         end: config.end || null
       }
     },
-    async saveProjectPfo(projectId) {
+    async saveGseaGroup(projectId) {
       this.error = ''
       try {
         const items = this.equities.map((eq, i) => ({
@@ -277,7 +355,7 @@ export const usePortfolioStore = defineStore('portfolio', {
           active: !!eq.active,
           name: eq.name || eq.filename
         }))
-        return savePfo(
+        return saveGseaGroup(
           projectId,
           items,
           this.commissionConfig,
@@ -294,7 +372,7 @@ export const usePortfolioStore = defineStore('portfolio', {
       this.updatingConfig = true
       this.error = ''
       try {
-        await this.saveProjectPfo(projectId)
+        await this.saveGseaGroup(projectId)
         await this.analyze(projectId, options)
       } catch (e) {
         this.error = e.message

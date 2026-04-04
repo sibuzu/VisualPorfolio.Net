@@ -382,7 +382,7 @@ export async function runAnalysis(projectId, payload) {
   throw toError(lastError)
 }
 
-export async function savePfo(
+export async function saveGseaGroup(
   projectId,
   equities,
   commissionConfig = null,
@@ -409,16 +409,16 @@ export async function savePfo(
         risk_free_rate: Number(sharpeConfig.risk_free_rate || 0)
       }
     }
-    const { data } = await api.put(`/projects/${projectId}/pfo`, payload)
+    const { data } = await api.put(`/projects/${projectId}/gsea-group`, payload)
     return data
   } catch (error) {
     throw toError(error)
   }
 }
 
-export async function getPfo(projectId) {
+export async function getGseaGroup(projectId) {
   try {
-    const { data } = await api.get(`/projects/${projectId}/pfo`, {
+    const { data } = await api.get(`/projects/${projectId}/gsea-group`, {
       responseType: 'text'
     })
     return data
