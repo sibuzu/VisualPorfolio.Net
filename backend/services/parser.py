@@ -74,8 +74,12 @@ def _to_dt(value: str) -> datetime:
 
 
 def _pct_or_pt(price: float, ratio_or_point: str) -> float:
+    # Rule:
+    # - With '%' (or full-width '％'): treat as percentage of price.
+    # - Without '%': treat as fixed big-point value. Final money impact is
+    #   fixed_value * point_value (applied later in _records_to_trade_items).
     text = (ratio_or_point or "0").strip()
-    if text.endswith("%"):
+    if text.endswith("%") or text.endswith("％"):
         return price * _to_float(text[:-1], 0.0) / 100.0
     return _to_float(text, 0.0)
 
