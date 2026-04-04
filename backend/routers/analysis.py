@@ -117,6 +117,7 @@ def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
             "entry": t["trade_date1"],
             "exit": t["trade_date2"],
             "pnl": round(float(t["net_profit"]), 6),
+            "trade_amount": round(float(t.get("trade_amount", 0.0)), 6),
         }
         for t in merged
     ]

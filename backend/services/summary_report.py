@@ -105,6 +105,7 @@ def build_report(
 
     profits = [float(t["net_profit"]) for t in trades]
     total = sum(profits)
+    real_trade_count = sum(1 for t in trades if abs(float(t.get("trade_amount", 0.0))) > 0)
 
     equity = 0.0
     peak = 0.0
@@ -230,7 +231,7 @@ def build_report(
 
     summary = {
         "period": f"{trades[0]['trade_date2'][:10]} ~ {trades[-1]['trade_date2'][:10]}" if trades else "N/A",
-        "trade_count": len(trades),
+        "trade_count": real_trade_count,
         "net_profit": round(total, 6),
         "mdd": round(abs(max_dd), 6),
         "profit_factor": round(_safe_div(gross_profit, gross_loss_abs), 6),

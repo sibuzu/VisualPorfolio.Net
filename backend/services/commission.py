@@ -65,7 +65,7 @@ def build_commission(trades: list[dict], rate_per_trade: float = 0.0, cfg: Commi
             "years": [],
         }
 
-    trade_count = len(trades)
+    trade_count = sum(1 for t in trades if abs(float(t.get("trade_amount", 0.0))) > 0)
     simple_total = round(trade_count * rate_per_trade, 6)
     net = round(sum(float(t["net_profit"]) for t in trades) - simple_total, 6)
 

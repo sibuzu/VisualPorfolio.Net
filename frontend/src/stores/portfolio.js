@@ -194,6 +194,9 @@ export const usePortfolioStore = defineStore('portfolio', {
       try {
         const cleaned = String(groupText).replace(/,(\s*[}\]])/g, '$1')
         doc = JSON.parse(cleaned)
+        if (typeof doc === 'string') {
+          doc = JSON.parse(doc)
+        }
       } catch {
         return
       }

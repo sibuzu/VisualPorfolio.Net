@@ -57,7 +57,8 @@ def build_diversity(trades: list[dict]) -> dict:
 
         strat_daily[si][day] += profit
         strat_amount[si] += amt
-        strat_count[si] += 1
+        if amt > 0:
+            strat_count[si] += 1
 
         merged_by_time[ts] += amt
         per_strat_by_time[ts][si] += amt

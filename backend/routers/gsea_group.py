@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from backend.services.group_config import save_group_equities, save_project_config
@@ -36,7 +37,7 @@ def get_gsea_group(project_id: str, current_user: str = Depends(require_auth)):
     if not group_path.exists():
         raise HTTPException(status_code=404, detail="group.json not found")
     touch_access_time(project_id)
-    return group_path.read_text(encoding="utf-8-sig")
+    return Response(content=group_path.read_text(encoding="utf-8-sig"), media_type="application/json")
 
 
 @router.put("")

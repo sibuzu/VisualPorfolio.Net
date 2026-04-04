@@ -126,6 +126,9 @@ const sharpeDraftCapitalWan = ref('')
 const sharpeDraftRiskFreeRate = ref('')
 const summary = computed(() => analysis.value.summary || {})
 const trades = computed(() => analysis.value.position_analysis || [])
+const realTrades = computed(() =>
+  trades.value.filter((t) => Math.abs(Number(t?.trade_amount || 0)) > 0)
+)
 const periodDates = computed(() => parsePeriod(summary.value.period))
 const periodYears = computed(() => {
   const { start, end } = periodDates.value
@@ -136,13 +139,13 @@ const periodYears = computed(() => {
 const derived = computed(() => {
   const netProfit = Number(summary.value.net_profit || 0)
   const mdd = Math.abs(Number(summary.value.mdd || 0))
-  const tradeCount = Number(summary.value.trade_count || trades.value.length || 0)
-  const winCount = trades.value.filter((t) => Number(t.pnl || 0) > 0).length
+  const tradeCount = Number(summary.value.trade_count || realTrades.value.length || 0)
+  const winCount = realTrades.value.filter((t) => Number(t.pnl || 0) > 0).length
   const lossCount = tradeCount - winCount
-  const winAmount = trades.value
+  const winAmount = realTrades.value
     .filter((t) => Number(t.pnl || 0) > 0)
     .reduce((s, t) => s + Number(t.pnl || 0), 0)
-  const lossAmount = trades.value
+  const lossAmount = realTrades.value
     .filter((t) => Number(t.pnl || 0) <= 0)
     .reduce((s, t) => s + Number(t.pnl || 0), 0)
   const yearProfit = periodYears.value > 0 ? netProfit / periodYears.value : 0
