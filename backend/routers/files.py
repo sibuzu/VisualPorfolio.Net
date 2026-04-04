@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import io
 from pathlib import Path
 import re
+import zipfile
 import xml.etree.ElementTree as ET
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -13,7 +15,7 @@ from backend.services.auth import require_auth
 
 router = APIRouter(prefix="/projects/{project_id}/files", tags=["files"])
 
-_ALLOWED = {".srp", ".xrp", ".xml"}
+_ALLOWED = {".srp", ".xrp", ".xml", ".sea", ".gsea"}
 _ATTACHMENT_ALLOWED = {".png", ".jpg", ".jpeg"}
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -21,7 +23,30 @@ _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 def _validate_filename(name: str) -> None:
     ext = Path(name).suffix.lower()
     if ext not in _ALLOWED:
-        raise HTTPException(status_code=400, detail="Only .srp/.xrp/.xml are allowed")
+        raise HTTPException(status_code=400, detail="Only .srp/.xrp/.xml/.sea/.gsea are allowed")
+
+
+def _validate_trade_payload(name: str, payload: bytes) -> None:
+    ext = Path(name).suffix.lower()
+    if ext in {".srp", ".xrp", ".xml"}:
+        try:
+            ET.fromstring(payload.decode("utf-8-sig"))
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid XML: {exc}") from exc
+        return
+    if ext in {".sea", ".gsea"}:
+        try:
+            with zipfile.ZipFile(io.BytesIO(payload), "r") as zf:
+                names = [n.lower() for n in zf.namelist()]
+                if ext == ".sea" and not any(n.endswith("/events.jsonl") for n in names):
+                    raise HTTPException(status_code=400, detail="Invalid .sea: events.jsonl not found")
+                if ext == ".gsea" and not any(n.endswith(".sea") for n in names):
+                    raise HTTPException(status_code=400, detail="Invalid .gsea: .sea entries not found")
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid zip: {exc}") from exc
+        return
 
 
 def _sanitize_filename(name: str, allowed_ext: set[str]) -> str:
@@ -68,11 +93,7 @@ async def upload_file(project_id: str, file: UploadFile = File(...), current_use
 
     _validate_filename(file.filename)
     payload = await file.read()
-
-    try:
-        ET.fromstring(payload.decode("utf-8-sig"))
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid XML: {exc}") from exc
+    _validate_trade_payload(file.filename or "", payload)
 
     folder = project_dir(project_id)
     folder.mkdir(parents=True, exist_ok=True)

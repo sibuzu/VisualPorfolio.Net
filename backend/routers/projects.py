@@ -202,7 +202,9 @@ def copy_project(project_id: str, payload: ProjectCopyRequest, current_user: str
 
 
 @router.get("/{project_id}/download")
-def download_project(project_id: str):
+def download_project(project_id: str, current_user: str = Depends(require_auth)):
+    get_project_access(project_id, current_user)
+
     src_dir = project_dir(project_id)
     if not src_dir.exists():
         raise HTTPException(status_code=404, detail="Project directory not found")
@@ -224,7 +226,7 @@ def download_project(project_id: str):
     return FileResponse(
         path=tmp_zip,
         media_type="application/zip",
-        filename=f"{project_id}.zip",
+        filename=f"{project_id}.gsea",
         background=BackgroundTask(_cleanup_temp_file, tmp_zip),
     )
 
@@ -243,8 +245,8 @@ def upload_project_zip(
     if not project_name:
         raise HTTPException(status_code=400, detail="project_name cannot be empty")
 
-    if not (file.filename or "").lower().endswith(".zip"):
-        raise HTTPException(status_code=400, detail="Only .zip is supported")
+    if not (file.filename or "").lower().endswith(".gsea"):
+        raise HTTPException(status_code=400, detail="Only .gsea is supported")
 
     existing = None
     try:

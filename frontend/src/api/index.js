@@ -222,6 +222,36 @@ export async function copyProject(projectId, projectName) {
   }
 }
 
+export async function downloadProjectPackage(projectId) {
+  try {
+    const response = await api.get(`/projects/${projectId}/download`, {
+      responseType: 'blob'
+    })
+    const disposition = String(response.headers?.['content-disposition'] || '')
+    const m = disposition.match(/filename="?([^"]+)"?/i)
+    return {
+      blob: response.data,
+      filename: (m?.[1] || `${projectId}.gsea`).trim()
+    }
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function uploadProjectPackage(projectId, projectName, file) {
+  try {
+    const form = new FormData()
+    form.append('project_name', projectName)
+    form.append('file', file)
+    const { data } = await api.post(`/projects/${projectId}/upload`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function deleteProject(projectId) {
   try {
     const { data } = await api.delete(`/projects/${projectId}`)

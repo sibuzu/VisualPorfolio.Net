@@ -2,8 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import io
+import json
 from pathlib import Path
+import re
+import zipfile
 import xml.etree.ElementTree as ET
+import tomllib
 
 
 @dataclass
@@ -46,7 +51,20 @@ def _to_float(value: str | None, default: float = 0.0) -> float:
 
 
 def _to_dt(value: str) -> datetime:
-    fmts = ["%Y/%m/%d %H:%M:%S", "%Y/%m/%d", "%Y-%m-%d", "%Y-%m-%d %H:%M:%S"]
+    value = str(value or "").strip()
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        pass
+    fmts = [
+        "%Y/%m/%d %H:%M:%S",
+        "%Y/%m/%d",
+        "%Y-%m-%d",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+    ]
     for fmt in fmts:
         try:
             return datetime.strptime(value, fmt)
@@ -63,12 +81,173 @@ def _pct_or_pt(price: float, ratio_or_point: str) -> float:
 
 
 def parse_file(path: Path, strategy_index: int) -> list[TradeItem]:
+    ext = path.suffix.lower()
+    if ext in {".sea", ".gsea"}:
+        if ext == ".sea":
+            return _parse_sea_file(path, strategy_index)
+        return _parse_gsea_file(path, strategy_index)
+
     root = ET.parse(path).getroot()
     if root.tag == "策略回測":
         return _parse_srp_as_net_value_series(root, strategy_index)
     if root.tag == "CryptoReport":
         return _parse_xrp_as_net_value_series(root, strategy_index)
     raise ValueError(f"Unsupported root tag: {root.tag}")
+
+
+def _find_zip_text_entry(zf: zipfile.ZipFile, suffix: str) -> str:
+    for name in zf.namelist():
+        if name.lower().endswith(suffix.lower()):
+            return zf.read(name).decode("utf-8-sig")
+    return ""
+
+
+def _parse_strategy_slippage(strategy_toml: str) -> str:
+    if not strategy_toml:
+        return "0"
+    try:
+        doc = tomllib.loads(strategy_toml)
+        basic = doc.get("params", {}).get("基本設定", {})
+        if isinstance(basic, dict):
+            raw = basic.get("滑價成本", basic.get("滑價", "0"))
+            return str(raw if raw is not None else "0")
+    except Exception:
+        pass
+    return "0"
+
+
+def _parse_sea_records(strategy_toml: str, events_jsonl: str) -> tuple[list[TradeRecord], str]:
+    slippage = _parse_strategy_slippage(strategy_toml)
+    records: list[TradeRecord] = []
+    pos_by_symbol: dict[str, float] = {}
+
+    for raw in (events_jsonl or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        event = json.loads(line)
+        event_type = str(event.get("type", "")).strip().lower()
+        ts = _to_dt(str(event.get("timestamp", "1970-01-01T00:00:00")))
+        data = event.get("data") if isinstance(event.get("data"), dict) else {}
+        if not data:
+            continue
+
+        symbol = str(data.get("instrument_id", "SYM"))
+        price = _to_float(str(data.get("price", 0.0)), 0.0)
+        if event_type == "trade":
+            qty = _to_float(str(data.get("quantity", 0.0)), 0.0)
+            if qty == 0 or price <= 0:
+                continue
+            bs = "B" if qty > 0 else "S"
+            records.append(
+                TradeRecord(
+                    strategy_index=0,
+                    bs=bs,
+                    contract=abs(qty),
+                    price=price,
+                    time_stamp=ts,
+                    trade_type="",
+                    symbol=symbol,
+                )
+            )
+            pos_by_symbol[symbol] = pos_by_symbol.get(symbol, 0.0) + qty
+            continue
+
+        if event_type == "price":
+            pos = pos_by_symbol.get(symbol, 0.0)
+            if pos == 0 or price <= 0:
+                continue
+            close_bs = "S" if pos > 0 else "B"
+            open_bs = "B" if pos > 0 else "S"
+            contract = abs(pos)
+            records.append(
+                TradeRecord(
+                    strategy_index=0,
+                    bs=close_bs,
+                    contract=contract,
+                    price=price,
+                    time_stamp=ts,
+                    trade_type="x",
+                    symbol=symbol,
+                )
+            )
+            records.append(
+                TradeRecord(
+                    strategy_index=0,
+                    bs=open_bs,
+                    contract=contract,
+                    price=price,
+                    time_stamp=ts,
+                    trade_type="x",
+                    symbol=symbol,
+                )
+            )
+
+    return records, slippage
+
+
+def _parse_sea_file(path: Path, strategy_index: int) -> list[TradeItem]:
+    with zipfile.ZipFile(path, "r") as zf:
+        strategy_toml = _find_zip_text_entry(zf, "/strategy.toml")
+        events_jsonl = _find_zip_text_entry(zf, "/events.jsonl")
+    if not events_jsonl:
+        raise ValueError("Cannot find events.jsonl in .sea")
+    records, slippage = _parse_sea_records(strategy_toml, events_jsonl)
+    return _records_to_trade_items(records, point_value=1.0, slippage=slippage, strategy_index=strategy_index)
+
+
+def _parse_gsea_group_items(group_text: str) -> dict[str, float]:
+    if not group_text:
+        return {}
+    try:
+        # Tolerate trailing commas in legacy group.json files.
+        cleaned = re.sub(r",(\s*[}\]])", r"\1", group_text)
+        group = json.loads(cleaned).get("group", [])
+    except Exception:
+        return {}
+
+    scales: dict[str, float] = {}
+    for item in group:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("project", "")).strip()
+        if not name:
+            continue
+        count = _to_float(str(item.get("count", 1)), 1.0)
+        weight = _to_float(str(item.get("weight", 1)), 1.0)
+        scales[name.lower()] = max(count, 0.0) * weight
+    return scales
+
+
+def _parse_gsea_file(path: Path, strategy_index: int) -> list[TradeItem]:
+    all_records: list[TradeRecord] = []
+    slippage = "0"
+    with zipfile.ZipFile(path, "r") as zf:
+        group_text = _find_zip_text_entry(zf, "/group.json")
+        scales = _parse_gsea_group_items(group_text)
+
+        sea_names = [name for name in zf.namelist() if name.lower().endswith(".sea")]
+        for sea_name in sea_names:
+            sea_base = Path(sea_name).stem.lower()
+            scale = scales.get(sea_base, 1.0)
+            if scale <= 0:
+                continue
+            sea_bytes = zf.read(sea_name)
+            # Read embedded .sea from memory.
+            with zipfile.ZipFile(io.BytesIO(sea_bytes), "r") as sea_zip:
+                strategy_toml = _find_zip_text_entry(sea_zip, "/strategy.toml")
+                events_jsonl = _find_zip_text_entry(sea_zip, "/events.jsonl")
+            if not events_jsonl:
+                continue
+            sea_records, sea_slippage = _parse_sea_records(strategy_toml, events_jsonl)
+            slippage = sea_slippage or slippage
+            for rec in sea_records:
+                rec.contract *= scale
+            all_records.extend(sea_records)
+
+    if not all_records:
+        raise ValueError("No valid .sea entries found in .gsea")
+    return _records_to_trade_items(all_records, point_value=1.0, slippage=slippage, strategy_index=strategy_index)
 
 
 def _parse_srp_as_net_value_series(root: ET.Element, strategy_index: int) -> list[TradeItem]:

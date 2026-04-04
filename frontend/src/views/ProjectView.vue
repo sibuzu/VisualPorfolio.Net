@@ -18,7 +18,14 @@
             <path d="M8,11h8v2H8V11z M20.1,12H22c0-2.76-2.24-5-5-5h-4v1.9h4C18.71,8.9,20.1,10.29,20.1,12z M3.9,12c0-1.71,1.39-3.1,3.1-3.1h4 V7H7c-2.76,0-5,2.24-5,5s2.24,5,5,5h4v-1.9H7C5.29,15.1,3.9,13.71,3.9,12z M19,12h-2v3h-3v2h3v3h2v-3h3v-2h-3V12z"/>
           </svg>
         </button>
-        <span class="status-inline">{{ readonly ? '（可檢視）' : '（可編輯）' }}</span>
+        <span class="status-inline" :title="readonly ? '可檢視' : '可編輯'" :aria-label="readonly ? '可檢視' : '可編輯'">
+          <svg v-if="readonly" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2.062,12.346C3.773,17,7.675,20,12,20s8.227-3,9.938-7.654a.993.993,0,0,0,0-.692C20.227,7,16.325,4,12,4S3.773,7,2.062,11.654A.993.993,0,0,0,2.062,12.346ZM12,6c3.373,0,6.451,2.343,7.929,6-1.478,3.657-4.556,6-7.929,6s-6.451-2.343-7.929-6C5.549,8.343,8.627,6,12,6Zm0,10a4,4,0,1,0-4-4A4,4,0,0,0,12,16Zm0-6a2,2,0,1,1-2,2A2,2,0,0,1,12,10Z"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18.111,2.293,9.384,11.021a.977.977,0,0,0-.241.39L8.052,14.684A1,1,0,0,0,9,16a.987.987,0,0,0,.316-.052l3.273-1.091a.977.977,0,0,0,.39-.241l8.728-8.727a1,1,0,0,0,0-1.414L19.525,2.293A1,1,0,0,0,18.111,2.293ZM11.732,13.035l-1.151.384.384-1.151L16.637,6.6l.767.767Zm7.854-7.853-.768.767-.767-.767.767-.768ZM3,5h8a1,1,0,0,1,0,2H4V20H17V13a1,1,0,0,1,2,0v8a1,1,0,0,1-1,1H3a1,1,0,0,1-1-1V6A1,1,0,0,1,3,5Z"/>
+          </svg>
+        </span>
         <span class="id-line-spacer"></span>
         <button
           type="button"
@@ -31,19 +38,38 @@
           </svg>
           <span>複製專案</span>
         </button>
+        <button
+          type="button"
+          class="copy-project-btn"
+          @click="downloadProject"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7.293,13.707a1,1,0,1,1,1.414-1.414L11,14.586V3a1,1,0,0,1,2,0V14.586l2.293-2.293a1,1,0,0,1,1.414,1.414l-4,4a1,1,0,0,1-.325.216.986.986,0,0,1-.764,0,1,1,0,0,1-.325-.216ZM22,12a1,1,0,0,0-1,1v7H3V13a1,1,0,0,0-2,0v8a1,1,0,0,0,1,1H22a1,1,0,0,0,1-1V13A1,1,0,0,0,22,12Z"/>
+          </svg>
+          <span>下載專案</span>
+        </button>
       </p>
       <p v-if="copyHint" class="hint">{{ copyHint }}</p>
 
       <div class="equity-manager-wrap">
         <div class="manager-head">
           <h3 class="manager-title">策略組合管理</h3>
-          <button type="button" class="copy-project-btn file-btn" :disabled="readonly" @click="openFilePicker">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M16,13 L13,13 L13,16 C13,16.55 12.55,17 12,17 C11.45,17 11,16.55 11,16 L11,13 L8,13 C7.45,13 7,12.55 7,12 C7,11.45 7.45,11 8,11 L11,11 L11,8 C11,7.45 11.45,7 12,7 C12.55,7 13,7.45 13,8 L13,11 L16,11 C16.55,11 17,11.45 17,12 C17,12.55 16.55,13 16,13 Z"/>
-            </svg>
-            <span>新增績效</span>
-          </button>
-          <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp,.xml" multiple :disabled="readonly" @change="upload" />
+          <div class="manager-actions">
+            <button type="button" class="copy-project-btn file-btn" :disabled="readonly" @click="openFilePicker">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M16,13 L13,13 L13,16 C13,16.55 12.55,17 12,17 C11.45,17 11,16.55 11,16 L11,13 L8,13 C7.45,13 7,12.55 7,12 C7,11.45 7.45,11 8,11 L11,11 L11,8 C11,7.45 11.45,7 12,7 C12.55,7 13,7.45 13,8 L13,11 L16,11 C16.55,11 17,11.45 17,12 C17,12.55 16.55,13 16,13 Z"/>
+              </svg>
+              <span>新增績效</span>
+            </button>
+            <button type="button" class="copy-project-btn file-btn" :disabled="readonly" @click="openProjectUploadPicker">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M23,13v8a1,1,0,0,1-1,1H2a1,1,0,0,1-1-1V13a1,1,0,0,1,2,0v7H21V13a1,1,0,0,1,2,0ZM12,18a1,1,0,0,0,1-1V5.414l2.293,2.293a1,1,0,0,0,1.414-1.414l-4-4a1,1,0,0,0-1.414,0l-4,4A1,1,0,1,0,8.707,7.707L11,5.414V17A1,1,0,0,0,12,18Z"/>
+              </svg>
+              <span>上傳專案</span>
+            </button>
+          </div>
+          <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp,.xml,.sea" multiple :disabled="readonly" @change="upload" />
+          <input ref="projectUploadInputRef" class="file-input-hidden" type="file" accept=".gsea" :disabled="readonly" @change="uploadProjectPackageFile" />
         </div>
         <div class="manager-range-row">
           <label class="range-check-label">
@@ -123,7 +149,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { authMe, currentUserId } from '../api'
+import { authMe, currentUserId, downloadProjectPackage, uploadProjectPackage } from '../api'
 import { useProjectStore } from '../stores/project'
 import { usePortfolioStore } from '../stores/portfolio'
 import EquityManager from '../components/EquityManager.vue'
@@ -148,6 +174,7 @@ const copyHint = ref('')
 const sidebarWidth = ref(390)
 const resizing = ref(false)
 const fileInputRef = ref(null)
+const projectUploadInputRef = ref(null)
 
 const readonly = computed(() => {
   const p = projectStore.activeProject
@@ -286,6 +313,49 @@ async function upload(event) {
 
 function openFilePicker() {
   fileInputRef.value?.click()
+}
+
+function openProjectUploadPicker() {
+  projectUploadInputRef.value?.click()
+}
+
+async function uploadProjectPackageFile(event) {
+  const file = Array.from(event?.target?.files || [])[0]
+  if (!file) return
+  viewError.value = ''
+  try {
+    await uploadProjectPackage(route.params.projectId, String(projectStore.activeProject?.project_name || 'Project'), file)
+    await loadAll()
+    copyHint.value = '上傳專案完成'
+    setTimeout(() => {
+      copyHint.value = ''
+    }, 1500)
+  } catch (e) {
+    viewError.value = e.message || '上傳專案失敗'
+  }
+  event.target.value = ''
+}
+
+async function downloadProject() {
+  if (readonly.value) return
+  viewError.value = ''
+  try {
+    const { blob, filename } = await downloadProjectPackage(route.params.projectId)
+    const href = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = href
+    a.download = filename || `${route.params.projectId}.gsea`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(href)
+    copyHint.value = '下載專案完成'
+    setTimeout(() => {
+      copyHint.value = ''
+    }, 1500)
+  } catch (e) {
+    viewError.value = e.message || '下載專案失敗'
+  }
 }
 
 async function copyProjectLink() {
@@ -470,10 +540,14 @@ button.active {
 }
 .manager-head {
   display: flex;
-  justify-content: space-between;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
+}
+.manager-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 12px;
 }
 .manager-title {
   margin: 0;
@@ -565,8 +639,15 @@ button.active {
   font-size: 13px;
 }
 .status-inline {
-  color: inherit;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+.status-inline svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 .file-input-hidden {
   display: none;

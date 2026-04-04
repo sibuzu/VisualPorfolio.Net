@@ -38,7 +38,7 @@ def _upload_sample_file(client: TestClient, project_id: str, filename: str) -> N
     assert resp.status_code == 200
 
 
-def _make_zip_bytes() -> bytes:
+def _make_gsea_bytes() -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("new.txt", "hello")
@@ -56,13 +56,14 @@ def test_project_download_returns_zip():
         resp = client.get(f"/projects/{project_id}/download")
         assert resp.status_code == 200
         assert resp.headers.get("content-type", "").startswith("application/zip")
+        assert ".gsea" in str(resp.headers.get("content-disposition", ""))
 
         with zipfile.ZipFile(io.BytesIO(resp.content), "r") as zf:
             names = set(zf.namelist())
         assert "aa-1.srp" in names
 
 
-def test_project_download_forbidden_for_non_owner():
+def test_project_download_allowed_for_non_owner_viewer():
     with TestClient(app) as client:
         owner_id, owner_pw = _new_user("owner")
         other_id, other_pw = _new_user("other")
@@ -72,9 +73,9 @@ def test_project_download_forbidden_for_non_owner():
         _upload_sample_file(client, project_id, "old.srp")
 
         _signup_and_login(client, other_id, other_pw)
-        deny = client.get(f"/projects/{project_id}/download")
-        assert deny.status_code == 403
-        assert deny.json()["detail"] == "Only owner can download"
+        allow = client.get(f"/projects/{project_id}/download")
+        assert allow.status_code == 200
+        assert allow.headers.get("content-type", "").startswith("application/zip")
 
 
 def test_project_upload_overwrites_dir_and_keeps_current_owner():
@@ -84,12 +85,12 @@ def test_project_upload_overwrites_dir_and_keeps_current_owner():
         project_id = _create_project(client, "zip-upload")
         _upload_sample_file(client, project_id, "old.srp")
         assert (project_dir(project_id) / "old.srp").exists()
-        zip_payload = _make_zip_bytes()
+        zip_payload = _make_gsea_bytes()
 
         upload = client.post(
             f"/projects/{project_id}/upload",
             data={"project_name": "Uploaded Project"},
-            files={"file": ("project.zip", zip_payload, "application/zip")},
+            files={"file": ("project.gsea", zip_payload, "application/zip")},
         )
         assert upload.status_code == 200
         body = upload.json()
@@ -108,6 +109,22 @@ def test_project_upload_overwrites_dir_and_keeps_current_owner():
         assert info.json()["project"]["project_name"] == "Uploaded Project"
 
 
+def test_project_upload_rejects_zip_extension():
+    with TestClient(app) as client:
+        owner_id, owner_pw = _new_user("owner")
+        _signup_and_login(client, owner_id, owner_pw)
+        project_id = _create_project(client, "gsea-upload")
+        zip_payload = _make_gsea_bytes()
+
+        upload = client.post(
+            f"/projects/{project_id}/upload",
+            data={"project_name": "Uploaded GSEA"},
+            files={"file": ("project.zip", zip_payload, "application/zip")},
+        )
+        assert upload.status_code == 400
+        assert upload.json()["detail"] == "Only .gsea is supported"
+
+
 def test_project_upload_fails_when_project_belongs_to_other_user():
     with TestClient(app) as client:
         owner_id, owner_pw = _new_user("owner")
@@ -118,11 +135,11 @@ def test_project_upload_fails_when_project_belongs_to_other_user():
         _upload_sample_file(client, project_id, "old.srp")
 
         _signup_and_login(client, other_id, other_pw)
-        zip_payload = _make_zip_bytes()
+        zip_payload = _make_gsea_bytes()
         upload = client.post(
             f"/projects/{project_id}/upload",
             data={"project_name": "Not Allowed"},
-            files={"file": ("project.zip", zip_payload, "application/zip")},
+            files={"file": ("project.gsea", zip_payload, "application/zip")},
         )
         assert upload.status_code == 403
         assert upload.json()["detail"] == "Project already owned by another user"
