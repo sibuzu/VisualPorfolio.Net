@@ -34,7 +34,7 @@ def test_upload_and_analysis_flow():
 
         listing = client.get(f"/projects/{project_id}/files", params={"user_id": OWNER})
         assert listing.status_code == 200
-        assert any(x["filename"] == "aa-1.srp" for x in listing.json()["files"])
+        assert any(x["filename"] == "aa-1.sea" for x in listing.json()["files"])
 
         run = client.post(
             f"/projects/{project_id}/analysis",
@@ -42,7 +42,7 @@ def test_upload_and_analysis_flow():
             json={
                 "equities": [
                     {
-                        "filename": "aa-1.srp",
+                        "filename": "aa-1.sea",
                         "active": True,
                         "contract": 1,
                         "weight": 1,

@@ -68,7 +68,7 @@
               <span>上傳專案</span>
             </button>
           </div>
-          <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp,.xml,.sea" multiple :disabled="readonly" @change="upload" />
+          <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp,.sea" multiple :disabled="readonly" @change="upload" />
           <input ref="projectUploadInputRef" class="file-input-hidden" type="file" accept=".gsea" :disabled="readonly" @change="uploadProjectPackageFile" />
         </div>
         <div class="manager-range-row">

@@ -69,7 +69,7 @@ export const usePortfolioStore = defineStore('portfolio', {
       this.equities = files
         .filter((f) => {
           const name = String(f.filename || '').toLowerCase()
-          return name.endsWith('.srp') || name.endsWith('.xrp') || name.endsWith('.xml') || name.endsWith('.sea')
+          return name.endsWith('.sea') || name.endsWith('.gsea')
         })
         .map((f, i) => ({
           filename: f.filename,

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 import logging
-import re
 import shutil
 import tempfile
 import zipfile
@@ -29,7 +27,7 @@ from backend.services.project_access import (
     write_project_config,
 )
 from backend.db.database import get_conn
-from backend.services.pfo import save_pfo
+from backend.services.sea_convert import convert_legacy_files_in_dir
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 _og_logger = logging.getLogger("uvicorn.error")
@@ -89,66 +87,6 @@ def _safe_extract_zip(zip_path: Path, dst: Path) -> None:
             target.parent.mkdir(parents=True, exist_ok=True)
             with zf.open(member, "r") as src, target.open("wb") as out:
                 shutil.copyfileobj(src, out)
-
-
-def _to_float(value, default: float = 1.0) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _build_pfo_from_group_json(target_dir: Path) -> None:
-    pfo_path = target_dir / "project.pfo"
-    if pfo_path.exists():
-        return
-    group_path = target_dir / "group.json"
-    if not group_path.exists():
-        return
-
-    try:
-        raw = group_path.read_text(encoding="utf-8-sig")
-        cleaned = re.sub(r",(\s*[}\]])", r"\1", raw)
-        data = json.loads(cleaned)
-    except Exception:
-        return
-
-    group_items = data.get("group")
-    if not isinstance(group_items, list):
-        return
-
-    equities: list[dict] = []
-    for i, item in enumerate(group_items):
-        if not isinstance(item, dict):
-            continue
-        project = str(item.get("project", "")).strip()
-        if not project:
-            continue
-        filename = f"{project}.sea"
-        if not (target_dir / filename).exists():
-            alt = f"{project}.gsea"
-            if (target_dir / alt).exists():
-                filename = alt
-            elif not (target_dir / project).exists():
-                continue
-
-        metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-        color = str(metadata.get("color", "Blue") or "Blue")
-        project_name = str(item.get("project_name", "")).strip() or project
-        equities.append(
-            {
-                "index": i,
-                "filename": filename,
-                "color": color,
-                "weight": _to_float(item.get("weight"), 1.0),
-                "contract": _to_float(item.get("count"), 1.0),
-                "active": True,
-                "name": project_name,
-            }
-        )
-
-    if equities:
-        save_pfo(pfo_path, equities)
 
 
 @router.get("", response_model=ProjectListResponse)
@@ -363,7 +301,8 @@ def upload_project_zip(
         _safe_extract_zip(tmp_zip, target_dir)
     finally:
         _cleanup_temp_file(tmp_zip)
-    _build_pfo_from_group_json(target_dir)
+    convert_legacy_files_in_dir(target_dir)
+    (target_dir / "project.pfo").unlink(missing_ok=True)
 
     ts = now_utc_iso()
     with get_conn() as conn:

@@ -50,7 +50,7 @@ def test_e2e_metric_parity_with_sample_srp():
             json={
                 "equities": [
                     {
-                        "filename": "aa-1.srp",
+                        "filename": "aa-1.sea",
                         "active": True,
                         "contract": 1,
                         "weight": 1,
@@ -89,8 +89,8 @@ def test_e2e_readonly_and_pfo_roundtrip():
             params={"user_id": OWNER},
             json={
                 "equities": [
-                    {"index": 0, "filename": "aa-1.srp", "color": "Blue", "weight": 31.7},
-                    {"index": 1, "filename": "aa-2.srp", "color": "Maroon", "weight": 31.7},
+                    {"index": 0, "filename": "aa-1.sea", "color": "Blue", "weight": 31.7},
+                    {"index": 1, "filename": "aa-2.sea", "color": "Maroon", "weight": 31.7},
                 ]
             },
         )
@@ -99,8 +99,8 @@ def test_e2e_readonly_and_pfo_roundtrip():
         download = client.get(f"/projects/{project_id}/pfo", params={"user_id": OWNER})
         assert download.status_code == 200
         assert "PortfolioyList" in download.text
-        assert "aa-1.srp" in download.text
-        assert "aa-2.srp" in download.text
+        assert "aa-1.sea" in download.text
+        assert "aa-2.sea" in download.text
 
         stranger_read = client.get(f"/projects/{project_id}", params={"user_id": STRANGER})
         assert stranger_read.status_code == 200
@@ -114,6 +114,6 @@ def test_e2e_readonly_and_pfo_roundtrip():
         stranger_pfo_put = client.put(
             f"/projects/{project_id}/pfo",
             params={"user_id": STRANGER},
-            json={"equities": [{"index": 0, "filename": "aa-1.srp", "color": "Blue", "weight": 1}]},
+            json={"equities": [{"index": 0, "filename": "aa-1.sea", "color": "Blue", "weight": 1}]},
         )
         assert stranger_pfo_put.status_code == 403

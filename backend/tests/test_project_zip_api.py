@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import io
+import json
 import uuid
 import zipfile
 from pathlib import Path
-import xml.etree.ElementTree as ET
 
 from fastapi.testclient import TestClient
 
@@ -88,7 +88,7 @@ def test_project_download_returns_zip():
 
         with zipfile.ZipFile(io.BytesIO(resp.content), "r") as zf:
             names = set(zf.namelist())
-        assert "aa-1.srp" in names
+        assert "aa-1.sea" in names
         assert "project.pfo" not in names
 
 
@@ -113,7 +113,7 @@ def test_project_upload_overwrites_dir_and_keeps_current_owner():
         _signup_and_login(client, owner_id, owner_pw)
         project_id = _create_project(client, "zip-upload")
         _upload_sample_file(client, project_id, "old.srp")
-        assert (project_dir(project_id) / "old.srp").exists()
+        assert (project_dir(project_id) / "old.sea").exists()
         zip_payload = _make_gsea_bytes()
 
         upload = client.post(
@@ -128,7 +128,7 @@ def test_project_upload_overwrites_dir_and_keeps_current_owner():
         assert body["project_name"] == "Uploaded Project"
 
         pdir = project_dir(project_id)
-        assert not (pdir / "old.srp").exists()
+        assert not (pdir / "old.sea").exists()
         assert (pdir / "new.txt").exists()
         assert (pdir / "nested/path/data.txt").exists()
 
@@ -194,7 +194,7 @@ def test_project_upload_fails_when_project_belongs_to_other_user():
         assert upload.json()["detail"] == "Project already owned by another user"
 
 
-def test_project_upload_builds_pfo_from_group_count_weight():
+def test_project_upload_keeps_group_weight_count():
     with TestClient(app) as client:
         owner_id, owner_pw = _new_user("owner")
         _signup_and_login(client, owner_id, owner_pw)
@@ -208,11 +208,10 @@ def test_project_upload_builds_pfo_from_group_count_weight():
         )
         assert upload.status_code == 200
 
-        pfo_path = project_dir(project_id) / "project.pfo"
-        assert pfo_path.exists()
-        root = ET.parse(pfo_path).getroot()
-        node = root.find("./Equity")
-        assert node is not None
-        assert node.attrib.get("FileName") == "BatchRun-1.sea"
-        assert node.attrib.get("Count") == "3.0"
-        assert node.attrib.get("Weight") == "2.5"
+        group_path = project_dir(project_id) / "group.json"
+        assert group_path.exists()
+        data = json.loads(group_path.read_text(encoding="utf-8"))
+        item = data["group"][0]
+        assert item["count"] == 3
+        assert item["weight"] == "2.5"
+        assert not (project_dir(project_id) / "project.pfo").exists()

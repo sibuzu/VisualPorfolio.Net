@@ -12,10 +12,11 @@ from fastapi.responses import FileResponse
 
 from backend.services.project_access import get_project_access, project_dir, touch_access_time
 from backend.services.auth import require_auth
+from backend.services.sea_convert import convert_legacy_payload_to_sea, is_legacy_trade_ext
 
 router = APIRouter(prefix="/projects/{project_id}/files", tags=["files"])
 
-_ALLOWED = {".srp", ".xrp", ".xml", ".sea", ".gsea"}
+_ALLOWED = {".srp", ".xrp", ".sea", ".gsea"}
 _ATTACHMENT_ALLOWED = {".png", ".jpg", ".jpeg"}
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -23,12 +24,12 @@ _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 def _validate_filename(name: str) -> None:
     ext = Path(name).suffix.lower()
     if ext not in _ALLOWED:
-        raise HTTPException(status_code=400, detail="Only .srp/.xrp/.xml/.sea/.gsea are allowed")
+        raise HTTPException(status_code=400, detail="Only .srp/.xrp/.sea/.gsea are allowed")
 
 
 def _validate_trade_payload(name: str, payload: bytes) -> None:
     ext = Path(name).suffix.lower()
-    if ext in {".srp", ".xrp", ".xml"}:
+    if ext in {".srp", ".xrp"}:
         try:
             ET.fromstring(payload.decode("utf-8-sig"))
         except Exception as exc:
@@ -94,14 +95,21 @@ async def upload_file(project_id: str, file: UploadFile = File(...), current_use
     _validate_filename(file.filename)
     payload = await file.read()
     _validate_trade_payload(file.filename or "", payload)
+    save_name = file.filename or "upload.sea"
+    ext = Path(save_name).suffix.lower()
+    if is_legacy_trade_ext(ext):
+        try:
+            save_name, payload = convert_legacy_payload_to_sea(save_name, payload)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Cannot convert {ext} to .sea: {exc}") from exc
 
     folder = project_dir(project_id)
     folder.mkdir(parents=True, exist_ok=True)
-    out_path = folder / file.filename
+    out_path = folder / save_name
     out_path.write_bytes(payload)
 
     touch_access_time(project_id)
-    return {"ok": True, "filename": file.filename}
+    return {"ok": True, "filename": save_name}
 
 
 @router.delete("/{filename}")

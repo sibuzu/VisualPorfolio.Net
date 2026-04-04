@@ -77,6 +77,43 @@ def save_pfo(
     date_range_config: dict | None = None,
     sharpe_config: dict | None = None,
 ) -> None:
+    root = _build_pfo_root(
+        equities,
+        commission_config=commission_config,
+        description=description,
+        date_range_config=date_range_config,
+        sharpe_config=sharpe_config,
+    )
+    tree = ET.ElementTree(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tree.write(path, encoding="utf-8", xml_declaration=True)
+
+
+def render_pfo_xml(
+    equities: list[dict],
+    commission_config: dict | None = None,
+    description: str | None = None,
+    date_range_config: dict | None = None,
+    sharpe_config: dict | None = None,
+) -> str:
+    root = _build_pfo_root(
+        equities,
+        commission_config=commission_config,
+        description=description,
+        date_range_config=date_range_config,
+        sharpe_config=sharpe_config,
+    )
+    xml_body = ET.tostring(root, encoding="unicode")
+    return '<?xml version="1.0" encoding="utf-8"?>\n' + xml_body
+
+
+def _build_pfo_root(
+    equities: list[dict],
+    commission_config: dict | None = None,
+    description: str | None = None,
+    date_range_config: dict | None = None,
+    sharpe_config: dict | None = None,
+) -> ET.Element:
     root = ET.Element("PortfolioyList")
     for eq in equities:
         ET.SubElement(
@@ -121,7 +158,4 @@ def save_pfo(
                 "risk_free_rate": str(sharpe_config.get("risk_free_rate", 0.0)),
             },
         )
-
-    tree = ET.ElementTree(root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tree.write(path, encoding="utf-8", xml_declaration=True)
+    return root

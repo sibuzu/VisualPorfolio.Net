@@ -87,6 +87,10 @@ def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
         if not eq.active:
             continue
         file_path = folder / eq.filename
+        if not file_path.exists() and Path(eq.filename).suffix.lower() in {".srp", ".xrp", ".xml"}:
+            alt = folder / f"{Path(eq.filename).stem}.sea"
+            if alt.exists():
+                file_path = alt
         if not file_path.exists():
             raise HTTPException(status_code=400, detail=f"File not found: {eq.filename}")
         trades = parse_file(file_path, strategy_index=i)
