@@ -59,7 +59,7 @@ export const usePortfolioStore = defineStore('portfolio', {
       end: ''
     },
     sharpeConfig: {
-      capital: 1000000,
+      capital: 100,
       risk_free_rate: 0
     }
   }),
@@ -181,11 +181,11 @@ export const usePortfolioStore = defineStore('portfolio', {
         const capital = Number(snode.getAttribute('capital'))
         const rf = Number(snode.getAttribute('risk_free_rate'))
         this.sharpeConfig = {
-          capital: Number.isFinite(capital) && capital > 0 ? capital : 1000000,
+          capital: Number.isFinite(capital) && capital > 0 ? capital : 100,
           risk_free_rate: Number.isFinite(rf) ? rf : 0
         }
       } else {
-        this.sharpeConfig = { capital: 1000000, risk_free_rate: 0 }
+        this.sharpeConfig = { capital: 100, risk_free_rate: 0 }
       }
     },
     applySavedConfigFromGroupJson(groupText) {
@@ -260,14 +260,14 @@ export const usePortfolioStore = defineStore('portfolio', {
       const capital = Number(sharpe.capital)
       const rf = Number(sharpe.risk_free_rate)
       this.sharpeConfig = {
-        capital: Number.isFinite(capital) && capital > 0 ? capital : 1000000,
+        capital: Number.isFinite(capital) && capital > 0 ? capital : 100,
         risk_free_rate: Number.isFinite(rf) ? rf : 0
       }
     },
     async restoreGseaGroupConfig(projectId) {
       this.strategyDescription = ''
       this.dateRangeConfig = { enabled: false, start: '', end: '' }
-      this.sharpeConfig = { capital: 1000000, risk_free_rate: 0 }
+      this.sharpeConfig = { capital: 100, risk_free_rate: 0 }
       try {
         const raw = await getGseaGroup(projectId)
         const text = String(raw || '')
@@ -288,7 +288,7 @@ export const usePortfolioStore = defineStore('portfolio', {
       try {
         const baseOptions = {
           risk_free_rate: Number(this.sharpeConfig?.risk_free_rate || 0),
-          capital: Number(this.sharpeConfig?.capital || 1000000),
+          capital: Number(this.sharpeConfig?.capital || 100),
           mdd_count: 5,
           commission_per_trade: 0
         }
@@ -334,7 +334,7 @@ export const usePortfolioStore = defineStore('portfolio', {
       const capital = Number(config?.capital)
       const riskFree = Number(config?.risk_free_rate)
       this.sharpeConfig = {
-        capital: Number.isFinite(capital) && capital > 0 ? capital : 1000000,
+        capital: Number.isFinite(capital) && capital > 0 ? capital : 100,
         risk_free_rate: Number.isFinite(riskFree) ? riskFree : 0
       }
     },

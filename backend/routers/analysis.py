@@ -41,7 +41,8 @@ class DateRange(BaseModel):
 
 
 class Options(BaseModel):
-    capital: float = 1_000_000.0
+    # Sharpe capital is provided in ten-thousand (萬元) units.
+    capital: float = 100.0
     risk_free_rate: float = 0.0
     mdd_count: int = Field(default=5, ge=1, le=20)
     div_by_count: bool = False
@@ -107,7 +108,7 @@ def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
         merged,
         risk_free_rate=payload.options.risk_free_rate,
         mdd_count=payload.options.mdd_count,
-        capital=payload.options.capital,
+        capital=(float(payload.options.capital) if float(payload.options.capital) > 0 else 100.0) * 10_000.0,
     )
 
     position_analysis = [

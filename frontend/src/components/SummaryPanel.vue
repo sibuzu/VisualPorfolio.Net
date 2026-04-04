@@ -291,9 +291,9 @@ function ratio(v) {
 }
 
 async function editSharpeConfig() {
-  const currentCapital = Number(portfolioStore.sharpeConfig?.capital || 1000000)
+  const currentCapitalWan = Number(portfolioStore.sharpeConfig?.capital || 100)
   const currentRf = Number(portfolioStore.sharpeConfig?.risk_free_rate || 0)
-  sharpeDraftCapitalWan.value = String(currentCapital / 10000)
+  sharpeDraftCapitalWan.value = String(currentCapitalWan)
   sharpeDraftRiskFreeRate.value = String(currentRf)
   sharpeDialogRef.value?.showModal()
 }
@@ -314,8 +314,8 @@ async function confirmSharpeDialog() {
     return
   }
 
-  const capital = capitalWan * 10000
-  const prevCapital = Number(portfolioStore.sharpeConfig?.capital || 1000000)
+  const capital = capitalWan
+  const prevCapital = Number(portfolioStore.sharpeConfig?.capital || 100)
   const prevRf = Number(portfolioStore.sharpeConfig?.risk_free_rate || 0)
   const changed = Math.abs(capital - prevCapital) > 1e-9 || Math.abs(riskFreeRate - prevRf) > 1e-9
   if (!changed) {
@@ -375,7 +375,8 @@ function recalcSharpeOnly(capital, riskFreeRate) {
   const ep = Array.from(dayPnl.values())
   const n = years > 0 ? ep.length / years : ep.length
   const rf = n > 0 ? (riskFreeRate * 0.01) / n : 0
-  const usedCapital = capital > 0 ? capital : 1000000
+  const usedCapitalWan = capital > 0 ? capital : 100
+  const usedCapital = usedCapitalWan * 10000
   const adjusted = ep.map((x) => (x / usedCapital) - rf)
   const mean = adjusted.length ? adjusted.reduce((a, b) => a + b, 0) / adjusted.length : 0
   const std = stdPop(adjusted)

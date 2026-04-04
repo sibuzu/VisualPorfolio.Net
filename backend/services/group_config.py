@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 _DEFAULT_COLORS = ["#0a9396", "#bb3e03", "#005f73", "#ca6702"]
+_SHARPE_CAPITAL_DEFAULT_WAN = 100.0
 
 
 def _to_float(value, default: float = 1.0) -> float:
@@ -120,7 +121,7 @@ def load_project_config(folder: Path) -> dict:
             "end": str(date_range.get("end", "") or ""),
         },
         "sharpe_config": {
-            "capital": _to_float(sharpe.get("capital"), 1_000_000.0),
+            "capital": _to_float(sharpe.get("capital"), _SHARPE_CAPITAL_DEFAULT_WAN),
             "risk_free_rate": _to_float(sharpe.get("risk_free_rate"), 0.0),
         },
     }
@@ -149,7 +150,7 @@ def save_project_config(
         }
     if sharpe_config is not None:
         cfg["sharpe_config"] = {
-            "capital": _to_float(sharpe_config.get("capital"), 1_000_000.0),
+            "capital": _to_float(sharpe_config.get("capital"), _SHARPE_CAPITAL_DEFAULT_WAN),
             "risk_free_rate": _to_float(sharpe_config.get("risk_free_rate"), 0.0),
         }
     doc["project_config"] = cfg
