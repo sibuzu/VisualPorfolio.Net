@@ -73,9 +73,11 @@ def _toml_string(value: str) -> str:
 
 def _render_project_strategy_toml(project_id: str, project_name: str, user_id: str) -> str:
     return (
-        "[project]\n"
-        f"project_id = {_toml_string(project_id)}\n"
-        f"project_name = {_toml_string(project_name)}\n"
+        "[strategy]\n"
+        'type = "group"\n'
+        f"name = {_toml_string(project_name)}\n"
+        'project = "sea"\n'
+        f"strategy_id = {_toml_string(project_id)}\n"
         f"user_id = {_toml_string(user_id)}\n"
     )
 
