@@ -128,6 +128,47 @@ def _parse_strategy_slippage(strategy_toml: str) -> str:
     return "0"
 
 
+def _parse_strategy_point_value(strategy_toml: str) -> float:
+    if not strategy_toml:
+        return 1.0
+    try:
+        doc = tomllib.loads(strategy_toml)
+        params = doc.get("params", {})
+        if isinstance(params, dict):
+            alias_keys = ("契約價值", "ContractValue", "BigPointValue")
+
+            basic = params.get("基本設定", {})
+            if isinstance(basic, dict):
+                for key in alias_keys:
+                    raw = basic.get(key)
+                    if raw is not None and str(raw).strip():
+                        return max(_to_float(str(raw), 1.0), 1e-12)
+
+            for key in alias_keys:
+                raw = params.get(key)
+                if raw is not None and str(raw).strip():
+                    return max(_to_float(str(raw), 1.0), 1e-12)
+    except Exception:
+        pass
+    return 1.0
+
+
+def _normalized_point_value(point_value: float, records: list[TradeRecord]) -> float:
+    # Backward compatibility: some early converted .sea files already encoded
+    # quantity as contract*point_value. Detect and avoid double scaling.
+    pv = float(point_value) if point_value and point_value > 0 else 1.0
+    if pv <= 1.0:
+        return pv
+    contracts = [abs(float(r.contract)) for r in records if abs(float(r.contract)) > 0]
+    if not contracts:
+        return pv
+    contracts.sort()
+    median = contracts[len(contracts) // 2]
+    if median >= pv * 0.5:
+        return 1.0
+    return pv
+
+
 def _parse_sea_records(strategy_toml: str, events_jsonl: str) -> tuple[list[TradeRecord], str]:
     slippage = _parse_strategy_slippage(strategy_toml)
     records: list[TradeRecord] = []
@@ -205,7 +246,8 @@ def _parse_sea_file(path: Path, strategy_index: int) -> list[TradeItem]:
     if not events_jsonl:
         raise ValueError("Cannot find events.jsonl in .sea")
     records, slippage = _parse_sea_records(strategy_toml, events_jsonl)
-    return _records_to_trade_items(records, point_value=1.0, slippage=slippage, strategy_index=strategy_index)
+    point_value = _normalized_point_value(_parse_strategy_point_value(strategy_toml), records)
+    return _records_to_trade_items(records, point_value=point_value, slippage=slippage, strategy_index=strategy_index)
 
 
 def _parse_gsea_group_items(group_text: str) -> dict[str, float]:
@@ -252,9 +294,10 @@ def _parse_gsea_file(path: Path, strategy_index: int) -> list[TradeItem]:
             if not events_jsonl:
                 continue
             sea_records, sea_slippage = _parse_sea_records(strategy_toml, events_jsonl)
+            point_value = _normalized_point_value(_parse_strategy_point_value(strategy_toml), sea_records)
             slippage = sea_slippage or slippage
             for rec in sea_records:
-                rec.contract *= scale
+                rec.contract *= (scale * point_value)
             all_records.extend(sea_records)
 
     if not all_records:

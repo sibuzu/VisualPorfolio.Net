@@ -65,24 +65,11 @@ def _trade_items_to_events(trades: list[TradeItem], symbol: str = "LEGACY") -> s
 
 def _events_from_srp_root(root: ET.Element, default_symbol: str) -> str:
     param = root.find("./參數")
-    min_point_unit = 1.0
-    min_point_price = 1.0
     symbol_hint = default_symbol
     if param is not None:
-        try:
-            min_point_unit = float(str(param.findtext("最小跳動點", "1") or "1").strip())
-        except Exception:
-            min_point_unit = 1.0
-        try:
-            min_point_price = float(str(param.findtext("最小跳動金額", "1") or "1").strip())
-        except Exception:
-            min_point_price = 1.0
         near_month = _as_text(param.findtext("近月代碼"), "")
         if near_month:
             symbol_hint = near_month.split(" ", 1)[0]
-    point_value = (min_point_price / min_point_unit) if min_point_unit else 1.0
-    if point_value <= 0:
-        point_value = 1.0
 
     lines: list[str] = []
     for node in root.findall("./策略交易/Trade"):
@@ -98,7 +85,7 @@ def _events_from_srp_root(root: ET.Element, default_symbol: str) -> str:
             continue
         if contract <= 0 or price <= 0:
             continue
-        qty = contract * point_value
+        qty = contract
         if bs == "S":
             qty = -qty
         event = {
