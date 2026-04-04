@@ -63,6 +63,120 @@ def _trade_items_to_events(trades: list[TradeItem], symbol: str = "LEGACY") -> s
     return "\n".join(lines)
 
 
+def _events_from_srp_root(root: ET.Element, default_symbol: str) -> str:
+    param = root.find("./參數")
+    min_point_unit = 1.0
+    min_point_price = 1.0
+    symbol_hint = default_symbol
+    if param is not None:
+        try:
+            min_point_unit = float(str(param.findtext("最小跳動點", "1") or "1").strip())
+        except Exception:
+            min_point_unit = 1.0
+        try:
+            min_point_price = float(str(param.findtext("最小跳動金額", "1") or "1").strip())
+        except Exception:
+            min_point_price = 1.0
+        near_month = _as_text(param.findtext("近月代碼"), "")
+        if near_month:
+            symbol_hint = near_month.split(" ", 1)[0]
+    point_value = (min_point_price / min_point_unit) if min_point_unit else 1.0
+    if point_value <= 0:
+        point_value = 1.0
+
+    lines: list[str] = []
+    for node in root.findall("./策略交易/Trade"):
+        bs = _as_text(node.attrib.get("bs"), "").upper()
+        if bs not in {"B", "S"}:
+            continue
+        symbol = _as_text(node.attrib.get("symbol"), symbol_hint or default_symbol)
+        ts = _as_text(node.attrib.get("time_stamp"), "1970-01-01T00:00:00")
+        try:
+            contract = float(_as_text(node.attrib.get("contract"), "0"))
+            price = float(_as_text(node.attrib.get("price"), "0"))
+        except Exception:
+            continue
+        if contract <= 0 or price <= 0:
+            continue
+        qty = contract * point_value
+        if bs == "S":
+            qty = -qty
+        event = {
+            "timestamp": ts,
+            "type": "trade",
+            "data": {
+                "instrument_id": symbol,
+                "price": price,
+                "quantity": qty,
+            },
+        }
+        lines.append(json.dumps(event, ensure_ascii=False))
+    return "\n".join(lines)
+
+
+def _events_from_xrp_root(root: ET.Element, default_symbol: str) -> str:
+    lines: list[str] = []
+    for node in root.findall("./Trades/Trade"):
+        bs = _as_text(node.attrib.get("bs"), "").upper()
+        symbol = _as_text(node.attrib.get("symbol"), default_symbol)
+        ts = _as_text(node.attrib.get("time_stamp"), "1970-01-01T00:00:00")
+        if bs in {"B", "S"}:
+            try:
+                qty_raw = float(_as_text(node.attrib.get("qty"), "0"))
+                price = float(_as_text(node.attrib.get("price"), "0"))
+            except Exception:
+                continue
+            if qty_raw == 0 or price <= 0:
+                continue
+            qty = abs(qty_raw)
+            if bs == "S":
+                qty = -qty
+            event = {
+                "timestamp": ts,
+                "type": "trade",
+                "data": {
+                    "instrument_id": symbol,
+                    "price": price,
+                    "quantity": qty,
+                },
+            }
+            lines.append(json.dumps(event, ensure_ascii=False))
+            continue
+
+        if bs == "N":
+            try:
+                price = float(_as_text(node.attrib.get("price"), "0"))
+            except Exception:
+                continue
+            if price <= 0:
+                continue
+            event = {
+                "timestamp": ts,
+                "type": "price",
+                "data": {
+                    "instrument_id": symbol,
+                    "price": price,
+                },
+            }
+            lines.append(json.dumps(event, ensure_ascii=False))
+    return "\n".join(lines)
+
+
+def _build_events_jsonl_from_legacy(payload: bytes, ext: str, stem: str) -> str:
+    if ext not in _LEGACY_EXTS:
+        return ""
+    try:
+        root = ET.fromstring(payload.decode("utf-8-sig"))
+    except Exception:
+        return ""
+
+    if root.tag == "策略回測":
+        return _events_from_srp_root(root, stem)
+    if root.tag == "CryptoReport":
+        return _events_from_xrp_root(root, stem)
+    return ""
+
+
 def _as_text(value, default: str = "") -> str:
     text = str(value if value is not None else default).strip()
     return text or str(default)
@@ -192,6 +306,9 @@ def _build_strategy_toml_srp(root: ET.Element, stem: str) -> str:
         f'"結束日期" = "{_safe_toml_value(end_date)}"',
         f'"滑價" = "{_safe_toml_value(fee_pct)}"',
         "",
+        '[params."基本設定"]',
+        f'"滑價成本" = "{_safe_toml_value(_as_text(pvals.get("滑價"), "0"))}"',
+        "",
         '[params."策略參數"]',
         f'"策略名稱" = "{_safe_toml_value(strategy_short)}"',
     ]
@@ -244,18 +361,19 @@ def convert_legacy_payload_to_sea(filename: str, payload: bytes) -> tuple[str, b
         return filename, payload
 
     stem = Path(filename).stem or "strategy"
-    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-        tmp.write(payload)
-    try:
-        trades = parse_file(tmp_path, strategy_index=0)
-    finally:
-        tmp_path.unlink(missing_ok=True)
+    events_jsonl = _build_events_jsonl_from_legacy(payload, ext, stem)
+    if not events_jsonl.strip():
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+            tmp.write(payload)
+        try:
+            trades = parse_file(tmp_path, strategy_index=0)
+        finally:
+            tmp_path.unlink(missing_ok=True)
 
-    if not trades:
-        raise ValueError("No trades found in source file")
-
-    events_jsonl = _trade_items_to_events(trades)
+        if not trades:
+            raise ValueError("No trades found in source file")
+        events_jsonl = _trade_items_to_events(trades)
     if not events_jsonl.strip():
         raise ValueError("Cannot convert to .sea: empty events")
 

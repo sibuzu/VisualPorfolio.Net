@@ -13,7 +13,7 @@ from fastapi import HTTPException, Request, Response
 from backend.db.database import DB_DIR
 
 USERS_DB_PATH = DB_DIR / "users.db"
-TOKEN_TTL_SECONDS = 6 * 60 * 60
+TOKEN_TTL_SECONDS = 365 * 24 * 60 * 60
 USER_COOKIE = "user_id"
 TOKEN_COOKIE = "auth_token"
 ADMIN_COOKIE = "admin_token"

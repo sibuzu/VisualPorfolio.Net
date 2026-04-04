@@ -107,10 +107,22 @@ def _parse_strategy_slippage(strategy_toml: str) -> str:
         return "0"
     try:
         doc = tomllib.loads(strategy_toml)
-        basic = doc.get("params", {}).get("基本設定", {})
-        if isinstance(basic, dict):
-            raw = basic.get("滑價成本", basic.get("滑價", "0"))
-            return str(raw if raw is not None else "0")
+        params = doc.get("params", {})
+        if isinstance(params, dict):
+            # Treat these keys as equivalent transaction-cost fields.
+            alias_keys = ("滑價成本", "滑價", "交易成本", "TradeCost", "Slippage")
+
+            basic = params.get("基本設定", {})
+            if isinstance(basic, dict):
+                for key in alias_keys:
+                    raw = basic.get(key)
+                    if raw is not None and str(raw).strip():
+                        return str(raw)
+
+            for key in alias_keys:
+                raw = params.get(key)
+                if raw is not None and str(raw).strip():
+                    return str(raw)
     except Exception:
         pass
     return "0"
