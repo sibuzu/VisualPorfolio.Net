@@ -35,11 +35,39 @@ def _make_sea_bytes() -> bytes:
     return buf.getvalue()
 
 
+def _make_sea_bytes_with_zero_price_close() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "demo/strategy.toml",
+            '[params]\n"契約價值" = "50"\n"滑價" = "1"\n',
+        )
+        zf.writestr(
+            "demo/events.jsonl",
+            "\n".join(
+                [
+                    '{"timestamp":"2025-01-01T00:00:00Z","type":"trade","data":{"instrument_id":"TXF","price":100,"quantity":2}}',
+                    '{"timestamp":"2025-01-02T00:00:00Z","type":"trade","data":{"instrument_id":"TXF","price":0,"quantity":-2}}',
+                ]
+            ),
+        )
+    return buf.getvalue()
+
+
 def test_parse_sea_has_rows(tmp_path):
     sea_path = tmp_path / "demo.sea"
     sea_path.write_bytes(_make_sea_bytes())
     rows = parse_file(sea_path, strategy_index=0)
     assert len(rows) >= 2
+
+
+def test_parse_sea_keeps_zero_price_trade(tmp_path):
+    sea_path = tmp_path / "zero_close.sea"
+    sea_path.write_bytes(_make_sea_bytes_with_zero_price_close())
+    rows = parse_file(sea_path, strategy_index=0)
+    assert len(rows) == 2
+    assert rows[-1].price1 == 0
+    assert abs(sum(x.net_profit for x in rows) + 10200.0) < 1e-6
 
 
 def test_parse_gsea_has_rows(tmp_path):

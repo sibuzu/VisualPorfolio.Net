@@ -193,7 +193,8 @@ def _parse_sea_records(strategy_toml: str, events_jsonl: str) -> tuple[list[Trad
         price = _to_float(str(data.get("price", 0.0)), 0.0)
         if event_type == "trade":
             qty = _to_float(str(data.get("quantity", 0.0)), 0.0)
-            if qty == 0 or price <= 0:
+            # price=0 is valid for option expiry/close events in legacy SRP-derived SEA.
+            if qty == 0 or price < 0:
                 continue
             bs = "B" if qty > 0 else "S"
             records.append(
@@ -212,7 +213,8 @@ def _parse_sea_records(strategy_toml: str, events_jsonl: str) -> tuple[list[Trad
 
         if event_type == "price":
             pos = pos_by_symbol.get(symbol, 0.0)
-            if pos == 0 or price <= 0:
+            # price snapshots can also be 0 in some legacy datasets.
+            if pos == 0 or price < 0:
                 continue
             close_bs = "S" if pos > 0 else "B"
             open_bs = "B" if pos > 0 else "S"
@@ -245,12 +247,15 @@ def _parse_sea_records(strategy_toml: str, events_jsonl: str) -> tuple[list[Trad
 
 def _parse_sea_file(path: Path, strategy_index: int) -> list[TradeItem]:
     with zipfile.ZipFile(path, "r") as zf:
+        names = [n.lower() for n in zf.namelist()]
         strategy_toml = _find_zip_text_entry(zf, "/strategy.toml")
         events_jsonl = _find_zip_text_entry(zf, "/events.jsonl")
     if not events_jsonl:
         raise ValueError("Cannot find events.jsonl in .sea")
     records, slippage = _parse_sea_records(strategy_toml, events_jsonl)
-    point_value = _normalized_point_value(_parse_strategy_point_value(strategy_toml), records)
+    point_value_raw = _parse_strategy_point_value(strategy_toml)
+    has_legacy = any(name.endswith("/legacy.srp") or name.endswith("/legacy.xrp") or name.endswith("/legacy.xml") for name in names)
+    point_value = point_value_raw if has_legacy else _normalized_point_value(point_value_raw, records)
     return _records_to_trade_items(records, point_value=point_value, slippage=slippage, strategy_index=strategy_index)
 
 
@@ -293,12 +298,18 @@ def _parse_gsea_file(path: Path, strategy_index: int) -> list[TradeItem]:
             sea_bytes = zf.read(sea_name)
             # Read embedded .sea from memory.
             with zipfile.ZipFile(io.BytesIO(sea_bytes), "r") as sea_zip:
+                sea_names_lower = [n.lower() for n in sea_zip.namelist()]
                 strategy_toml = _find_zip_text_entry(sea_zip, "/strategy.toml")
                 events_jsonl = _find_zip_text_entry(sea_zip, "/events.jsonl")
             if not events_jsonl:
                 continue
             sea_records, sea_slippage = _parse_sea_records(strategy_toml, events_jsonl)
-            point_value = _normalized_point_value(_parse_strategy_point_value(strategy_toml), sea_records)
+            point_value_raw = _parse_strategy_point_value(strategy_toml)
+            has_legacy = any(
+                name.endswith("/legacy.srp") or name.endswith("/legacy.xrp") or name.endswith("/legacy.xml")
+                for name in sea_names_lower
+            )
+            point_value = point_value_raw if has_legacy else _normalized_point_value(point_value_raw, sea_records)
             slippage = sea_slippage or slippage
             for rec in sea_records:
                 rec.contract *= (scale * point_value)

@@ -83,7 +83,8 @@ def _events_from_srp_root(root: ET.Element, default_symbol: str) -> str:
             price = float(_as_text(node.attrib.get("price"), "0"))
         except Exception:
             continue
-        if contract <= 0 or price <= 0:
+        # price=0 is a valid close price in legacy SRP (e.g. option expiry).
+        if contract <= 0 or price < 0:
             continue
         qty = contract
         if bs == "S":
@@ -113,7 +114,7 @@ def _events_from_xrp_root(root: ET.Element, default_symbol: str) -> str:
                 price = float(_as_text(node.attrib.get("price"), "0"))
             except Exception:
                 continue
-            if qty_raw == 0 or price <= 0:
+            if qty_raw == 0 or price < 0:
                 continue
             qty = abs(qty_raw)
             if bs == "S":
@@ -135,7 +136,7 @@ def _events_from_xrp_root(root: ET.Element, default_symbol: str) -> str:
                 price = float(_as_text(node.attrib.get("price"), "0"))
             except Exception:
                 continue
-            if price <= 0:
+            if price < 0:
                 continue
             event = {
                 "timestamp": ts,
