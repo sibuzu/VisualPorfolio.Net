@@ -107,6 +107,14 @@ def _find_zip_text_entry(zf: zipfile.ZipFile, suffix: str) -> str:
 
 
 def _parse_strategy_slippage(strategy_toml: str) -> str:
+    def _is_zero_cost_text(value: str) -> bool:
+        text = str(value or "").strip().replace("％", "%")
+        if not text:
+            return True
+        if text.endswith("%"):
+            text = text[:-1].strip()
+        return abs(_to_float(text, 0.0)) < 1e-12
+
     if not strategy_toml:
         return "0"
     try:
@@ -117,16 +125,29 @@ def _parse_strategy_slippage(strategy_toml: str) -> str:
             alias_keys = ("滑價成本", "滑價", "交易成本", "TradeCost", "Slippage")
 
             basic = params.get("基本設定", {})
+            basic_value: str | None = None
             if isinstance(basic, dict):
                 for key in alias_keys:
                     raw = basic.get(key)
                     if raw is not None and str(raw).strip():
-                        return str(raw)
+                        basic_value = str(raw)
+                        break
 
+            params_value: str | None = None
             for key in alias_keys:
                 raw = params.get(key)
                 if raw is not None and str(raw).strip():
-                    return str(raw)
+                    params_value = str(raw)
+                    break
+
+            # If basic setting is explicit zero but params carries a non-zero
+            # cost, prefer params-level value for backward compatibility.
+            if basic_value is not None:
+                if params_value is not None and _is_zero_cost_text(basic_value) and not _is_zero_cost_text(params_value):
+                    return params_value
+                return basic_value
+            if params_value is not None:
+                return params_value
     except Exception:
         pass
     return "0"
@@ -325,7 +346,8 @@ def _parse_srp_as_net_value_series(root: ET.Element, strategy_index: int) -> lis
     min_point_unit = _to_float(param_node.findtext("最小跳動點") if param_node is not None else "1", 1.0)
     min_point_price = _to_float(param_node.findtext("最小跳動金額") if param_node is not None else "1", 1.0)
     point_value = min_point_price / min_point_unit if min_point_unit else 1.0
-    slippage = (param_node.findtext("滑價") if param_node is not None else "0") or "0"
+    slippage_raw = (param_node.findtext("滑價") if param_node is not None else "") or ""
+    slippage = slippage_raw.strip() or "0"
 
     records: list[TradeRecord] = []
     for node in root.findall("./策略交易/Trade"):

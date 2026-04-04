@@ -273,7 +273,6 @@ def _build_strategy_toml_srp(root: ET.Element, stem: str) -> str:
     symbol = near_month.split(" ", 1)[0] if near_month else ""
     start_date = _to_iso_date(_as_text(pvals.get("開始日期"), ""))
     end_date = _to_iso_date(_as_text(pvals.get("結束日期"), ""))
-    fee_pct = _as_text(pvals.get("滑價"), "0.05%")
     contract_value = _as_text(pvals.get("契約價值"), "1")
     min_tick = _as_text(pvals.get("最小跳動點"), "1")
 
@@ -292,10 +291,6 @@ def _build_strategy_toml_srp(root: ET.Element, stem: str) -> str:
         '"貨幣" = "USD"',
         f'"開始日期" = "{_safe_toml_value(start_date)}"',
         f'"結束日期" = "{_safe_toml_value(end_date)}"',
-        f'"滑價" = "{_safe_toml_value(fee_pct)}"',
-        "",
-        '[params."基本設定"]',
-        f'"滑價成本" = "{_safe_toml_value(_as_text(pvals.get("滑價"), "0"))}"',
         "",
         '[params."策略參數"]',
         f'"策略名稱" = "{_safe_toml_value(strategy_short)}"',
@@ -330,17 +325,17 @@ def _build_strategy_toml_srp(root: ET.Element, stem: str) -> str:
 
 def _build_strategy_toml_from_legacy(payload: bytes, ext: str, stem: str) -> str:
     if ext not in _LEGACY_EXTS:
-        return '[params."基本設定"]\n"滑價成本" = "0"\n'
+        return "[params]\n"
     try:
         root = ET.fromstring(payload.decode("utf-8-sig"))
     except Exception:
-        return '[params."基本設定"]\n"滑價成本" = "0"\n'
+        return "[params]\n"
 
     if root.tag == "CryptoReport":
         return _build_strategy_toml_xrp(root, stem)
     if root.tag == "策略回測":
         return _build_strategy_toml_srp(root, stem)
-    return '[params."基本設定"]\n"滑價成本" = "0"\n'
+    return "[params]\n"
 
 
 def convert_legacy_payload_to_sea(filename: str, payload: bytes) -> tuple[str, bytes]:
