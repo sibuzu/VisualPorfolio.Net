@@ -156,3 +156,33 @@ def test_convert_srp_does_not_inject_slippage_fields():
         text = zf.read(strategy).decode("utf-8")
     assert '"滑價"' not in text
     assert '"滑價成本"' not in text
+
+
+def test_convert_srp_keeps_defined_slippage_fields():
+    srp = """<?xml version="1.0" encoding="utf-8"?>
+<策略回測>
+  <參數>
+    <策略>Demo</策略>
+    <滑價>1</滑價>
+    <契約價值>50</契約價值>
+    <最小跳動點>1</最小跳動點>
+    <最小跳動金額>50</最小跳動金額>
+  </參數>
+  <策略參數>
+    <StgDemo>
+      <策略名稱>Demo</策略名稱>
+    </StgDemo>
+  </策略參數>
+  <策略交易>
+    <Trade index="1" bs="B" contract="1" price="100" time_stamp="2025/01/01 00:00:00" />
+    <Trade index="1" bs="S" contract="1" price="110" time_stamp="2025/01/02 00:00:00" />
+  </策略交易>
+</策略回測>
+"""
+    _, payload = convert_legacy_payload_to_sea("demo.srp", srp.encode("utf-8"))
+    with zipfile.ZipFile(io.BytesIO(payload), "r") as zf:
+        strategy = [n for n in zf.namelist() if n.endswith("/strategy.toml")][0]
+        text = zf.read(strategy).decode("utf-8")
+    assert '"契約價值" = "50"' in text
+    assert '"滑價" = "1"' in text
+    assert '"滑價成本"' not in text

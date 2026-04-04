@@ -275,6 +275,7 @@ def _build_strategy_toml_srp(root: ET.Element, stem: str) -> str:
     end_date = _to_iso_date(_as_text(pvals.get("結束日期"), ""))
     contract_value = _as_text(pvals.get("契約價值"), "1")
     min_tick = _as_text(pvals.get("最小跳動點"), "1")
+    slippage = _as_text(pvals.get("滑價"), "")
 
     lines: list[str] = [
         "[strategy]",
@@ -291,10 +292,16 @@ def _build_strategy_toml_srp(root: ET.Element, stem: str) -> str:
         '"貨幣" = "USD"',
         f'"開始日期" = "{_safe_toml_value(start_date)}"',
         f'"結束日期" = "{_safe_toml_value(end_date)}"',
-        "",
-        '[params."策略參數"]',
-        f'"策略名稱" = "{_safe_toml_value(strategy_short)}"',
     ]
+    if slippage:
+        lines.append(f'"滑價" = "{_safe_toml_value(slippage)}"')
+    lines.extend(
+        [
+            "",
+            '[params."策略參數"]',
+            f'"策略名稱" = "{_safe_toml_value(strategy_short)}"',
+        ]
+    )
 
     if strategy_node is not None:
         seen = {"策略名稱"}
