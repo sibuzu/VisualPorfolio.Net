@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import json
 import os
 from pathlib import Path
 
@@ -50,21 +49,35 @@ def write_project_config(project_id: str, project_name: str, user_id: str) -> No
     except OSError:
         pass
 
-    payload = {
-        "project_id": project_id,
-        "project_name": project_name,
-        "user_id": user_id,
-    }
-    cfg = pdir / "config.json"
+    cfg = pdir / "strategy.toml"
     try:
         if cfg.exists():
             try:
                 os.chmod(cfg, 0o664)
             except OSError:
                 pass
-        cfg.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        cfg.write_text(_render_project_strategy_toml(project_id, project_name, user_id), encoding="utf-8")
+        # Keep backward compatibility cleanup: remove legacy config.json if present.
+        legacy = pdir / "config.json"
+        if legacy.exists():
+            legacy.unlink(missing_ok=True)
     except PermissionError:
         raise HTTPException(status_code=500, detail=f"Project config is not writable: {project_id}")
+
+
+def _toml_string(value: str) -> str:
+    text = str(value or "")
+    text = text.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{text}"'
+
+
+def _render_project_strategy_toml(project_id: str, project_name: str, user_id: str) -> str:
+    return (
+        "[project]\n"
+        f"project_id = {_toml_string(project_id)}\n"
+        f"project_name = {_toml_string(project_name)}\n"
+        f"user_id = {_toml_string(user_id)}\n"
+    )
 
 
 def create_project(user_id: str, project_name: str) -> dict:
@@ -158,7 +171,7 @@ def update_project(
             (new_name, 1 if new_never_expires else 0, 1 if new_important else 0, now_utc_iso(), project_id),
         )
         conn.commit()
-    # Best-effort sync to config.json: project rename must not fail if file permission is broken.
+    # Best-effort sync to strategy.toml: project rename must not fail if file permission is broken.
     try:
         write_project_config(project_id, new_name, project["user_id"])
     except HTTPException:
