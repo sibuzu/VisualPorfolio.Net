@@ -4,6 +4,7 @@ import io
 import uuid
 import zipfile
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 from fastapi.testclient import TestClient
 
@@ -51,6 +52,24 @@ def _make_gsea_with_root_dir_bytes() -> bytes:
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("BatchRun/strategy.toml", "[strategy]\nname='BatchRun'\n")
         zf.writestr("BatchRun/group.json", '{"group":[{"project":"BatchRun-1"}]}')
+        zf.writestr("BatchRun/BatchRun-1.sea", b"dummy")
+    return buf.getvalue()
+
+
+def _make_group_weight_count_gsea_bytes() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("BatchRun/strategy.toml", "[strategy]\nname='BatchRun'\n")
+        zf.writestr(
+            "BatchRun/group.json",
+            """
+            {
+              "group": [
+                {"project":"BatchRun-1","count":3,"weight":"2.5","metadata":{"color":"Maroon"}}
+              ]
+            }
+            """,
+        )
         zf.writestr("BatchRun/BatchRun-1.sea", b"dummy")
     return buf.getvalue()
 
@@ -172,3 +191,27 @@ def test_project_upload_fails_when_project_belongs_to_other_user():
         )
         assert upload.status_code == 403
         assert upload.json()["detail"] == "Project already owned by another user"
+
+
+def test_project_upload_builds_pfo_from_group_count_weight():
+    with TestClient(app) as client:
+        owner_id, owner_pw = _new_user("owner")
+        _signup_and_login(client, owner_id, owner_pw)
+        project_id = _create_project(client, "gsea-pfo-group")
+        payload = _make_group_weight_count_gsea_bytes()
+
+        upload = client.post(
+            f"/projects/{project_id}/upload",
+            data={"project_name": "GroupPfo"},
+            files={"file": ("BatchRun.gsea", payload, "application/zip")},
+        )
+        assert upload.status_code == 200
+
+        pfo_path = project_dir(project_id) / "project.pfo"
+        assert pfo_path.exists()
+        root = ET.parse(pfo_path).getroot()
+        node = root.find("./Equity")
+        assert node is not None
+        assert node.attrib.get("FileName") == "BatchRun-1.sea"
+        assert node.attrib.get("Count") == "3.0"
+        assert node.attrib.get("Weight") == "2.5"
