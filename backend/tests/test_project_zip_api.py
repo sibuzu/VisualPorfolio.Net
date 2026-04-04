@@ -89,6 +89,7 @@ def test_project_download_returns_zip():
         with zipfile.ZipFile(io.BytesIO(resp.content), "r") as zf:
             names = set(zf.namelist())
         assert "aa-1.srp" in names
+        assert "project.pfo" not in names
 
 
 def test_project_download_allowed_for_non_owner_viewer():

@@ -291,6 +291,8 @@ def download_project(project_id: str, current_user: str = Depends(require_auth))
         with zipfile.ZipFile(tmp_zip, "w", zipfile.ZIP_DEFLATED) as zf:
             for f in src_dir.rglob("*"):
                 if f.is_file():
+                    if f.name.lower() == "project.pfo":
+                        continue
                     zf.write(f, arcname=str(f.relative_to(src_dir)))
     except Exception:
         _cleanup_temp_file(tmp_zip)
