@@ -24,6 +24,7 @@ def test_dynamic_compounding_drawdown_switch_and_mdd():
     monthly = out["monthly"]
     assert abs(monthly["final_net_value"] - 94.875) < 1e-6
     assert abs(monthly["mdd_amount"] - 50.6) < 1e-6
+    assert monthly["rollback_adjust_count"] == 1
     assert monthly["reach_10x_date"] == "未達成"
 
 

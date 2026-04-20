@@ -1,93 +1,120 @@
 <template>
   <section>
     <div class="head-row">
-      <h3>動態複利</h3>
-      <button type="button" class="help-btn" @click="openHelp">Help</button>
+      <h3 class="head-title">
+        <span>動態複利</span>
+        <button type="button" class="help-btn" title="Help" aria-label="Help" @click="openHelp">
+          <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" aria-hidden="true">
+            <path d="M0 0h24v24H0z" fill="none"/>
+            <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/>
+          </svg>
+        </button>
+      </h3>
     </div>
 
-    <div class="form-grid">
-      <label class="field">
-        <span>初始資金</span>
-        <input :value="draft.initial_capital" type="number" step="1" min="1" :disabled="props.readonly" @change="onFieldChange('initial_capital', $event.target.value)" />
-      </label>
-      <label class="field">
-        <span>MDD（參考）</span>
-        <input :value="refMdd" type="text" readonly />
-      </label>
-      <label class="field">
-        <span>初始比例</span>
-        <input :value="draft.initial_ratio" type="number" step="0.0001" min="0" :disabled="props.readonly" @change="onFieldChange('initial_ratio', $event.target.value)" />
-      </label>
-      <label class="field">
-        <span>獲利達加碼</span>
-        <input :value="draft.add_threshold_profit" type="number" step="1" :disabled="props.readonly" @change="onFieldChange('add_threshold_profit', $event.target.value)" />
-      </label>
-      <label class="field">
-        <span>加碼比例</span>
-        <input :value="draft.add_ratio" type="number" step="0.0001" min="0" :disabled="props.readonly" @change="onFieldChange('add_ratio', $event.target.value)" />
-      </label>
-      <label class="field">
-        <span>回徹金額</span>
-        <input :value="draft.rollback_amount" type="number" step="1" min="0" :disabled="props.readonly" @change="onFieldChange('rollback_amount', $event.target.value)" />
-      </label>
-      <label class="field">
-        <span>最大倍數</span>
-        <input :value="draft.max_multiple" type="number" step="0.01" min="0" :disabled="props.readonly" @change="onFieldChange('max_multiple', $event.target.value)" />
-      </label>
+    <div class="config-cards">
+      <div class="config-card" v-for="row in configRows" :key="row.key">
+        <button
+          v-if="row.editable"
+          type="button"
+          class="edit-btn"
+          title="編輯"
+          aria-label="編輯"
+          :disabled="props.readonly"
+          @click="startEdit(row)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l8.06-8.06.92.92L5.92 19.58zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+          </svg>
+        </button>
+        <div class="label">{{ row.label }}</div>
+        <div v-if="editingKey === row.key" class="edit-row">
+          <input
+            ref="editInputRef"
+            v-model="draftValue"
+            class="edit-input"
+            type="text"
+            @keydown.enter.prevent="saveEdit(row)"
+            @keyup.esc="cancelEdit"
+            @blur="cancelEdit"
+          />
+        </div>
+        <div v-else class="val">{{ row.value }}</div>
+      </div>
     </div>
-
-    <div class="action-row">
-      <button type="button" :disabled="props.readonly || portfolioStore.loading || portfolioStore.updatingConfig" @click="applyConfig">
-        套用並重算
-      </button>
-      <span v-if="portfolioStore.loading || portfolioStore.updatingConfig" class="busy">更新計算中...</span>
-    </div>
+    <p v-if="configError" class="error">{{ configError }}</p>
+    <p v-if="portfolioStore.loading || portfolioStore.updatingConfig" class="busy">更新計算中...</p>
 
     <table class="grid">
+      <colgroup>
+        <col style="width: 28%" />
+        <col style="width: 36%" />
+        <col style="width: 36%" />
+      </colgroup>
       <thead>
         <tr>
           <th>項目</th>
-          <th>初始淨值</th>
-          <th>最終淨值</th>
-          <th>獲利倍數</th>
-          <th>CAGR(%)</th>
-          <th>MDD(%)</th>
-          <th>MDD($)</th>
-          <th>達到 10 倍規模日期</th>
+          <th>每週調整</th>
+          <th>每月調整</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>每週調整</td>
-          <td>{{ moneyInt(weekly.initial_net_value) }}</td>
-          <td>{{ moneyInt(weekly.final_net_value) }}</td>
-          <td>{{ ratio(weekly.profit_multiple) }}</td>
-          <td>{{ pct(weekly.cagr_pct) }}</td>
-          <td>{{ pct(weekly.mdd_pct) }}</td>
-          <td>{{ moneyInt(weekly.mdd_amount) }}</td>
-          <td>{{ weekly.reach_10x_date || '未達成' }}</td>
+          <td>初始淨值(萬)</td>
+          <td>{{ wanIntText(weekly.initial_net_value) }}</td>
+          <td>{{ wanIntText(monthly.initial_net_value) }}</td>
         </tr>
         <tr>
-          <td>每月調整</td>
-          <td>{{ moneyInt(monthly.initial_net_value) }}</td>
-          <td>{{ moneyInt(monthly.final_net_value) }}</td>
+          <td>最終淨值(萬)</td>
+          <td>{{ wanIntText(weekly.final_net_value) }}</td>
+          <td>{{ wanIntText(monthly.final_net_value) }}</td>
+        </tr>
+        <tr>
+          <td>獲利倍數</td>
+          <td>{{ ratio(weekly.profit_multiple) }}</td>
           <td>{{ ratio(monthly.profit_multiple) }}</td>
+        </tr>
+        <tr>
+          <td>CAGR(%)</td>
+          <td>{{ pct(weekly.cagr_pct) }}</td>
           <td>{{ pct(monthly.cagr_pct) }}</td>
+        </tr>
+        <tr>
+          <td>MDD(%)</td>
+          <td>{{ pct(weekly.mdd_pct) }}</td>
           <td>{{ pct(monthly.mdd_pct) }}</td>
-          <td>{{ moneyInt(monthly.mdd_amount) }}</td>
+        </tr>
+        <tr>
+          <td>MDD(萬)</td>
+          <td>{{ wanIntText(weekly.mdd_amount) }}</td>
+          <td>{{ wanIntText(monthly.mdd_amount) }}</td>
+        </tr>
+        <tr>
+          <td>高點回撤調整次數</td>
+          <td>{{ int0(weekly.rollback_adjust_count) }}</td>
+          <td>{{ int0(monthly.rollback_adjust_count) }}</td>
+        </tr>
+        <tr>
+          <td>達到 10 倍規模日期</td>
+          <td>{{ weekly.reach_10x_date || '未達成' }}</td>
           <td>{{ monthly.reach_10x_date || '未達成' }}</td>
         </tr>
       </tbody>
     </table>
 
+    <h4>Dynamic MDD Equity Curve (Weekly vs Monthly)</h4>
+    <div ref="curveChartRef" class="curve-chart"></div>
+
     <dialog ref="helpDialogRef" class="help-dialog">
       <form method="dialog" class="help-form">
         <h4>動態複利規則</h4>
-        <p>一開始用 {{ percentText(draft.initial_ratio) }}</p>
-        <p>累積獲利 &gt; {{ moneyInt(draft.add_threshold_profit) }}，下一期切到 {{ percentText(draft.add_ratio) }}</p>
-        <p>切到 {{ percentText(draft.add_ratio) }} 後，只要從高點回撤 &gt; {{ moneyInt(draft.rollback_amount) }}，下一期切回 {{ percentText(draft.initial_ratio) }}</p>
-        <p>切回 {{ percentText(draft.initial_ratio) }} 後，只要再賺回 {{ moneyInt(draft.rollback_amount) }}（創新高），下一期再切回 {{ percentText(draft.add_ratio) }}</p>
-        <p>交易資金 {{ moneyInt(draft.max_multiple * draft.initial_capital) }} 封頂，最大為 {{ num2(draft.max_multiple) }} 倍初始資金。</p>
+        <pre class="help-lines">
+  1. 一開始用 {{ percentText(draft.initial_ratio) }}。
+  2. 累積獲利 &gt; {{ wanIntText(draft.add_threshold_profit) }} 萬，下一期切到 {{ percentText(draft.add_ratio) }}。
+  3. 切到 {{ percentText(draft.add_ratio) }} 後，只要從高點回撤 &gt; {{ wanIntText(draft.rollback_amount) }} 萬，下一期切回 {{ percentText(draft.initial_ratio) }}。
+  4. 切回 {{ percentText(draft.initial_ratio) }} 後，只要再賺回 {{ wanIntText(draft.rollback_amount) }} 萬（創新高），下一期再切回 {{ percentText(draft.add_ratio) }}。
+  5. 交易資金 {{ wanIntText(draft.max_multiple * draft.initial_capital) }} 萬封頂，最大為 {{ compactNum(draft.max_multiple) }}倍初始資金。
+        </pre>
         <div class="help-actions">
           <button type="submit">關閉</button>
         </div>
@@ -97,8 +124,9 @@
 </template>
 
 <script setup>
+import * as echarts from 'echarts'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePortfolioStore } from '../stores/portfolio'
 
@@ -110,6 +138,13 @@ const route = useRoute()
 const portfolioStore = usePortfolioStore()
 const { analysis } = storeToRefs(portfolioStore)
 const helpDialogRef = ref(null)
+const curveChartRef = ref(null)
+let curveChart
+const editingKey = ref('')
+const draftValue = ref('')
+const configError = ref('')
+const committingByEnter = ref(false)
+const editInputRef = ref(null)
 
 const draft = ref({
   initial_capital: 80000000,
@@ -135,32 +170,94 @@ watch(
   { immediate: true, deep: true }
 )
 
-const refMdd = computed(() => moneyInt(Number(analysis.value?.summary?.mdd || 0)))
+const refMdd = computed(() => wanIntText(Number(analysis.value?.summary?.mdd || 0)))
 const weekly = computed(() => analysis.value?.dynamic_compounding?.weekly || {})
 const monthly = computed(() => analysis.value?.dynamic_compounding?.monthly || {})
 
-function onFieldChange(key, value) {
-  const n = Number(String(value || '').replace(/,/g, '').trim())
-  if (!Number.isFinite(n)) return
-  draft.value = { ...draft.value, [key]: n }
+const configRows = computed(() => [
+  { key: 'initial_capital', label: '初始資金(萬)', value: wanIntText(draft.value.initial_capital), editable: true, kind: 'amount' },
+  { key: 'mdd_ref', label: 'MDD（萬）', value: refMdd.value, editable: false, kind: 'readonly' },
+  { key: 'initial_ratio', label: '初始比例', value: ratio(draft.value.initial_ratio), editable: true, kind: 'ratio' },
+  { key: 'add_threshold_profit', label: '獲利達加碼(萬)', value: wanIntText(draft.value.add_threshold_profit), editable: true, kind: 'amount' },
+  { key: 'add_ratio', label: '加碼比例', value: ratio(draft.value.add_ratio), editable: true, kind: 'ratio' },
+  { key: 'rollback_amount', label: '回徹金額(萬)', value: wanIntText(draft.value.rollback_amount), editable: true, kind: 'amount' },
+  { key: 'max_multiple', label: '最大倍數', value: ratio(draft.value.max_multiple), editable: true, kind: 'ratio' }
+])
+
+function startEdit(row) {
+  if (!row.editable || props.readonly) return
+  configError.value = ''
+  editingKey.value = row.key
+  const current = draft.value[row.key]
+  draftValue.value = row.kind === 'amount' ? String(toWanInt(current)) : String(current ?? '')
+  nextTick(() => {
+    const el = editInputRef.value
+    if (el && typeof el.focus === 'function') {
+      el.focus()
+      if (typeof el.select === 'function') el.select()
+    }
+  })
 }
 
-async function applyConfig() {
-  portfolioStore.setDynamicCompoundingConfig(draft.value)
-  await portfolioStore.persistAndAnalyze(route.params.projectId)
+async function saveEdit(row) {
+  committingByEnter.value = true
+  const raw = String(draftValue.value || '').replace(/,/g, '').trim()
+  const n = Number(raw)
+  if (!Number.isFinite(n)) {
+    configError.value = '請輸入有效數值'
+    committingByEnter.value = false
+    return
+  }
+
+  const nextDraft = { ...draft.value }
+  if (row.kind === 'amount') {
+    nextDraft[row.key] = Math.round(n) * 10000
+  } else {
+    nextDraft[row.key] = n
+  }
+
+  configError.value = ''
+  editingKey.value = ''
+  draftValue.value = ''
+  draft.value = nextDraft
+
+  try {
+    portfolioStore.setDynamicCompoundingConfig(nextDraft)
+    if (props.readonly) {
+      await portfolioStore.analyze(route.params.projectId)
+    } else {
+      await portfolioStore.persistAndAnalyze(route.params.projectId)
+    }
+  } catch (e) {
+    configError.value = e.message || '更新動態複利設定失敗'
+  } finally {
+    nextTick(() => {
+      committingByEnter.value = false
+    })
+  }
+}
+
+function cancelEdit() {
+  if (committingByEnter.value) return
+  editingKey.value = ''
+  draftValue.value = ''
 }
 
 function openHelp() {
   helpDialogRef.value?.showModal()
 }
 
-function moneyInt(v) {
-  const n = Math.round(Number(v || 0))
+function toWanInt(v) {
+  return Math.round(Number(v || 0) / 10000)
+}
+
+function wanIntText(v) {
+  const n = toWanInt(v)
   return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 }
 
 function ratio(v) {
-  return Number(v || 0).toFixed(4)
+  return Number(v || 0).toFixed(2)
 }
 
 function pct(v) {
@@ -168,33 +265,160 @@ function pct(v) {
 }
 
 function percentText(v) {
-  return `${(Number(v || 0) * 100).toFixed(2)}%`
+  return `${compactNum(Number(v || 0) * 100)}%`
 }
 
-function num2(v) {
-  return Number(v || 0).toFixed(2)
+function compactNum(v) {
+  const s = Number(v || 0).toFixed(2)
+  return s.replace(/\.?0+$/, '')
 }
+
+function int0(v) {
+  return Math.round(Number(v || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })
+}
+
+function renderCurveChart() {
+  if (!curveChartRef.value) return
+  if (!curveChart) curveChart = echarts.init(curveChartRef.value)
+
+  const weeklyCurve = Array.isArray(weekly.value?.curve) ? weekly.value.curve : []
+  const monthlyCurve = Array.isArray(monthly.value?.curve) ? monthly.value.curve : []
+  const toWan = (n) => Number(n || 0) / 10000
+
+  curveChart.setOption(
+    {
+      tooltip: {
+        trigger: 'axis',
+        valueFormatter: (v) => `${Math.round(Number(v || 0)).toLocaleString('en-US')} 萬`
+      },
+      legend: {
+        data: ['每週調整', '每月調整']
+      },
+      xAxis: {
+        type: 'time'
+      },
+      yAxis: {
+        type: 'value',
+        name: '淨值(萬)',
+        axisLabel: {
+          formatter: (v) => Math.round(Number(v || 0)).toLocaleString('en-US')
+        }
+      },
+      series: [
+        {
+          name: '每週調整',
+          type: 'line',
+          smooth: true,
+          data: weeklyCurve.map((p) => [p.date, toWan(p.net_value)])
+        },
+        {
+          name: '每月調整',
+          type: 'line',
+          smooth: true,
+          data: monthlyCurve.map((p) => [p.date, toWan(p.net_value)])
+        }
+      ]
+    },
+    { notMerge: true }
+  )
+}
+
+watch(
+  [weekly, monthly],
+  async () => {
+    await nextTick()
+    renderCurveChart()
+  },
+  { deep: true }
+)
+
+onMounted(() => {
+  renderCurveChart()
+})
+
+onBeforeUnmount(() => {
+  curveChart?.dispose()
+  curveChart = null
+})
 </script>
 
 <style scoped>
 .head-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
-.help-btn {
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
+.head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
 }
-.form-grid {
+.config-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+}
+.config-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  position: relative;
+}
+.edit-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.edit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.edit-btn:hover:not(:disabled) {
+  color: var(--accent);
+}
+.edit-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+.edit-row {
+  margin-top: 4px;
+  display: block;
+}
+.edit-input {
+  width: 120px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.help-btn {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+.help-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.help-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
 }
 .field {
   display: flex;
@@ -206,14 +430,17 @@ function num2(v) {
   border-radius: 8px;
   padding: 8px 10px;
 }
-.action-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 12px;
-}
 .busy {
   color: var(--muted);
+  margin: 4px 0 12px;
+}
+.label {
+  color: var(--muted);
+  font-size: 13px;
+}
+.val {
+  font-size: 20px;
+  font-weight: 700;
 }
 .grid {
   width: 100%;
@@ -229,6 +456,11 @@ function num2(v) {
 .grid td:first-child {
   text-align: left;
 }
+.curve-chart {
+  width: 100%;
+  height: 420px;
+  margin-top: 10px;
+}
 .help-dialog {
   border: none;
   border-radius: 10px;
@@ -238,9 +470,20 @@ function num2(v) {
   padding: 16px;
   min-width: min(640px, 92vw);
 }
+.help-lines {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.7;
+}
 .help-actions {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
+}
+@media (max-width: 1100px) {
+  .config-cards {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
 }
 </style>

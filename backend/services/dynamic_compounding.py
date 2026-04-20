@@ -102,6 +102,8 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
     recovery_peak = initial
     reach_10x_date = ""
     next_mode = mode
+    curve: list[dict] = []
+    rollback_adjust_count = 0
 
     for row in periods:
         if next_mode != mode:
@@ -124,6 +126,14 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
         if not reach_10x_date and equity >= initial * 10.0:
             reach_10x_date = str(row.get("end_date", ""))
 
+        curve.append(
+            {
+                "date": str(row.get("end_date", "")),
+                "net_value": round(equity, 6),
+                "drawdown_amount": round(dd, 6),
+            }
+        )
+
         next_mode = mode
         if mode == "initial":
             if waiting_recovery:
@@ -138,6 +148,7 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
                 next_mode = "initial"
                 waiting_recovery = True
                 recovery_peak = peak
+                rollback_adjust_count += 1
 
     first_date = str(periods[0]["end_date"]) if periods else ""
     last_date = str(periods[-1]["end_date"]) if periods else ""
@@ -163,7 +174,9 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
         "cagr_pct": round(cagr_pct, 6),
         "mdd_pct": round(mdd_pct, 6),
         "mdd_amount": round(mdd_amount, 6),
+        "rollback_adjust_count": int(rollback_adjust_count),
         "reach_10x_date": reach_10x_date or "未達成",
+        "curve": curve,
     }
 
 
