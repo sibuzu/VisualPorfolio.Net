@@ -20,7 +20,6 @@
           class="edit-btn"
           title="編輯"
           aria-label="編輯"
-          :disabled="props.readonly"
           @click="startEdit(row)"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -95,25 +94,30 @@
           <td>{{ int0(monthly.rollback_adjust_count) }}</td>
         </tr>
         <tr>
-          <td>達到 10 倍規模日期</td>
-          <td>{{ weekly.reach_10x_date || '未達成' }}</td>
-          <td>{{ monthly.reach_10x_date || '未達成' }}</td>
+          <td>達到最大倍數規模日期</td>
+          <td>{{ maxScaleDate(weekly) }}</td>
+          <td>{{ maxScaleDate(monthly) }}</td>
         </tr>
       </tbody>
     </table>
 
-    <h4>Dynamic MDD Equity Curve (Weekly vs Monthly)</h4>
+    <h4>Dynamic MDD Equity Curve - Weekly vs Monthly Rebalance</h4>
     <div ref="curveChartRef" class="curve-chart"></div>
+    <p class="curve-summary">
+      Final Weekly: {{ moneyText(weekly.final_net_value) }}
+      &nbsp;&nbsp; Final Monthly: {{ moneyText(monthly.final_net_value) }}
+      &nbsp;&nbsp; Difference (M-W): {{ moneyText((monthly.final_net_value || 0) - (weekly.final_net_value || 0)) }}
+    </p>
 
     <dialog ref="helpDialogRef" class="help-dialog">
       <form method="dialog" class="help-form">
         <h4>動態複利規則</h4>
         <pre class="help-lines">
-  1. 一開始用 {{ percentText(draft.initial_ratio) }}。
+  1. 一開始用 {{ percentText(draft.initial_ratio) }}，初始MDD風險控制為 {{ wanIntText(draft.initial_capital * draft.initial_ratio) }} 萬。
   2. 累積獲利 &gt; {{ wanIntText(draft.add_threshold_profit) }} 萬，下一期切到 {{ percentText(draft.add_ratio) }}。
   3. 切到 {{ percentText(draft.add_ratio) }} 後，只要從高點回撤 &gt; {{ wanIntText(draft.rollback_amount) }} 萬，下一期切回 {{ percentText(draft.initial_ratio) }}。
   4. 切回 {{ percentText(draft.initial_ratio) }} 後，只要再賺回 {{ wanIntText(draft.rollback_amount) }} 萬（創新高），下一期再切回 {{ percentText(draft.add_ratio) }}。
-  5. 交易資金 {{ wanIntText(draft.max_multiple * draft.initial_capital) }} 萬封頂，最大為 {{ compactNum(draft.max_multiple) }}倍初始資金。
+  5. MDD風險控制 {{ wanIntText(draft.max_multiple * draft.initial_capital * draft.initial_ratio) }} 萬封頂，最大為 {{ compactNum(draft.max_multiple) }}倍初始MDD風險控制。
         </pre>
         <div class="help-actions">
           <button type="submit">關閉</button>
@@ -185,7 +189,7 @@ const configRows = computed(() => [
 ])
 
 function startEdit(row) {
-  if (!row.editable || props.readonly) return
+  if (!row.editable) return
   configError.value = ''
   editingKey.value = row.key
   const current = draft.value[row.key]
@@ -277,6 +281,14 @@ function int0(v) {
   return Math.round(Number(v || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })
 }
 
+function moneyText(v) {
+  return Math.round(Number(v || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })
+}
+
+function maxScaleDate(row) {
+  return row?.reach_max_multiple_date || row?.reach_10x_date || '未達成'
+}
+
 function renderCurveChart() {
   if (!curveChartRef.value) return
   if (!curveChart) curveChart = echarts.init(curveChartRef.value)
@@ -287,34 +299,57 @@ function renderCurveChart() {
 
   curveChart.setOption(
     {
+      backgroundColor: '#f3f3f3',
       tooltip: {
         trigger: 'axis',
         valueFormatter: (v) => `${Math.round(Number(v || 0)).toLocaleString('en-US')} 萬`
       },
       legend: {
-        data: ['每週調整', '每月調整']
+        show: true,
+        top: 10,
+        left: 22,
+        data: ['Weekly Rebalance', 'Monthly Rebalance'],
+        textStyle: {
+          fontSize: 14
+        }
+      },
+      grid: {
+        left: 72,
+        right: 22,
+        top: 56,
+        bottom: 42
       },
       xAxis: {
-        type: 'time'
+        type: 'time',
+        splitLine: { show: true, lineStyle: { color: '#dddddd' } },
+        axisLine: { lineStyle: { color: '#666' } },
+        axisLabel: { color: '#555' }
       },
       yAxis: {
         type: 'value',
         name: '淨值(萬)',
+        splitLine: { show: true, lineStyle: { color: '#dddddd' } },
+        axisLine: { lineStyle: { color: '#666' } },
         axisLabel: {
+          color: '#555',
           formatter: (v) => Math.round(Number(v || 0)).toLocaleString('en-US')
         }
       },
       series: [
         {
-          name: '每週調整',
+          name: 'Weekly Rebalance',
           type: 'line',
-          smooth: true,
+          smooth: false,
+          showSymbol: false,
+          lineStyle: { width: 1.5, color: '#1f77b4' },
           data: weeklyCurve.map((p) => [p.date, toWan(p.net_value)])
         },
         {
-          name: '每月調整',
+          name: 'Monthly Rebalance',
           type: 'line',
-          smooth: true,
+          smooth: false,
+          showSymbol: false,
+          lineStyle: { width: 1.5, color: '#ff7f0e' },
           data: monthlyCurve.map((p) => [p.date, toWan(p.net_value)])
         }
       ]
@@ -460,6 +495,12 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 420px;
   margin-top: 10px;
+}
+.curve-summary {
+  margin: 10px 0 0;
+  color: #2b2b2b;
+  font-weight: 600;
+  line-height: 1.4;
 }
 .help-dialog {
   border: none;

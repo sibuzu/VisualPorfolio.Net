@@ -129,6 +129,13 @@ def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
     end = None if payload.date_range.all else _parse_date(payload.date_range.end)
     merged = merge_trades(strategy_trades, start, end, factor=factor)
 
+    # Align dynamic-compounding source with mdd-style baseline:
+    # do not apply range-start warmup filtering; still honor selected date range.
+    merged_dynamic = merge_trades(strategy_trades, None, end, factor=factor)
+    if start:
+        start_s = start.strftime("%Y-%m-%d")
+        merged_dynamic = [t for t in merged_dynamic if str(t.get("trade_date2", ""))[:10] >= start_s]
+
     report = build_report(
         merged,
         risk_free_rate=payload.options.risk_free_rate,
@@ -186,8 +193,13 @@ def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
         "diversity": build_diversity(merged),
         "mdd_markers": report["mdd_markers"],
         "dynamic_compounding": build_dynamic_compounding(
-            merged,
-            normalize_dynamic_compounding_config(payload.options.dynamic_compounding),
+            merged_dynamic,
+            normalize_dynamic_compounding_config(
+                {
+                    **(payload.options.dynamic_compounding or {}),
+                    "base_mdd": float(report.get("summary", {}).get("mdd", 0.0)),
+                }
+            ),
         ),
     }
     return result
