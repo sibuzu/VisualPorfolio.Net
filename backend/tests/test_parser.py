@@ -102,6 +102,35 @@ def test_parse_sea_prefers_params_cost_when_basic_is_zero(tmp_path):
     assert abs(sum(x.net_profit for x in rows) - 9.895) < 1e-6
 
 
+def test_parse_sea_always_applies_contract_value_with_large_quantity(tmp_path):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "demo/strategy.toml",
+            "\n".join(
+                [
+                    "[params]",
+                    '"ContractValue" = "50"',
+                    '"TradeCost" = "0"',
+                ]
+            )
+            + "\n",
+        )
+        zf.writestr(
+            "demo/events.jsonl",
+            "\n".join(
+                [
+                    '{"timestamp":"2025-01-01T00:00:00Z","type":"trade","data":{"instrument_id":"TXF","price":100,"quantity":100}}',
+                    '{"timestamp":"2025-01-02T00:00:00Z","type":"trade","data":{"instrument_id":"TXF","price":110,"quantity":-100}}',
+                ]
+            ),
+        )
+    sea_path = tmp_path / "large_qty_contract_value.sea"
+    sea_path.write_bytes(buf.getvalue())
+    rows = parse_file(sea_path, strategy_index=0)
+    assert abs(sum(x.net_profit for x in rows) - 50000.0) < 1e-6
+
+
 def test_parse_gsea_has_rows(tmp_path):
     sea_bytes = _make_sea_bytes()
     gsea_path = tmp_path / "demo.gsea"

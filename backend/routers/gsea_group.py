@@ -27,6 +27,7 @@ class GseaGroupSaveRequest(BaseModel):
     description: str | None = None
     date_range_config: dict | None = None
     sharpe_config: dict | None = None
+    dynamic_compounding_config: dict | None = None
 
 
 @router.get("")
@@ -55,6 +56,7 @@ def put_gsea_group(project_id: str, payload: GseaGroupSaveRequest, current_user:
         description=payload.description,
         date_range_config=payload.date_range_config,
         sharpe_config=payload.sharpe_config,
+        dynamic_compounding_config=payload.dynamic_compounding_config,
     )
     touch_access_time(project_id)
     return {"ok": True, "filename": "group.json"}

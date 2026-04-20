@@ -91,7 +91,15 @@ def test_e2e_readonly_and_gsea_group_roundtrip():
                 "equities": [
                     {"index": 0, "filename": "aa-1.sea", "color": "Blue", "weight": 31.7},
                     {"index": 1, "filename": "aa-2.sea", "color": "Maroon", "weight": 31.7},
-                ]
+                ],
+                "dynamic_compounding_config": {
+                    "initial_capital": 80000000,
+                    "initial_ratio": 0.1,
+                    "add_threshold_profit": 100000000,
+                    "add_ratio": 0.15,
+                    "rollback_amount": 20000000,
+                    "max_multiple": 10,
+                },
             },
         )
         assert save.status_code == 200
@@ -101,6 +109,8 @@ def test_e2e_readonly_and_gsea_group_roundtrip():
         assert '"group"' in download.text
         assert '"project": "aa-1"' in download.text
         assert '"project": "aa-2"' in download.text
+        assert '"dynamic_compounding_config"' in download.text
+        assert '"initial_capital": 80000000.0' in download.text
 
         stranger_read = client.get(f"/projects/{project_id}", params={"user_id": STRANGER})
         assert stranger_read.status_code == 200

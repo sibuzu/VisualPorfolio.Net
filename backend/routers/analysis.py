@@ -12,6 +12,10 @@ from pydantic import BaseModel, Field
 from backend.services.commission import CommissionCfg, build_commission
 from backend.services.auth import require_auth
 from backend.services.diversity import build_diversity
+from backend.services.dynamic_compounding import (
+    build_dynamic_compounding,
+    normalize_dynamic_compounding_config,
+)
 from backend.services.parser import parse_file
 from backend.services.portfolio import merge_trades
 from backend.services.project_access import get_project_access, project_dir, touch_access_time
@@ -48,6 +52,7 @@ class Options(BaseModel):
     div_by_count: bool = False
     commission_per_trade: float = 0.0
     commission_config: dict[str, float] | None = None
+    dynamic_compounding: dict[str, float] | None = None
 
 
 class AnalysisRequest(BaseModel):
@@ -68,6 +73,26 @@ def _empty_analysis() -> dict:
         "commission": {},
         "diversity": {},
         "mdd_markers": [],
+        "dynamic_compounding": {
+            "weekly": {
+                "initial_net_value": 80_000_000.0,
+                "final_net_value": 80_000_000.0,
+                "profit_multiple": 1.0,
+                "cagr_pct": 0.0,
+                "mdd_pct": 0.0,
+                "mdd_amount": 0.0,
+                "reach_10x_date": "未達成",
+            },
+            "monthly": {
+                "initial_net_value": 80_000_000.0,
+                "final_net_value": 80_000_000.0,
+                "profit_multiple": 1.0,
+                "cagr_pct": 0.0,
+                "mdd_pct": 0.0,
+                "mdd_amount": 0.0,
+                "reach_10x_date": "未達成",
+            },
+        },
     }
 
 
@@ -160,6 +185,10 @@ def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
         "commission": build_commission(merged, payload.options.commission_per_trade, cfg=commission_cfg),
         "diversity": build_diversity(merged),
         "mdd_markers": report["mdd_markers"],
+        "dynamic_compounding": build_dynamic_compounding(
+            merged,
+            normalize_dynamic_compounding_config(payload.options.dynamic_compounding),
+        ),
     }
     return result
 

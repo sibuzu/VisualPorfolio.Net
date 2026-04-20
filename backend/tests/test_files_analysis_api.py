@@ -66,6 +66,20 @@ def test_upload_and_analysis_flow():
         assert "commission" in body
         assert "diversity" in body
         assert "mdd_markers" in body
+        assert "dynamic_compounding" in body
+        assert "weekly" in body["dynamic_compounding"]
+        assert "monthly" in body["dynamic_compounding"]
+        for key in (
+            "initial_net_value",
+            "final_net_value",
+            "profit_multiple",
+            "cagr_pct",
+            "mdd_pct",
+            "mdd_amount",
+            "reach_10x_date",
+        ):
+            assert key in body["dynamic_compounding"]["weekly"]
+            assert key in body["dynamic_compounding"]["monthly"]
         assert body["summary"]["trade_count"] > 0
 
 

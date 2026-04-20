@@ -1,6 +1,17 @@
 import { defineStore } from 'pinia'
 import { getGseaGroup, runAnalysis, saveGseaGroup } from '../api'
 
+function defaultDynamicCompoundingConfig() {
+  return {
+    initial_capital: 80000000,
+    initial_ratio: 0.1,
+    add_threshold_profit: 100000000,
+    add_ratio: 0.15,
+    rollback_amount: 20000000,
+    max_multiple: 10
+  }
+}
+
 function normalizeFileKey(v) {
   if (!v) return ''
   const s = String(v).trim().replace(/\\/g, '/')
@@ -46,7 +57,11 @@ export const usePortfolioStore = defineStore('portfolio', {
       win_loss: {},
       commission: {},
       diversity: {},
-      mdd_markers: []
+      mdd_markers: [],
+      dynamic_compounding: {
+        weekly: {},
+        monthly: {}
+      }
     },
     loading: false,
     error: '',
@@ -61,7 +76,8 @@ export const usePortfolioStore = defineStore('portfolio', {
     sharpeConfig: {
       capital: 100,
       risk_free_rate: 0
-    }
+    },
+    dynamicCompoundingConfig: defaultDynamicCompoundingConfig()
   }),
   actions: {
     setFilesAsEquities(files) {
@@ -187,6 +203,20 @@ export const usePortfolioStore = defineStore('portfolio', {
       } else {
         this.sharpeConfig = { capital: 100, risk_free_rate: 0 }
       }
+
+      const dcnode = doc.querySelector('DynamicCompoundingConfig')
+      if (dcnode) {
+        this.setDynamicCompoundingConfig({
+          initial_capital: Number(dcnode.getAttribute('initial_capital')),
+          initial_ratio: Number(dcnode.getAttribute('initial_ratio')),
+          add_threshold_profit: Number(dcnode.getAttribute('add_threshold_profit')),
+          add_ratio: Number(dcnode.getAttribute('add_ratio')),
+          rollback_amount: Number(dcnode.getAttribute('rollback_amount')),
+          max_multiple: Number(dcnode.getAttribute('max_multiple'))
+        })
+      } else {
+        this.dynamicCompoundingConfig = defaultDynamicCompoundingConfig()
+      }
     },
     applySavedConfigFromGroupJson(groupText) {
       if (!groupText) return
@@ -263,11 +293,16 @@ export const usePortfolioStore = defineStore('portfolio', {
         capital: Number.isFinite(capital) && capital > 0 ? capital : 100,
         risk_free_rate: Number.isFinite(rf) ? rf : 0
       }
+      const dyn = cfg.dynamic_compounding_config && typeof cfg.dynamic_compounding_config === 'object'
+        ? cfg.dynamic_compounding_config
+        : {}
+      this.setDynamicCompoundingConfig(dyn)
     },
     async restoreGseaGroupConfig(projectId) {
       this.strategyDescription = ''
       this.dateRangeConfig = { enabled: false, start: '', end: '' }
       this.sharpeConfig = { capital: 100, risk_free_rate: 0 }
+      this.dynamicCompoundingConfig = defaultDynamicCompoundingConfig()
       try {
         const raw = await getGseaGroup(projectId)
         const text = String(raw || '')
@@ -290,7 +325,15 @@ export const usePortfolioStore = defineStore('portfolio', {
           risk_free_rate: Number(this.sharpeConfig?.risk_free_rate || 0),
           capital: Number(this.sharpeConfig?.capital || 100),
           mdd_count: 5,
-          commission_per_trade: 0
+          commission_per_trade: 0,
+          dynamic_compounding: {
+            initial_capital: Number(this.dynamicCompoundingConfig?.initial_capital || 80000000),
+            initial_ratio: Number(this.dynamicCompoundingConfig?.initial_ratio || 0.1),
+            add_threshold_profit: Number(this.dynamicCompoundingConfig?.add_threshold_profit || 100000000),
+            add_ratio: Number(this.dynamicCompoundingConfig?.add_ratio || 0.15),
+            rollback_amount: Number(this.dynamicCompoundingConfig?.rollback_amount || 20000000),
+            max_multiple: Number(this.dynamicCompoundingConfig?.max_multiple || 10)
+          }
         }
         if (this.commissionConfig) {
           baseOptions.commission_config = this.commissionConfig
@@ -338,6 +381,23 @@ export const usePortfolioStore = defineStore('portfolio', {
         risk_free_rate: Number.isFinite(riskFree) ? riskFree : 0
       }
     },
+    setDynamicCompoundingConfig(config) {
+      const defaults = defaultDynamicCompoundingConfig()
+      const initialCapital = Number(config?.initial_capital)
+      const initialRatio = Number(config?.initial_ratio)
+      const addThresholdProfit = Number(config?.add_threshold_profit)
+      const addRatio = Number(config?.add_ratio)
+      const rollbackAmount = Number(config?.rollback_amount)
+      const maxMultiple = Number(config?.max_multiple)
+      this.dynamicCompoundingConfig = {
+        initial_capital: Number.isFinite(initialCapital) && initialCapital > 0 ? initialCapital : defaults.initial_capital,
+        initial_ratio: Number.isFinite(initialRatio) && initialRatio >= 0 ? initialRatio : defaults.initial_ratio,
+        add_threshold_profit: Number.isFinite(addThresholdProfit) ? addThresholdProfit : defaults.add_threshold_profit,
+        add_ratio: Number.isFinite(addRatio) && addRatio >= 0 ? addRatio : defaults.add_ratio,
+        rollback_amount: Number.isFinite(rollbackAmount) && rollbackAmount >= 0 ? rollbackAmount : defaults.rollback_amount,
+        max_multiple: Number.isFinite(maxMultiple) && maxMultiple >= 0 ? maxMultiple : defaults.max_multiple
+      }
+    },
     _toDateRangePayload(config) {
       if (!config?.enabled) return { all: true }
       return {
@@ -364,7 +424,8 @@ export const usePortfolioStore = defineStore('portfolio', {
           this.commissionConfig,
           this.strategyDescription,
           this.dateRangeConfig,
-          this.sharpeConfig
+          this.sharpeConfig,
+          this.dynamicCompoundingConfig
         )
       } catch (e) {
         this.error = e.message

@@ -388,7 +388,8 @@ export async function saveGseaGroup(
   commissionConfig = null,
   description = '',
   dateRangeConfig = null,
-  sharpeConfig = null
+  sharpeConfig = null,
+  dynamicCompoundingConfig = null
 ) {
   try {
     const payload = { equities }
@@ -407,6 +408,16 @@ export async function saveGseaGroup(
       payload.sharpe_config = {
         capital: Number(sharpeConfig.capital || 0),
         risk_free_rate: Number(sharpeConfig.risk_free_rate || 0)
+      }
+    }
+    if (dynamicCompoundingConfig && typeof dynamicCompoundingConfig === 'object') {
+      payload.dynamic_compounding_config = {
+        initial_capital: Number(dynamicCompoundingConfig.initial_capital || 0),
+        initial_ratio: Number(dynamicCompoundingConfig.initial_ratio || 0),
+        add_threshold_profit: Number(dynamicCompoundingConfig.add_threshold_profit || 0),
+        add_ratio: Number(dynamicCompoundingConfig.add_ratio || 0),
+        rollback_amount: Number(dynamicCompoundingConfig.rollback_amount || 0),
+        max_multiple: Number(dynamicCompoundingConfig.max_multiple || 0)
       }
     }
     const { data } = await api.put(`/projects/${projectId}/gsea-group`, payload)
