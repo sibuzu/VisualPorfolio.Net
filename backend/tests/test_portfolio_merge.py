@@ -22,7 +22,7 @@ def _t(idx: int, ts: str, pnl: float, bs: str, contract: float, strategy_index: 
     )
 
 
-def test_merge_trades_range_skips_carried_position_until_flat():
+def test_merge_trades_range_includes_trades_after_start():
     strategy_trades = [
         (
             [
@@ -36,11 +36,15 @@ def test_merge_trades_range_skips_carried_position_until_flat():
     ]
 
     out = merge_trades(strategy_trades, start=datetime(2024, 1, 5), end=None, factor=1.0)
-    assert [x["trade_date2"] for x in out] == ["2024-01-11 09:00:00", "2024-01-12 09:00:00"]
-    assert [x["net_profit"] for x in out] == [10.0, 20.0]
+    assert [x["trade_date2"] for x in out] == [
+        "2024-01-10 09:00:00",
+        "2024-01-11 09:00:00",
+        "2024-01-12 09:00:00",
+    ]
+    assert [x["net_profit"] for x in out] == [100.0, 10.0, 20.0]
 
 
-def test_merge_trades_range_keeps_flat_strategy_from_start():
+def test_merge_trades_range_keeps_all_strategies_after_start():
     strategy_trades = [
         (
             [
@@ -59,5 +63,5 @@ def test_merge_trades_range_keeps_flat_strategy_from_start():
     ]
 
     out = merge_trades(strategy_trades, start=datetime(2024, 1, 5), end=None, factor=1.0)
-    assert [x["strategy_index"] for x in out] == [1, 1]
-    assert [x["net_profit"] for x in out] == [5.0, 8.0]
+    assert [x["strategy_index"] for x in out] == [1, 1, 0]
+    assert [x["net_profit"] for x in out] == [5.0, 8.0, 100.0]

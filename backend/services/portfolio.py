@@ -6,16 +6,6 @@ from datetime import datetime
 from backend.services.parser import TradeItem
 
 
-def _signed_contract(t: TradeItem) -> float:
-    side = str(t.bs or "").upper()
-    qty = float(t.contract or 0.0)
-    if side == "B":
-        return qty
-    if side == "S":
-        return -qty
-    return 0.0
-
-
 def merge_trades(
     strategy_trades: list[tuple[list[TradeItem], dict]],
     start: datetime | None,
@@ -46,32 +36,12 @@ def merge_trades(
 
     merged.sort(key=lambda t: (t.trade_date2, t.idx))
 
-    # If a strategy already has open position at range start, skip its trades
-    # until that carried position is flattened, then start counting performance.
-    position_by_strategy: dict[int, float] = {}
-    if start:
-        for t in merged:
-            if t.trade_date2 >= start:
-                break
-            key = int(t.strategy_index)
-            position_by_strategy[key] = position_by_strategy.get(key, 0.0) + _signed_contract(t)
-
-    warmup_strategies = {
-        key for key, pos in position_by_strategy.items() if abs(float(pos)) > 1e-9
-    }
-
     out: list[dict] = []
     aux_idx = 1
     for t in merged:
-        key = int(t.strategy_index)
         if start and t.trade_date2 < start:
             continue
-        position_by_strategy[key] = position_by_strategy.get(key, 0.0) + _signed_contract(t)
         if end and t.trade_date2 > end:
-            continue
-        if key in warmup_strategies:
-            if abs(float(position_by_strategy.get(key, 0.0))) <= 1e-9:
-                warmup_strategies.remove(key)
             continue
         item = asdict(t)
         item["trade_date1"] = t.trade_date1.strftime("%Y-%m-%d %H:%M:%S")
