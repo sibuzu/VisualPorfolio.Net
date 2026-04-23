@@ -1,0 +1,35 @@
+services:
+  visualportfolio-beta-frontend:
+    build:
+      context: ../..
+      dockerfile: docker/visual-portfolio-beta/Dockerfile.frontend
+    container_name: visualportfolio-beta-frontend
+    restart: unless-stopped
+    networks:
+      - sibuzu-net
+
+  visualportfolio-beta-backend:
+    build:
+      context: ../..
+      dockerfile: docker/visual-portfolio-beta/Dockerfile.backend
+    container_name: visualportfolio-beta-backend
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    environment:
+      - UMASK=002
+      - VP_ENV=beta
+      - BETA_DATA_ROOT=${BETA_DATA_ROOT:-../../data-beta}
+    volumes:
+      - ${BETA_DATA_ROOT:-../../data-beta}:/app/data
+    restart: unless-stopped
+    networks:
+      - sibuzu-net
+
+networks:
+  sibuzu-net:
+    external: true
+
+# Suggested startup:
+#   export APP_UID=$(id -u)
+#   export APP_GID=$(id -g)
+#   export BETA_DATA_ROOT=../../data-beta
+#   docker compose -f docker/visual-portfolio-beta/docker-compose.yml up -d --build
