@@ -23,3 +23,7 @@ VisualPortfolio.Net Spec Requirement
 7. 建立project dir = data/projects/{project-id}，之前上傳的 srp xrp files 或是 建立的 pfo 都是放在這個project dir
 
 8. 每次project access (edit/view) 都會更 db 的 project access time。若是72小時都沒access 的 project，則會刪除。
+
+9. Dynamic Compounding 的「回徹金額」參數需同時支援「萬」與「%」兩種輸入模式：
+   - 無 `%` 後綴時，視為萬（例如 `2000` = 2000萬）
+   - 有 `%` 後綴時，視為從高點回撤比例（例如 `10%` = 從高點損失 10% 觸發回切）

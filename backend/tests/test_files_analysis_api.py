@@ -76,6 +76,8 @@ def test_upload_and_analysis_flow():
             "cagr_pct",
             "mdd_pct",
             "mdd_amount",
+            "mdd_pct_date",
+            "mdd_amount_date",
             "reach_10x_date",
         ):
             assert key in body["dynamic_compounding"]["weekly"]

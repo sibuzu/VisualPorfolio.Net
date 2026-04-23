@@ -89,6 +89,16 @@
           <td>{{ wanIntText(monthly.mdd_amount) }}</td>
         </tr>
         <tr>
+          <td>MDD%日期</td>
+          <td>{{ dateText(weekly.mdd_pct_date) }}</td>
+          <td>{{ dateText(monthly.mdd_pct_date) }}</td>
+        </tr>
+        <tr>
+          <td>MDD萬日期</td>
+          <td>{{ dateText(weekly.mdd_amount_date) }}</td>
+          <td>{{ dateText(monthly.mdd_amount_date) }}</td>
+        </tr>
+        <tr>
           <td>高點回撤調整次數</td>
           <td>{{ int0(weekly.rollback_adjust_count) }}</td>
           <td>{{ int0(monthly.rollback_adjust_count) }}</td>
@@ -115,8 +125,8 @@
         <pre class="help-lines">
   1. 一開始用 {{ percentText(draft.initial_ratio) }}，初始MDD風險控制為 {{ wanIntText(draft.initial_capital * draft.initial_ratio) }} 萬。
   2. 累積獲利 &gt; {{ wanIntText(draft.add_threshold_profit) }} 萬，下一期切到 {{ percentText(draft.add_ratio) }}。
-  3. 切到 {{ percentText(draft.add_ratio) }} 後，只要從高點回撤 &gt; {{ wanIntText(draft.rollback_amount) }} 萬，下一期切回 {{ percentText(draft.initial_ratio) }}。
-  4. 切回 {{ percentText(draft.initial_ratio) }} 後，只要再賺回 {{ wanIntText(draft.rollback_amount) }} 萬（創新高），下一期再切回 {{ percentText(draft.add_ratio) }}。
+  3. 切到 {{ percentText(draft.add_ratio) }} 後，只要從高點回撤 &gt; {{ rollbackThresholdHelpText() }}，下一期切回 {{ percentText(draft.initial_ratio) }}。
+  4. 切回 {{ percentText(draft.initial_ratio) }} 後，只要淨值再創新高，下一期再切回 {{ percentText(draft.add_ratio) }}。
   5. MDD風險控制 {{ wanIntText(draft.max_multiple * draft.initial_capital * draft.initial_ratio) }} 萬封頂，最大為 {{ compactNum(draft.max_multiple) }}倍初始MDD風險控制。
         </pre>
         <div class="help-actions">
@@ -156,6 +166,7 @@ const draft = ref({
   add_threshold_profit: 100000000,
   add_ratio: 0.15,
   rollback_amount: 20000000,
+  rollback_percent: 0,
   max_multiple: 10
 })
 
@@ -168,6 +179,7 @@ watch(
       add_threshold_profit: Number(cfg?.add_threshold_profit || 100000000),
       add_ratio: Number(cfg?.add_ratio || 0.15),
       rollback_amount: Number(cfg?.rollback_amount || 20000000),
+      rollback_percent: Number(cfg?.rollback_percent || 0),
       max_multiple: Number(cfg?.max_multiple || 10)
     }
   },
@@ -184,7 +196,7 @@ const configRows = computed(() => [
   { key: 'initial_ratio', label: '初始比例', value: ratio(draft.value.initial_ratio), editable: true, kind: 'ratio' },
   { key: 'add_threshold_profit', label: '獲利達加碼(萬)', value: wanIntText(draft.value.add_threshold_profit), editable: true, kind: 'amount' },
   { key: 'add_ratio', label: '加碼比例', value: ratio(draft.value.add_ratio), editable: true, kind: 'ratio' },
-  { key: 'rollback_amount', label: '回徹金額(萬)', value: wanIntText(draft.value.rollback_amount), editable: true, kind: 'amount' },
+  { key: 'rollback_amount', label: '回徹金額(萬, %)', value: rollbackDisplayText(), editable: true, kind: 'rollback' },
   { key: 'max_multiple', label: '最大倍數', value: ratio(draft.value.max_multiple), editable: true, kind: 'ratio' }
 ])
 
@@ -193,7 +205,13 @@ function startEdit(row) {
   configError.value = ''
   editingKey.value = row.key
   const current = draft.value[row.key]
-  draftValue.value = row.kind === 'amount' ? String(toWanInt(current)) : String(current ?? '')
+  if (row.kind === 'amount') {
+    draftValue.value = String(toWanInt(current))
+  } else if (row.kind === 'rollback') {
+    draftValue.value = rollbackEditText()
+  } else {
+    draftValue.value = String(current ?? '')
+  }
   nextTick(() => {
     const el = editInputRef.value
     if (el && typeof el.focus === 'function') {
@@ -206,18 +224,28 @@ function startEdit(row) {
 async function saveEdit(row) {
   committingByEnter.value = true
   const raw = String(draftValue.value || '').replace(/,/g, '').trim()
-  const n = Number(raw)
-  if (!Number.isFinite(n)) {
-    configError.value = '請輸入有效數值'
-    committingByEnter.value = false
-    return
-  }
-
   const nextDraft = { ...draft.value }
-  if (row.kind === 'amount') {
-    nextDraft[row.key] = Math.round(n) * 10000
+  if (row.kind === 'rollback') {
+    const parsed = parseRollbackInput(raw)
+    if (!parsed.ok) {
+      configError.value = parsed.error
+      committingByEnter.value = false
+      return
+    }
+    nextDraft.rollback_amount = parsed.rollback_amount
+    nextDraft.rollback_percent = parsed.rollback_percent
   } else {
-    nextDraft[row.key] = n
+    const n = Number(raw)
+    if (!Number.isFinite(n)) {
+      configError.value = '請輸入有效數值'
+      committingByEnter.value = false
+      return
+    }
+    if (row.kind === 'amount') {
+      nextDraft[row.key] = Math.round(n) * 10000
+    } else {
+      nextDraft[row.key] = n
+    }
   }
 
   configError.value = ''
@@ -249,6 +277,46 @@ function cancelEdit() {
 
 function openHelp() {
   helpDialogRef.value?.showModal()
+}
+
+function rollbackDisplayText() {
+  const pct = Number(draft.value.rollback_percent || 0)
+  if (pct > 0) return percentText(pct)
+  return wanIntText(draft.value.rollback_amount)
+}
+
+function rollbackEditText() {
+  const pct = Number(draft.value.rollback_percent || 0)
+  if (pct > 0) return `${compactNum(pct * 100)}%`
+  return String(toWanInt(draft.value.rollback_amount))
+}
+
+function rollbackThresholdHelpText() {
+  const pct = Number(draft.value.rollback_percent || 0)
+  if (pct > 0) return `${percentText(pct)}（相對高點）`
+  return `${wanIntText(draft.value.rollback_amount)} 萬`
+}
+
+function parseRollbackInput(raw) {
+  const text = String(raw || '').trim()
+  const hasPercent = /%\s*$/.test(text)
+  const numberText = hasPercent ? text.replace(/%\s*$/, '').trim() : text
+  const n = Number(numberText)
+  if (!Number.isFinite(n) || n < 0) {
+    return { ok: false, error: '請輸入有效數值' }
+  }
+  if (hasPercent) {
+    return {
+      ok: true,
+      rollback_amount: Number(draft.value.rollback_amount || 0),
+      rollback_percent: n / 100
+    }
+  }
+  return {
+    ok: true,
+    rollback_amount: Math.round(n) * 10000,
+    rollback_percent: 0
+  }
 }
 
 function toWanInt(v) {
@@ -283,6 +351,11 @@ function int0(v) {
 
 function moneyText(v) {
   return Math.round(Number(v || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })
+}
+
+function dateText(v) {
+  const s = String(v || '').trim()
+  return s || '未達成'
 }
 
 function maxScaleDate(row) {

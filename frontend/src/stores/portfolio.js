@@ -8,6 +8,7 @@ function defaultDynamicCompoundingConfig() {
     add_threshold_profit: 100000000,
     add_ratio: 0.15,
     rollback_amount: 20000000,
+    rollback_percent: 0,
     max_multiple: 10
   }
 }
@@ -212,6 +213,7 @@ export const usePortfolioStore = defineStore('portfolio', {
           add_threshold_profit: Number(dcnode.getAttribute('add_threshold_profit')),
           add_ratio: Number(dcnode.getAttribute('add_ratio')),
           rollback_amount: Number(dcnode.getAttribute('rollback_amount')),
+          rollback_percent: Number(dcnode.getAttribute('rollback_percent')),
           max_multiple: Number(dcnode.getAttribute('max_multiple'))
         })
       } else {
@@ -332,6 +334,7 @@ export const usePortfolioStore = defineStore('portfolio', {
             add_threshold_profit: Number(this.dynamicCompoundingConfig?.add_threshold_profit || 100000000),
             add_ratio: Number(this.dynamicCompoundingConfig?.add_ratio || 0.15),
             rollback_amount: Number(this.dynamicCompoundingConfig?.rollback_amount || 20000000),
+            rollback_percent: Number(this.dynamicCompoundingConfig?.rollback_percent || 0),
             max_multiple: Number(this.dynamicCompoundingConfig?.max_multiple || 10)
           }
         }
@@ -388,6 +391,7 @@ export const usePortfolioStore = defineStore('portfolio', {
       const addThresholdProfit = Number(config?.add_threshold_profit)
       const addRatio = Number(config?.add_ratio)
       const rollbackAmount = Number(config?.rollback_amount)
+      const rollbackPercent = Number(config?.rollback_percent)
       const maxMultiple = Number(config?.max_multiple)
       this.dynamicCompoundingConfig = {
         initial_capital: Number.isFinite(initialCapital) && initialCapital > 0 ? initialCapital : defaults.initial_capital,
@@ -395,6 +399,7 @@ export const usePortfolioStore = defineStore('portfolio', {
         add_threshold_profit: Number.isFinite(addThresholdProfit) ? addThresholdProfit : defaults.add_threshold_profit,
         add_ratio: Number.isFinite(addRatio) && addRatio >= 0 ? addRatio : defaults.add_ratio,
         rollback_amount: Number.isFinite(rollbackAmount) && rollbackAmount >= 0 ? rollbackAmount : defaults.rollback_amount,
+        rollback_percent: Number.isFinite(rollbackPercent) && rollbackPercent >= 0 ? rollbackPercent : defaults.rollback_percent,
         max_multiple: Number.isFinite(maxMultiple) && maxMultiple >= 0 ? maxMultiple : defaults.max_multiple
       }
     },

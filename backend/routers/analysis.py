@@ -81,6 +81,8 @@ def _empty_analysis() -> dict:
                 "cagr_pct": 0.0,
                 "mdd_pct": 0.0,
                 "mdd_amount": 0.0,
+                "mdd_pct_date": "未達成",
+                "mdd_amount_date": "未達成",
                 "reach_10x_date": "未達成",
             },
             "monthly": {
@@ -90,6 +92,8 @@ def _empty_analysis() -> dict:
                 "cagr_pct": 0.0,
                 "mdd_pct": 0.0,
                 "mdd_amount": 0.0,
+                "mdd_pct_date": "未達成",
+                "mdd_amount_date": "未達成",
                 "reach_10x_date": "未達成",
             },
         },

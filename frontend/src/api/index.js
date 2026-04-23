@@ -417,6 +417,7 @@ export async function saveGseaGroup(
         add_threshold_profit: Number(dynamicCompoundingConfig.add_threshold_profit || 0),
         add_ratio: Number(dynamicCompoundingConfig.add_ratio || 0),
         rollback_amount: Number(dynamicCompoundingConfig.rollback_amount || 0),
+        rollback_percent: Number(dynamicCompoundingConfig.rollback_percent || 0),
         max_multiple: Number(dynamicCompoundingConfig.max_multiple || 0)
       }
     }

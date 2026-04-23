@@ -11,6 +11,7 @@ class DynamicCompoundingConfig:
     add_threshold_profit: float = 100_000_000.0
     add_ratio: float = 0.15
     rollback_amount: float = 20_000_000.0
+    rollback_percent: float = 0.0
     max_multiple: float = 10.0
     base_mdd: float = 0.0
 
@@ -30,6 +31,7 @@ def normalize_dynamic_compounding_config(raw: dict | None) -> DynamicCompounding
         add_threshold_profit=_safe_float(raw.get("add_threshold_profit"), 100_000_000.0),
         add_ratio=max(_safe_float(raw.get("add_ratio"), 0.15), 0.0),
         rollback_amount=max(_safe_float(raw.get("rollback_amount"), 20_000_000.0), 0.0),
+        rollback_percent=max(_safe_float(raw.get("rollback_percent"), 0.0), 0.0),
         max_multiple=max(_safe_float(raw.get("max_multiple"), 10.0), 0.0),
         base_mdd=max(_safe_float(raw.get("base_mdd"), 0.0), 0.0),
     )
@@ -159,6 +161,8 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
     mdd_peak = initial
     mdd_amount = 0.0
     mdd_pct_max = 0.0
+    mdd_amount_date = ""
+    mdd_pct_date = ""
     ratio = max(float(cfg.initial_ratio), 0.0)
     mode = "initial"
     has_entered_add = False
@@ -174,16 +178,18 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
     sample_last_equity = initial
 
     def _flush_week_sample() -> None:
-        nonlocal mdd_peak, mdd_amount, mdd_pct_max
+        nonlocal mdd_peak, mdd_amount, mdd_pct_max, mdd_amount_date, mdd_pct_date
         if not sample_last_date:
             return
         dd = max(mdd_peak - sample_last_equity, 0.0)
         if dd > mdd_amount:
             mdd_amount = dd
+            mdd_amount_date = sample_last_date
         if mdd_peak > 0:
             dd_pct = (dd / mdd_peak) * 100.0
             if dd_pct > mdd_pct_max:
                 mdd_pct_max = dd_pct
+                mdd_pct_date = sample_last_date
         if sample_last_equity > mdd_peak:
             mdd_peak = sample_last_equity
         curve.append(
@@ -258,7 +264,10 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
                 next_mode = "add"
                 has_entered_add = True
         else:
-            if logic_peak - equity > float(cfg.rollback_amount):
+            rollback_threshold = float(cfg.rollback_amount)
+            if float(cfg.rollback_percent) > 0:
+                rollback_threshold = logic_peak * float(cfg.rollback_percent)
+            if logic_peak - equity > rollback_threshold:
                 next_mode = "initial"
                 waiting_recovery = True
                 recovery_peak = logic_peak
@@ -289,6 +298,8 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
         "cagr_pct": round(cagr_pct, 6),
         "mdd_pct": round(mdd_pct_max, 6),
         "mdd_amount": round(mdd_amount, 6),
+        "mdd_pct_date": mdd_pct_date or "未達成",
+        "mdd_amount_date": mdd_amount_date or "未達成",
         "rollback_adjust_count": int(rollback_adjust_count),
         "reach_max_multiple_date": reach_max_multiple_date or "未達成",
         "reach_10x_date": reach_10x_date or "未達成",

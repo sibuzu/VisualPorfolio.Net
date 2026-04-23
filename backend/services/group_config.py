@@ -13,6 +13,7 @@ _DYN_COMP_DEFAULTS = {
     "add_threshold_profit": 100_000_000.0,
     "add_ratio": 0.15,
     "rollback_amount": 20_000_000.0,
+    "rollback_percent": 0.0,
     "max_multiple": 10.0,
 }
 
@@ -147,6 +148,9 @@ def load_project_config(folder: Path) -> dict:
             "rollback_amount": _to_float(
                 dynamic_compounding.get("rollback_amount"), _DYN_COMP_DEFAULTS["rollback_amount"]
             ),
+            "rollback_percent": _to_float(
+                dynamic_compounding.get("rollback_percent"), _DYN_COMP_DEFAULTS["rollback_percent"]
+            ),
             "max_multiple": _to_float(dynamic_compounding.get("max_multiple"), _DYN_COMP_DEFAULTS["max_multiple"]),
         },
     }
@@ -193,6 +197,9 @@ def save_project_config(
             "add_ratio": _to_float(dynamic_compounding_config.get("add_ratio"), _DYN_COMP_DEFAULTS["add_ratio"]),
             "rollback_amount": _to_float(
                 dynamic_compounding_config.get("rollback_amount"), _DYN_COMP_DEFAULTS["rollback_amount"]
+            ),
+            "rollback_percent": _to_float(
+                dynamic_compounding_config.get("rollback_percent"), _DYN_COMP_DEFAULTS["rollback_percent"]
             ),
             "max_multiple": _to_float(
                 dynamic_compounding_config.get("max_multiple"), _DYN_COMP_DEFAULTS["max_multiple"]

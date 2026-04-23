@@ -11,6 +11,7 @@ The system SHALL accept an optional `dynamic_compounding` configuration in analy
   - `add_threshold_profit=100,000,000`
   - `add_ratio=0.15`
   - `rollback_amount=20,000,000`
+  - `rollback_percent=0`
   - `max_multiple=10`
 - **THEN** response SHALL include both `weekly` and `monthly` result objects.
 
@@ -23,6 +24,8 @@ The system SHALL accept an optional `dynamic_compounding` configuration in analy
   - `cagr_pct`
   - `mdd_pct`
   - `mdd_amount`
+  - `mdd_pct_date`
+  - `mdd_amount_date`
   - `rollback_adjust_count`
   - `reach_max_multiple_date`
   - `curve`
@@ -35,7 +38,9 @@ The system SHALL apply dynamic compounding mode transitions using strict greater
 - **THEN** system SHALL switch to add mode on the next period.
 
 #### Scenario: Roll back to initial mode on drawdown
-- **WHEN** system is in add mode and drawdown from prior peak becomes greater than `rollback_amount`
+- **WHEN** system is in add mode and drawdown from prior peak becomes greater than configured rollback threshold
+- **THEN** rollback threshold SHALL be `rollback_amount` when `rollback_percent <= 0`
+- **THEN** rollback threshold SHALL be `logic_peak * rollback_percent` when `rollback_percent > 0`
 - **THEN** system SHALL switch to initial mode on the next period
 - **THEN** system SHALL increment `rollback_adjust_count`.
 
@@ -80,3 +85,9 @@ The frontend SHALL provide a dedicated dynamic compounding tab with editable par
 - **WHEN** analysis response includes weekly and monthly dynamic compounding results
 - **THEN** frontend SHALL render a comparison table with both modes
 - **THEN** chart SHALL plot weekly-sampled floating equity curves for both modes on the same time axis.
+
+#### Scenario: Rollback input supports amount and percentage
+- **WHEN** user edits rollback threshold in dynamic compounding panel
+- **THEN** input ending with `%` SHALL be interpreted as percentage rollback (e.g. `10%` means drawdown from peak exceeds 10%)
+- **THEN** input without `%` SHALL be interpreted as amount in ten-thousand units (e.g. `2000` means `2,000萬`)
+- **THEN** help text SHALL describe rollback threshold using the current input mode.
