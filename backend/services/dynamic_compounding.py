@@ -137,7 +137,13 @@ def _monthly_periods(trades: list[dict]) -> list[dict]:
     return rows
 
 
-def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
+def _simulate(
+    periods: list[dict],
+    cfg: DynamicCompoundingConfig,
+    *,
+    cagr_start_date: str = "",
+    cagr_end_date: str = "",
+) -> dict:
     initial = float(cfg.initial_capital)
     if initial <= 0:
         initial = 1.0
@@ -275,8 +281,11 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
 
     _flush_week_sample()
 
-    first_date = str(periods[0]["end_date"]) if periods else ""
-    last_date = str(periods[-1]["end_date"]) if periods else ""
+    first_date = str(cagr_start_date or "").strip()
+    last_date = str(cagr_end_date or "").strip()
+    if not first_date or not last_date:
+        first_date = str(periods[0]["end_date"]) if periods else ""
+        last_date = str(periods[-1]["end_date"]) if periods else ""
     years = 0.0
     if first_date and last_date:
         t1 = _dt(first_date)
@@ -310,7 +319,33 @@ def _simulate(periods: list[dict], cfg: DynamicCompoundingConfig) -> dict:
 def build_dynamic_compounding(trades: list[dict], config: DynamicCompoundingConfig) -> dict:
     weekly_periods = _weekly_periods(trades)
     monthly_periods = _monthly_periods(trades)
+    cagr_start_date = ""
+    cagr_end_date = ""
+    if trades:
+        dates: list[datetime] = []
+        for t in trades:
+            ds = str(t.get("trade_date2", ""))[:10]
+            if not ds:
+                continue
+            try:
+                dates.append(_dt(ds))
+            except ValueError:
+                continue
+        if dates:
+            dates.sort()
+            cagr_start_date = dates[0].strftime("%Y-%m-%d")
+            cagr_end_date = dates[-1].strftime("%Y-%m-%d")
     return {
-        "weekly": _simulate(weekly_periods, config),
-        "monthly": _simulate(monthly_periods, config),
+        "weekly": _simulate(
+            weekly_periods,
+            config,
+            cagr_start_date=cagr_start_date,
+            cagr_end_date=cagr_end_date,
+        ),
+        "monthly": _simulate(
+            monthly_periods,
+            config,
+            cagr_start_date=cagr_start_date,
+            cagr_end_date=cagr_end_date,
+        ),
     }

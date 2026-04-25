@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from backend.services.dynamic_compounding import DynamicCompoundingConfig, build_dynamic_compounding
 
 
@@ -128,3 +130,29 @@ def test_dynamic_compounding_rollback_percent_trigger():
     monthly = out["monthly"]
     assert monthly["rollback_adjust_count"] == 1
     assert abs(monthly["final_net_value"] - 160.16) < 1e-6
+
+
+def test_dynamic_compounding_cagr_uses_shared_trade_date_range():
+    cfg = DynamicCompoundingConfig(
+        initial_capital=100.0,
+        initial_ratio=0.5,
+        add_threshold_profit=9_999.0,
+        add_ratio=0.5,
+        rollback_amount=9_999.0,
+        max_multiple=99.0,
+    )
+    trades = [
+        _trade("2024-01-02", 10.0),
+        _trade("2024-01-20", 10.0),
+        _trade("2024-02-10", 10.0),
+    ]
+    out = build_dynamic_compounding(trades, cfg)
+    weekly = out["weekly"]
+    monthly = out["monthly"]
+
+    years = ((datetime(2024, 2, 10) - datetime(2024, 1, 2)).days + 1) / 365.25
+    weekly_expected = (weekly["profit_multiple"] ** (1.0 / years) - 1.0) * 100.0
+    monthly_expected = (monthly["profit_multiple"] ** (1.0 / years) - 1.0) * 100.0
+
+    assert abs(weekly["cagr_pct"] - weekly_expected) < 1e-6
+    assert abs(monthly["cagr_pct"] - monthly_expected) < 1e-6
