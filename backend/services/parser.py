@@ -55,7 +55,7 @@ def _to_dt(value: str) -> datetime:
     if value.endswith("Z"):
         value = value[:-1] + "+00:00"
     try:
-        return datetime.fromisoformat(value)
+        return _strip_tz(datetime.fromisoformat(value))
     except ValueError:
         pass
     fmts = [
@@ -71,6 +71,12 @@ def _to_dt(value: str) -> datetime:
         except ValueError:
             pass
     raise ValueError(f"unsupported datetime format: {value}")
+
+
+def _strip_tz(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value
+    return value.replace(tzinfo=None)
 
 
 def _pct_or_pt(price: float, ratio_or_point: str) -> float:

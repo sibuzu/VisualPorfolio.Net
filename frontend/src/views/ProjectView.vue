@@ -55,6 +55,12 @@
         <div class="manager-head">
           <h3 class="manager-title">策略組合管理</h3>
           <div class="manager-actions">
+            <button type="button" class="copy-project-btn file-btn" :disabled="readonly || buyHoldLoading" @click="openBuyHoldDialog">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M16,13 L13,13 L13,16 C13,16.55 12.55,17 12,17 C11.45,17 11,16.55 11,16 L11,13 L8,13 C7.45,13 7,12.55 7,12 C7,11.45 7.45,11 8,11 L11,11 L11,8 C11,7.45 11.45,7 12,7 C12.55,7 13,7.45 13,8 L13,11 L16,11 C16.55,11 17,11.45 17,12 C17,12.55 16.55,13 16,13 Z"/>
+              </svg>
+              <span>Buy&amp;Hold</span>
+            </button>
             <button type="button" class="copy-project-btn file-btn" :disabled="readonly" @click="openFilePicker">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M16,13 L13,13 L13,16 C13,16.55 12.55,17 12,17 C11.45,17 11,16.55 11,16 L11,13 L8,13 C7.45,13 7,12.55 7,12 C7,11.45 7.45,11 8,11 L11,11 L11,8 C11,7.45 11.45,7 12,7 C12.55,7 13,7.45 13,8 L13,11 L16,11 C16.55,11 17,11.45 17,12 C17,12.55 16.55,13 16,13 Z"/>
@@ -70,6 +76,57 @@
           </div>
           <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp,.sea" multiple :disabled="readonly" @change="upload" />
           <input ref="projectUploadInputRef" class="file-input-hidden" type="file" accept=".gsea" :disabled="readonly" @change="uploadProjectPackageFile" />
+        </div>
+        <div v-if="buyHoldOpen" class="modal-backdrop" @click.self="closeBuyHoldDialog">
+          <form class="buy-hold-dialog" @submit.prevent="submitBuyHold">
+            <div class="buy-hold-title-row">
+              <h4>Buy&amp;Hold</h4>
+              <button type="button" class="icon-btn" title="Buy&Hold 說明" aria-label="Buy&Hold 說明" @click="buyHoldHelpOpen = !buyHoldHelpOpen">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" aria-hidden="true">
+                  <path d="M0 0h24v24H0z" fill="none"></path>
+                  <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"></path>
+                </svg>
+              </button>
+            </div>
+            <div v-if="buyHoldHelpOpen" class="buy-hold-help">
+              <p>股票代碼如 2330, 0050, 會配息再投資</p>
+              <p>期貨代碼如 TX, TE, TF, GTF, 會 rollover，並用槓桿</p>
+            </div>
+            <label class="buy-hold-field">
+              <span>日期</span>
+              <input v-model="buyHoldForm.date" class="range-date-input" type="text" placeholder="YYYY-MM-DD" autocomplete="off" />
+            </label>
+            <label class="buy-hold-field">
+              <span>金額(萬)</span>
+              <input v-model="buyHoldForm.amount_wan" type="text" inputmode="decimal" autocomplete="off" />
+            </label>
+            <div class="buy-hold-field">
+              <span>商品</span>
+              <div class="product-toggle">
+                <label>
+                  <input v-model="buyHoldForm.product_type" type="radio" value="股票" @change="setBuyHoldProduct('股票')" />
+                  <span>股票</span>
+                </label>
+                <label>
+                  <input v-model="buyHoldForm.product_type" type="radio" value="期貨" @change="setBuyHoldProduct('期貨')" />
+                  <span>期貨</span>
+                </label>
+              </div>
+            </div>
+            <label class="buy-hold-field">
+              <span>代碼</span>
+              <input v-model="buyHoldForm.code" type="text" autocomplete="off" />
+            </label>
+            <label v-if="buyHoldForm.product_type === '期貨'" class="buy-hold-field">
+              <span>槓桿</span>
+              <input v-model="buyHoldForm.leverage" type="text" inputmode="decimal" autocomplete="off" />
+            </label>
+            <p v-if="buyHoldError" class="error buy-hold-error">{{ buyHoldError }}</p>
+            <div class="buy-hold-actions">
+              <button type="button" class="copy-project-btn" :disabled="buyHoldLoading" @click="closeBuyHoldDialog">取消</button>
+              <button type="submit" class="copy-project-btn file-btn" :disabled="buyHoldLoading">{{ buyHoldLoading ? '建立中...' : '建立' }}</button>
+            </div>
+          </form>
         </div>
         <div class="manager-range-row">
           <label class="range-check-label">
@@ -177,6 +234,67 @@ const sidebarWidth = ref(390)
 const resizing = ref(false)
 const fileInputRef = ref(null)
 const projectUploadInputRef = ref(null)
+const buyHoldOpen = ref(false)
+const buyHoldHelpOpen = ref(false)
+const buyHoldLoading = ref(false)
+const buyHoldError = ref('')
+const BUY_HOLD_DEFAULTS = {
+  date: '2020-01-01',
+  amount_wan: '100',
+  product_type: '股票',
+  stock_code: '0050',
+  futures_code: 'TX',
+  leverage: '5'
+}
+const BUY_HOLD_STORAGE_KEY = 'visualportfolio.buyHold.defaults'
+const buyHoldForm = ref(defaultBuyHoldForm())
+
+function defaultBuyHoldForm(productType = BUY_HOLD_DEFAULTS.product_type) {
+  return {
+    date: BUY_HOLD_DEFAULTS.date,
+    amount_wan: BUY_HOLD_DEFAULTS.amount_wan,
+    product_type: productType,
+    code: productType === '期貨' ? BUY_HOLD_DEFAULTS.futures_code : BUY_HOLD_DEFAULTS.stock_code,
+    leverage: BUY_HOLD_DEFAULTS.leverage
+  }
+}
+
+function normalizeBuyHoldForm(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {}
+  const productType = source.product_type === '期貨' ? '期貨' : '股票'
+  const defaults = defaultBuyHoldForm(productType)
+  return {
+    date: String(source.date || defaults.date),
+    amount_wan: String(source.amount_wan || defaults.amount_wan),
+    product_type: productType,
+    code: String(source.code || defaults.code),
+    leverage: String(source.leverage || defaults.leverage)
+  }
+}
+
+function loadBuyHoldDefaults() {
+  if (typeof localStorage === 'undefined') return defaultBuyHoldForm()
+  try {
+    return normalizeBuyHoldForm(JSON.parse(localStorage.getItem(BUY_HOLD_STORAGE_KEY) || '{}'))
+  } catch {
+    return defaultBuyHoldForm()
+  }
+}
+
+function rememberBuyHoldDefaults() {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(BUY_HOLD_STORAGE_KEY, JSON.stringify(normalizeBuyHoldForm(buyHoldForm.value)))
+}
+
+function setBuyHoldProduct(productType) {
+  const nextProduct = productType === '期貨' ? '期貨' : '股票'
+  buyHoldForm.value = {
+    ...buyHoldForm.value,
+    product_type: nextProduct,
+    code: nextProduct === '期貨' ? BUY_HOLD_DEFAULTS.futures_code : BUY_HOLD_DEFAULTS.stock_code,
+    leverage: buyHoldForm.value.leverage || BUY_HOLD_DEFAULTS.leverage
+  }
+}
 
 const readonly = computed(() => {
   const p = projectStore.activeProject
@@ -319,6 +437,63 @@ function openFilePicker() {
 
 function openProjectUploadPicker() {
   projectUploadInputRef.value?.click()
+}
+
+function openBuyHoldDialog() {
+  if (readonly.value) return
+  buyHoldError.value = ''
+  buyHoldHelpOpen.value = false
+  buyHoldForm.value = loadBuyHoldDefaults()
+  buyHoldOpen.value = true
+}
+
+function closeBuyHoldDialog() {
+  if (buyHoldLoading.value) return
+  buyHoldOpen.value = false
+  buyHoldError.value = ''
+}
+
+function validateBuyHoldForm() {
+  const form = buyHoldForm.value
+  if (!String(form.date || '').trim()) return '請輸入日期'
+  if (!String(form.amount_wan || '').trim()) return '請輸入金額(萬)'
+  if (!String(form.code || '').trim()) return '請輸入代碼'
+  if (form.product_type === '期貨' && !String(form.leverage || '').trim()) return '請輸入槓桿'
+  return ''
+}
+
+async function submitBuyHold() {
+  if (readonly.value) return
+  const err = validateBuyHoldForm()
+  if (err) {
+    buyHoldError.value = err
+    return
+  }
+
+  buyHoldLoading.value = true
+  buyHoldError.value = ''
+  viewError.value = ''
+  try {
+    rememberBuyHoldDefaults()
+    await projectStore.createBuyHold(route.params.projectId, {
+      date: String(buyHoldForm.value.date || '').trim(),
+      amount_wan: String(buyHoldForm.value.amount_wan || '').trim(),
+      product_type: buyHoldForm.value.product_type,
+      code: String(buyHoldForm.value.code || '').trim(),
+      leverage: buyHoldForm.value.product_type === '期貨' ? String(buyHoldForm.value.leverage || '5').trim() : null
+    })
+    portfolioStore.setFilesAsEquities(projectStore.files)
+    await portfolioStore.persistAndAnalyze(route.params.projectId)
+    buyHoldOpen.value = false
+    copyHint.value = 'Buy&Hold 建立完成'
+    setTimeout(() => {
+      copyHint.value = ''
+    }, 1500)
+  } catch (e) {
+    buyHoldError.value = e.message || 'Buy&Hold 建立失敗'
+  } finally {
+    buyHoldLoading.value = false
+  }
 }
 
 async function uploadProjectPackageFile(event) {
@@ -548,14 +723,16 @@ button.active {
 }
 .manager-head {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
+  align-items: stretch;
   margin-bottom: 8px;
 }
 .manager-actions {
-  margin-left: auto;
-  display: inline-flex;
-  gap: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 .manager-title {
   margin: 0;
@@ -659,6 +836,96 @@ button.active {
 }
 .file-input-hidden {
   display: none;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px 14px 14px;
+  background: rgba(15, 23, 42, 0.35);
+}
+.buy-hold-dialog {
+  width: min(360px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
+}
+.buy-hold-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.buy-hold-title-row h4 {
+  margin: 0;
+  font-size: 18px;
+}
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.icon-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+.buy-hold-help {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.buy-hold-help p {
+  margin: 0;
+}
+.buy-hold-help p + p {
+  margin-top: 4px;
+}
+.buy-hold-field {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.buy-hold-field input[type='text'] {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-size: 14px;
+}
+.product-toggle {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.product-toggle label {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.buy-hold-error {
+  margin: 8px 0;
+  font-size: 13px;
+}
+.buy-hold-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
 }
 .loading {
   padding: 24px;

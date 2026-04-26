@@ -10,6 +10,7 @@ from backend.db.database import init_db
 from backend.routers.admin import router as admin_router
 from backend.routers.auth import router as auth_router
 from backend.routers.analysis import router as analysis_router
+from backend.routers.buy_hold import router as buy_hold_router
 from backend.routers.files import router as files_router
 from backend.routers.gsea_group import router as gsea_group_router
 from backend.routers.projects import router as projects_router
@@ -59,6 +60,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(projects_router)
 app.include_router(files_router)
+app.include_router(buy_hold_router)
 app.include_router(analysis_router)
 app.include_router(gsea_group_router)
 

@@ -292,6 +292,15 @@ export async function deleteProjectFile(projectId, filename) {
   }
 }
 
+export async function createBuyHoldPerformance(projectId, payload) {
+  try {
+    const { data } = await api.post(`/projects/${projectId}/buy-hold`, payload)
+    return data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function listProjectAttachments(projectId) {
   try {
     const { data } = await api.get(`/projects/${projectId}/files/attachments`)

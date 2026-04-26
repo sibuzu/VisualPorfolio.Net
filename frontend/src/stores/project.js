@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import {
   createProject,
+  createBuyHoldPerformance,
   copyProject,
   deleteProject,
   deleteProjectFile,
@@ -145,6 +146,17 @@ export const useProjectStore = defineStore('project', {
       try {
         await deleteProjectFile(projectId, filename)
         await this.loadFiles(projectId)
+      } catch (e) {
+        this.error = e.message
+        throw e
+      }
+    },
+    async createBuyHold(projectId, payload) {
+      this.error = ''
+      try {
+        const result = await createBuyHoldPerformance(projectId, payload)
+        await this.loadFiles(projectId)
+        return result
       } catch (e) {
         this.error = e.message
         throw e
