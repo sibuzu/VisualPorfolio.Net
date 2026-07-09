@@ -77,7 +77,7 @@
           <input ref="fileInputRef" class="file-input-hidden" type="file" accept=".srp,.xrp,.sea" multiple :disabled="readonly" @change="upload" />
           <input ref="projectUploadInputRef" class="file-input-hidden" type="file" accept=".gsea" :disabled="readonly" @change="uploadProjectPackageFile" />
         </div>
-        <div v-if="buyHoldOpen" class="modal-backdrop" @click.self="closeBuyHoldDialog">
+        <div v-if="buyHoldOpen" class="modal-backdrop">
           <form class="buy-hold-dialog" @submit.prevent="submitBuyHold">
             <div class="buy-hold-title-row">
               <h4>Buy&amp;Hold</h4>
@@ -104,11 +104,11 @@
               <span>商品</span>
               <div class="product-toggle">
                 <label>
-                  <input v-model="buyHoldForm.product_type" type="radio" value="股票" @change="setBuyHoldProduct('股票')" />
+                  <input :checked="buyHoldForm.product_type === '股票'" type="radio" value="股票" @change="setBuyHoldProduct('股票')" />
                   <span>股票</span>
                 </label>
                 <label>
-                  <input v-model="buyHoldForm.product_type" type="radio" value="期貨" @change="setBuyHoldProduct('期貨')" />
+                  <input :checked="buyHoldForm.product_type === '期貨'" type="radio" value="期貨" @change="setBuyHoldProduct('期貨')" />
                   <span>期貨</span>
                 </label>
               </div>
@@ -250,11 +250,15 @@ const BUY_HOLD_STORAGE_KEY = 'visualportfolio.buyHold.defaults'
 const buyHoldForm = ref(defaultBuyHoldForm())
 
 function defaultBuyHoldForm(productType = BUY_HOLD_DEFAULTS.product_type) {
+  const stockCode = BUY_HOLD_DEFAULTS.stock_code
+  const futuresCode = BUY_HOLD_DEFAULTS.futures_code
   return {
     date: BUY_HOLD_DEFAULTS.date,
     amount_wan: BUY_HOLD_DEFAULTS.amount_wan,
     product_type: productType,
-    code: productType === '期貨' ? BUY_HOLD_DEFAULTS.futures_code : BUY_HOLD_DEFAULTS.stock_code,
+    code: productType === '期貨' ? futuresCode : stockCode,
+    stock_code: stockCode,
+    futures_code: futuresCode,
     leverage: BUY_HOLD_DEFAULTS.leverage
   }
 }
@@ -263,11 +267,20 @@ function normalizeBuyHoldForm(raw) {
   const source = raw && typeof raw === 'object' ? raw : {}
   const productType = source.product_type === '期貨' ? '期貨' : '股票'
   const defaults = defaultBuyHoldForm(productType)
+  const sourceCode = String(source.code || '').trim()
+  const stockCode = productType === '股票'
+    ? String(sourceCode || source.stock_code || defaults.stock_code)
+    : String(source.stock_code || defaults.stock_code)
+  const futuresCode = productType === '期貨'
+    ? String(sourceCode || source.futures_code || defaults.futures_code)
+    : String(source.futures_code || defaults.futures_code)
   return {
     date: String(source.date || defaults.date),
     amount_wan: String(source.amount_wan || defaults.amount_wan),
     product_type: productType,
-    code: String(source.code || defaults.code),
+    code: productType === '期貨' ? futuresCode : stockCode,
+    stock_code: stockCode,
+    futures_code: futuresCode,
     leverage: String(source.leverage || defaults.leverage)
   }
 }
@@ -288,10 +301,20 @@ function rememberBuyHoldDefaults() {
 
 function setBuyHoldProduct(productType) {
   const nextProduct = productType === '期貨' ? '期貨' : '股票'
+  const currentProduct = buyHoldForm.value.product_type === '期貨' ? '期貨' : '股票'
+  const currentCode = String(buyHoldForm.value.code || '').trim()
+  const stockCode = currentProduct === '股票'
+    ? (currentCode || buyHoldForm.value.stock_code || BUY_HOLD_DEFAULTS.stock_code)
+    : (buyHoldForm.value.stock_code || BUY_HOLD_DEFAULTS.stock_code)
+  const futuresCode = currentProduct === '期貨'
+    ? (currentCode || buyHoldForm.value.futures_code || BUY_HOLD_DEFAULTS.futures_code)
+    : (buyHoldForm.value.futures_code || BUY_HOLD_DEFAULTS.futures_code)
   buyHoldForm.value = {
     ...buyHoldForm.value,
     product_type: nextProduct,
-    code: nextProduct === '期貨' ? BUY_HOLD_DEFAULTS.futures_code : BUY_HOLD_DEFAULTS.stock_code,
+    code: nextProduct === '期貨' ? futuresCode : stockCode,
+    stock_code: stockCode,
+    futures_code: futuresCode,
     leverage: buyHoldForm.value.leverage || BUY_HOLD_DEFAULTS.leverage
   }
 }
@@ -474,6 +497,7 @@ async function submitBuyHold() {
   buyHoldError.value = ''
   viewError.value = ''
   try {
+    buyHoldForm.value = normalizeBuyHoldForm(buyHoldForm.value)
     rememberBuyHoldDefaults()
     await projectStore.createBuyHold(route.params.projectId, {
       date: String(buyHoldForm.value.date || '').trim(),

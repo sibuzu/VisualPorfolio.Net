@@ -9,7 +9,7 @@ The Buy&Hold flow should behave like adding another performance file: the user e
 **Goals:**
 - Add a first-class `+ Buy&Hold` action in strategy portfolio management.
 - Generate stock and futures buy-and-hold performance from FinMind data.
-- Store the generated result as a project performance file named from `BH{代碼}_{金額}萬`.
+- Store the generated result as a project performance file named from `BH{代碼}_{金額}萬` for stocks and `BH{代碼}_{金額}萬_{槓桿}X` for futures.
 - Preserve existing owner/read-only access rules for project mutations.
 - Keep all inputs as plain text fields without numeric spinners.
 
@@ -47,7 +47,7 @@ The Buy&Hold flow should behave like adding another performance file: the user e
 
 5. Treat the user-entered amount as capital in ten-thousand units.
 
-   The generated performance name SHALL be `BH{code}_{amount}萬`, preserving the user-entered amount text after trimming. Calculation converts the amount to base currency by multiplying by 10,000. Futures leverage defaults to `5` and only applies when product type is futures.
+   The generated stock performance name SHALL be `BH{code}_{amount}萬`; the generated futures performance name SHALL be `BH{code}_{amount}萬_{leverage}X`. The amount and leverage portions preserve normalized user-entered text after trimming. Calculation converts the amount to base currency by multiplying by 10,000. Futures leverage defaults to `5` and only applies when product type is futures.
 
    Alternative considered: normalize the name to the converted currency amount. That would conflict with the requested naming pattern.
 
@@ -62,5 +62,5 @@ The Buy&Hold flow should behave like adding another performance file: the user e
 - FinMind data availability or symbol coverage gaps -> Return a clear validation/API error and do not create a partial file.
 - Dividend and rollover rules can be domain-sensitive -> Keep algorithms small, documented in tests, and driven by normalized source records.
 - Network calls may be slow -> Use backend timeouts and surface loading/error states in the dialog.
-- Generated filename collisions are destructive by design for Buy&Hold -> Sanitize names and overwrite the same `BH{code}_{amount}萬.sea` file when it already exists.
+- Generated filename collisions are destructive by design for Buy&Hold -> Sanitize names and overwrite the same generated `.sea` file when it already exists.
 - Futures continuous series definitions vary -> Start with a deterministic rollover rule and document any unsupported contracts or missing calendar data.

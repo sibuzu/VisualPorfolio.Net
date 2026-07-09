@@ -102,14 +102,18 @@ def parse_positive_leverage(text: str | None) -> float:
     return value
 
 
-def display_name_for(code: str, amount_wan_text: str) -> str:
+def display_name_for(code: str, amount_wan_text: str, product_type: str = "股票", leverage_text: str | None = None) -> str:
     code_text = str(code or "").strip().upper()
     amount_text = str(amount_wan_text or "").strip()
     if not code_text:
         raise BuyHoldError("代碼 is required")
     if not amount_text:
         raise BuyHoldError("金額(萬) is required")
-    return f"BH{code_text}_{amount_text}萬"
+    base = f"BH{code_text}_{amount_text}萬"
+    if product_type == "期貨":
+        leverage = _format_leverage_suffix(leverage_text or "5")
+        return f"{base}_{leverage}X"
+    return base
 
 
 def generated_filename(display_name: str) -> str:
@@ -129,7 +133,7 @@ def build_buy_hold_sea(
 ) -> BuyHoldResult:
     _parse_date(buy_date)
     code_text = str(code or "").strip().upper()
-    display_name = display_name_for(code_text, amount_wan_text)
+    display_name = display_name_for(code_text, amount_wan_text, product_type, leverage_text)
     filename = generated_filename(display_name)
     capital = parse_positive_amount_wan(amount_wan_text) * 10_000.0
     fetcher = fetcher or HttpFinMindFetcher()
@@ -230,7 +234,13 @@ def build_stock_events(
         dividend_by_date[div.date] = dividend_by_date.get(div.date, 0.0) + div.cash
 
     events = [_trade_event(points[0].date, code, points[0].close, quantity)]
+    prev_close = points[0].close
     for point in points[1:]:
+        split_ratio = _infer_split_ratio(prev_close, point.close)
+        if split_ratio > 1.0:
+            events.append(_trade_event(point.date, code, prev_close, -quantity))
+            quantity *= split_ratio
+            events.append(_trade_event(point.date, code, point.close, quantity))
         cash_per_unit = dividend_by_date.get(point.date, 0.0)
         if cash_per_unit > 0:
             add_qty = (quantity * cash_per_unit) / point.close
@@ -238,6 +248,7 @@ def build_stock_events(
                 events.append(_trade_event(point.date, code, point.close, add_qty))
                 quantity += add_qty
         events.append(_price_event(point.date, code, point.close))
+        prev_close = point.close
     events.append(_trade_event(points[-1].date, code, points[-1].close, -quantity))
     return events, quantity
 
@@ -334,6 +345,18 @@ def _futures_symbol(code: str, point: PricePoint) -> str:
     return f"{code}_{suffix}" if suffix else code
 
 
+def _infer_split_ratio(prev_close: float, close: float) -> float:
+    if prev_close <= 0 or close <= 0:
+        return 1.0
+    raw = prev_close / close
+    rounded = round(raw)
+    if rounded < 2 or rounded > 20:
+        return 1.0
+    if abs(raw - rounded) / rounded <= 0.08:
+        return float(rounded)
+    return 1.0
+
+
 def _contract_sort_key(value: str) -> tuple[int, str]:
     digits = re.sub(r"\D+", "", str(value or ""))
     if len(digits) >= 6:
@@ -351,6 +374,16 @@ def _parse_float(value: str | int | float | None) -> float:
         return float(text)
     except ValueError as exc:
         raise BuyHoldError(f"Invalid number: {value}") from exc
+
+
+def _format_leverage_suffix(value: str | int | float | None) -> str:
+    parsed = parse_positive_leverage(str(value if value is not None else "5"))
+    if abs(parsed - round(parsed)) < 1e-12:
+        return str(int(round(parsed)))
+    text = str(value if value is not None else parsed).strip().replace(",", "")
+    if text.endswith("%"):
+        text = str(parsed)
+    return text.rstrip("0").rstrip(".") if "." in text else text
 
 
 def _parse_date(value: str) -> date:

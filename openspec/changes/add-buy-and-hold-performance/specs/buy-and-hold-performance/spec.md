@@ -44,11 +44,15 @@ The frontend SHALL provide a Buy&Hold dialog with date, amount, product type, co
 - **THEN** help text SHALL state that stocks reinvest dividends and futures roll over.
 
 ### Requirement: Generated Performance Naming
-The system SHALL name generated Buy&Hold performance files using a `BH` prefix plus the entered code and amount in ten-thousand units.
+The system SHALL name generated Buy&Hold performance files using a `BH` prefix plus the entered code and amount in ten-thousand units, and SHALL include futures leverage in futures names.
 
-#### Scenario: Generated name uses code and amount
+#### Scenario: Stock generated name uses code and amount
 - **WHEN** user creates Buy&Hold performance with code `2330` and amount `100`
 - **THEN** system SHALL create the performance display name `BH2330_100萬`.
+
+#### Scenario: Futures generated name uses code amount and leverage
+- **WHEN** user creates futures Buy&Hold performance with code `TX`, amount `100`, and leverage `5`
+- **THEN** system SHALL create the performance display name `BHTX_100萬_5X`.
 
 #### Scenario: Existing generated name is overwritten
 - **WHEN** a generated Buy&Hold file with the requested name already exists

@@ -111,7 +111,13 @@
       </tbody>
     </table>
 
-    <h4>Dynamic MDD Equity Curve - Weekly vs Monthly Rebalance</h4>
+    <div class="curve-head-row">
+      <h4>Dynamic MDD Equity Curve - Weekly vs Monthly Rebalance</h4>
+      <label class="status-check-label">
+        <input v-model="logScale" type="checkbox" />
+        <span>Log Scale</span>
+      </label>
+    </div>
     <div ref="curveChartRef" class="curve-chart"></div>
     <p class="curve-summary">
       Final Weekly: {{ moneyText(weekly.final_net_value) }}
@@ -159,6 +165,7 @@ const draftValue = ref('')
 const configError = ref('')
 const committingByEnter = ref(false)
 const editInputRef = ref(null)
+const logScale = ref(false)
 
 const draft = ref({
   initial_capital: 80000000,
@@ -399,7 +406,7 @@ function renderCurveChart() {
         axisLabel: { color: '#555' }
       },
       yAxis: {
-        type: 'value',
+        type: logScale.value ? 'log' : 'value',
         name: '淨值(萬)',
         splitLine: { show: true, lineStyle: { color: '#dddddd' } },
         axisLine: { lineStyle: { color: '#666' } },
@@ -432,7 +439,7 @@ function renderCurveChart() {
 }
 
 watch(
-  [weekly, monthly],
+  [weekly, monthly, logScale],
   async () => {
     await nextTick()
     renderCurveChart()
@@ -568,6 +575,27 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 420px;
   margin-top: 10px;
+}
+.curve-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.curve-head-row h4 {
+  margin: 0;
+}
+.status-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #2b2b2b;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
 }
 .curve-summary {
   margin: 10px 0 0;

@@ -17,15 +17,20 @@ def _srp_expected(path: Path) -> tuple[float, float]:
 
 
 def test_srp_golden_metrics_for_all_samples():
+    visual_portfolio_mdd = {
+        "aa-1.srp": 4379.602161,
+        "aa-2.srp": 3480.928361,
+        "aa-3.srp": 4497.778458,
+    }
     for fn in ["aa-1.srp", "aa-2.srp", "aa-3.srp"]:
         path = Path("ref_result/project") / fn
-        exp_net, exp_mdd = _srp_expected(path)
+        exp_net, _ = _srp_expected(path)
         trades = parse_file(path, strategy_index=0)
         merged = merge_trades([(trades, {"weight": 1, "contract": 1})], None, None)
         report = build_report(merged, risk_free_rate=3, mdd_count=5)
 
         assert abs(report["summary"]["net_profit"] - exp_net) < 5.0, fn
-        assert abs(report["summary"]["mdd"] - exp_mdd) < 5.0, fn
+        assert abs(report["summary"]["mdd"] - visual_portfolio_mdd[fn]) < 1e-6, fn
         assert len(report["monthly"]) > 0, fn
         assert len(report["annual"]) > 0, fn
         assert len(report["weekly"]) > 0, fn
@@ -46,3 +51,17 @@ def test_xrp_golden_end_to_end_pnl_from_amount_qty_logic():
     report = build_report(merged)
 
     assert abs(report["summary"]["net_profit"] - expected) < 1e-6
+
+
+def test_summary_mdd_uses_last_equity_per_day():
+    trades = [
+        {"trade_date2": "2024-01-01 10:00:00", "net_profit": 100.0, "trade_amount": 1.0},
+        {"trade_date2": "2024-01-02 10:00:00", "net_profit": -80.0, "trade_amount": 1.0},
+        {"trade_date2": "2024-01-02 14:00:00", "net_profit": 60.0, "trade_amount": 1.0},
+        {"trade_date2": "2024-01-03 10:00:00", "net_profit": -30.0, "trade_amount": 1.0},
+    ]
+
+    report = build_report(trades)
+
+    assert report["summary"]["mdd"] == 50.0
+    assert report["mdd_markers"][0]["value"] == -50.0

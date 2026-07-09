@@ -6,7 +6,7 @@
 - [x] 1.4 Implement FinMind futures price fetching and deterministic rollover selection behind the same service boundary.
 - [x] 1.5 Implement daily floating equity calculation with fractional entry positions for stock dividend reinvestment and futures leveraged rollover series.
 - [x] 1.6 Serialize generated Buy&Hold results as `.sea` files with `strategy.toml` metadata and daily event data.
-- [x] 1.7 Sanitize generated `BH{代碼}_{金額}萬` filenames and overwrite the existing same-name Buy&Hold file.
+- [x] 1.7 Sanitize generated Buy&Hold filenames and overwrite the existing same-name Buy&Hold file.
 
 ## 2. Frontend Workflow
 

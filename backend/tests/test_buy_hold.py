@@ -87,6 +87,37 @@ def test_stock_buy_hold_uses_bh_name_fractional_quantity_and_reinvests_dividend(
     assert abs(events[1]["data"]["quantity"] - ((10000 / 300) * 3 / 330)) < 1e-9
 
 
+def test_stock_buy_hold_adjusts_detected_split_without_loss_spike(tmp_path):
+    result = build_buy_hold_sea(
+        folder=tmp_path,
+        buy_date="2025-06-09",
+        amount_wan_text="100",
+        product_type="股票",
+        code="0050",
+        fetcher=FakeFetcher(
+            stock_prices=[
+                {"date": "2025-06-09", "close": 183.7},
+                {"date": "2025-06-10", "close": 188.65},
+                {"date": "2025-06-18", "close": 47.57},
+                {"date": "2025-06-19", "close": 47.1},
+            ],
+        ),
+    )
+
+    events = _events(result.payload)
+    split_sells = [e for e in events if e["type"] == "trade" and e["timestamp"].startswith("2025-06-18") and e["data"]["quantity"] < 0]
+    split_buys = [e for e in events if e["type"] == "trade" and e["timestamp"].startswith("2025-06-18") and e["data"]["quantity"] > 0]
+    assert split_sells
+    assert split_buys
+    assert abs(split_buys[0]["data"]["quantity"] - abs(split_sells[0]["data"]["quantity"]) * 4) < 1e-9
+
+    path = tmp_path / result.filename
+    path.write_bytes(result.payload)
+    rows = parse_file(path, strategy_index=0)
+    pnl_by_date = {row.trade_date2.strftime("%Y-%m-%d"): row.net_profit for row in rows}
+    assert abs(pnl_by_date["2025-06-18"]) < 1e-6
+
+
 def test_futures_buy_hold_uses_fractional_quantity_and_rolls_contract(tmp_path):
     result = build_buy_hold_sea(
         folder=tmp_path,
@@ -103,7 +134,8 @@ def test_futures_buy_hold_uses_fractional_quantity_and_rolls_contract(tmp_path):
         ),
     )
 
-    assert result.display_name == "BHTX_100萬"
+    assert result.display_name == "BHTX_100萬_5X"
+    assert result.filename == "BHTX_100萬_5X.sea"
     assert abs(result.quantity - (1_000_000 * 5 / 3030)) < 1e-9
     events = _events(result.payload)
     assert events[0]["data"]["instrument_id"] == "TX_202501"

@@ -75,6 +75,52 @@ def _calc_year_month_profit(
     return years, months, year_profits, month_profits, year_mdd, month_mdd
 
 
+def _calc_daily_mdds(trades: list[dict]) -> list[dict]:
+    if not trades:
+        return []
+
+    daily_equity: list[float] = []
+    daily_index: list[int] = []
+    last_date = ""
+    acc_profit = 0.0
+
+    for i, t in enumerate(trades):
+        acc_profit += float(t["net_profit"])
+        trade_date = str(t["trade_date2"])[:10]
+        if daily_equity and trade_date == last_date:
+            daily_equity[-1] = acc_profit
+            daily_index[-1] = i
+        else:
+            daily_equity.append(acc_profit)
+            daily_index.append(i)
+            last_date = trade_date
+
+    peak = daily_equity[0]
+    start_candidate = 0
+    current_mdd = {"value": 0.0, "start_idx": 0, "end_idx": 0, "end_idx2": 0}
+    result: list[dict] = []
+
+    for i, equity in enumerate(daily_equity):
+        drawdown = equity - peak
+        if drawdown >= 0:
+            peak = equity
+            start_candidate = i
+            if current_mdd["value"] < 0:
+                current_mdd["end_idx2"] = daily_index[max(0, i - 1)]
+                result.append(current_mdd.copy())
+                current_mdd = {"value": 0.0, "start_idx": 0, "end_idx": 0, "end_idx2": 0}
+        elif drawdown < current_mdd["value"]:
+            current_mdd["value"] = drawdown
+            current_mdd["start_idx"] = daily_index[start_candidate]
+            current_mdd["end_idx"] = daily_index[i]
+
+    if current_mdd["value"] < 0:
+        current_mdd["end_idx2"] = daily_index[-1]
+        result.append(current_mdd.copy())
+
+    return sorted(result, key=lambda x: x["value"])
+
+
 def build_report(
     trades: list[dict],
     risk_free_rate: float = 0.0,
@@ -108,33 +154,16 @@ def build_report(
     real_trade_count = sum(1 for t in trades if abs(float(t.get("trade_amount", 0.0))) > 0)
 
     equity = 0.0
-    peak = 0.0
     drawdown = 0.0
-    max_dd = 0.0
     equity_curve = []
-    mdd_markers: list[dict] = []
-    mdd_start_candidate = 0
-    current_mdd = {"value": 0.0, "start_idx": 0, "end_idx": 0, "end_idx2": 0}
 
-    for i, t in enumerate(trades):
+    for t in trades:
         p = float(t["net_profit"])
         equity += p
-        if equity >= peak:
-            peak = equity
         drawdown += p
         if drawdown >= 0:
             drawdown = 0
-            mdd_start_candidate = i
-            if current_mdd["value"] < 0:
-                current_mdd["end_idx2"] = i - 1
-                mdd_markers.append(current_mdd.copy())
-                current_mdd = {"value": 0.0, "start_idx": 0, "end_idx": 0, "end_idx2": 0}
-        if drawdown < current_mdd["value"]:
-            current_mdd["value"] = drawdown
-            current_mdd["start_idx"] = mdd_start_candidate
-            current_mdd["end_idx"] = i
 
-        max_dd = min(max_dd, drawdown)
         equity_curve.append(
             {
                 "date": str(t["trade_date2"])[:10],
@@ -142,9 +171,6 @@ def build_report(
                 "drawdown": round(drawdown, 6),
             }
         )
-    if current_mdd["value"] < 0:
-        current_mdd["end_idx2"] = len(trades) - 1
-        mdd_markers.append(current_mdd.copy())
 
     winners = [p for p in profits if p > 0]
     losers = [p for p in profits if p < 0]
@@ -229,6 +255,9 @@ def build_report(
             }
         )
 
+    daily_mdds = _calc_daily_mdds(trades)
+    max_dd = daily_mdds[0]["value"] if daily_mdds else 0.0
+
     summary = {
         "period": f"{trades[0]['trade_date2'][:10]} ~ {trades[-1]['trade_date2'][:10]}" if trades else "N/A",
         "trade_count": real_trade_count,
@@ -243,7 +272,7 @@ def build_report(
         "sqn": round(sqn, 6),
     }
 
-    mdd_markers = sorted(mdd_markers, key=lambda x: x["value"])[:mdd_count]
+    mdd_markers = daily_mdds[:mdd_count]
     mdd_markers = [
         {"start_idx": x["start_idx"], "end_idx": x["end_idx"], "value": round(x["value"], 6), "end_idx2": x["end_idx2"]}
         for x in mdd_markers

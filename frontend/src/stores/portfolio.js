@@ -1,6 +1,105 @@
 import { defineStore } from 'pinia'
 import { getGseaGroup, runAnalysis, saveGseaGroup } from '../api'
 
+const PLOT_COLOR_PALETTE = [
+  '#1f77b4',
+  '#ff7f0e',
+  '#2ca02c',
+  '#d62728',
+  '#9467bd',
+  '#8c564b',
+  '#e377c2',
+  '#7f7f7f',
+  '#bcbd22',
+  '#17becf',
+  '#636efa',
+  '#ef553b',
+  '#00cc96',
+  '#ab63fa',
+  '#ffa15a',
+  '#19d3f3',
+  '#ff6692',
+  '#ff97ff',
+  '#4e79a7',
+  '#f28e2b',
+  '#e15759',
+  '#76b7b2',
+  '#59a14f',
+  '#edc949',
+  '#af7aa1',
+  '#ff9da7',
+  '#9c755f',
+  '#bab0ab',
+  '#003f5c',
+  '#2f4b7c',
+  '#665191',
+  '#a05195',
+  '#d45087',
+  '#f95d6a',
+  '#ff7c43',
+  '#ffa600',
+  '#3366cc',
+  '#dc3912',
+  '#109618',
+  '#990099',
+  '#0099c6',
+  '#dd4477',
+  '#66aa00',
+  '#b82e2e',
+  '#316395',
+  '#994499',
+  '#22aa99',
+  '#aaaa11',
+  '#6633cc',
+  '#e67300',
+  '#8b0707',
+  '#651067',
+  '#329262',
+  '#5574a6',
+  '#3b3eac',
+  '#b15928',
+  '#1b9e77',
+  '#d95f02',
+  '#7570b3',
+  '#e7298a',
+  '#66a61e',
+  '#e6ab02',
+  '#a6761d',
+  '#666666',
+  '#1a9850',
+  '#d73027',
+  '#4575b4',
+  '#91bfdb',
+  '#fc8d59',
+  '#7b3294',
+  '#008837',
+  '#c51b7d',
+  '#4d9221',
+  '#2166ac',
+  '#b2182b',
+  '#01665e',
+  '#762a83',
+  '#a6611a',
+  '#018571',
+  '#80cdc1',
+  '#dfc27d',
+  '#35978f',
+  '#bf812d',
+  '#016c59',
+  '#8c510a',
+  '#543005',
+  '#003c30',
+  '#40004b',
+  '#8e0152',
+  '#276419',
+  '#1f4e79',
+  '#7030a0',
+  '#c00000',
+  '#00a2e8',
+  '#ffc000',
+  '#92d050'
+]
+
 function defaultDynamicCompoundingConfig() {
   return {
     initial_capital: 80000000,
@@ -45,6 +144,12 @@ function normalizeColor(value, fallback = '#0a9396') {
   return fallback
 }
 
+function randomPlotColor(usedColors) {
+  const available = PLOT_COLOR_PALETTE.filter((color) => !usedColors.has(color))
+  const choices = available.length ? available : PLOT_COLOR_PALETTE
+  return choices[Math.floor(Math.random() * choices.length)]
+}
+
 export const usePortfolioStore = defineStore('portfolio', {
   state: () => ({
     equities: [],
@@ -83,20 +188,26 @@ export const usePortfolioStore = defineStore('portfolio', {
   actions: {
     setFilesAsEquities(files) {
       const existingByFile = new Map(this.equities.map((x) => [x.filename, x]))
+      const usedColors = new Set(this.equities.map((x) => normalizeColor(x.color, '').toLowerCase()).filter(Boolean))
       this.equities = files
         .filter((f) => {
           const name = String(f.filename || '').toLowerCase()
           return name.endsWith('.sea') || name.endsWith('.gsea')
         })
-        .map((f, i) => ({
-          filename: f.filename,
-          active: true,
-          contract: existingByFile.get(f.filename)?.contract ?? 1,
-          weight: existingByFile.get(f.filename)?.weight ?? 1,
-          color: existingByFile.get(f.filename)?.color ?? ['#0a9396', '#bb3e03', '#005f73', '#ca6702'][i % 4],
-          name: existingByFile.get(f.filename)?.name ?? f.filename,
-          index: i
-        }))
+        .map((f, i) => {
+          const existing = existingByFile.get(f.filename)
+          const color = existing?.color || randomPlotColor(usedColors)
+          usedColors.add(normalizeColor(color, '').toLowerCase())
+          return {
+            filename: f.filename,
+            active: true,
+            contract: existing?.contract ?? 1,
+            weight: existing?.weight ?? 1,
+            color,
+            name: existing?.name ?? f.filename,
+            index: i
+          }
+        })
     },
     applySavedConfigFromXml(xmlText) {
       if (!xmlText || typeof DOMParser === 'undefined') return
