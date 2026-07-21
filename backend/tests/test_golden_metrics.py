@@ -65,3 +65,15 @@ def test_summary_mdd_uses_last_equity_per_day():
 
     assert report["summary"]["mdd"] == 50.0
     assert report["mdd_markers"][0]["value"] == -50.0
+
+
+def test_summary_mdd_counts_initial_daily_loss_from_zero():
+    trades = [
+        {"trade_date2": "2024-01-01 10:00:00", "net_profit": -100.0, "trade_amount": 1.0},
+        {"trade_date2": "2024-01-02 10:00:00", "net_profit": 50.0, "trade_amount": 1.0},
+    ]
+
+    report = build_report(trades)
+
+    assert report["summary"]["mdd"] == 100.0
+    assert report["mdd_markers"][0]["value"] == -100.0

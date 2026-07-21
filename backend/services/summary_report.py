@@ -95,7 +95,7 @@ def _calc_daily_mdds(trades: list[dict]) -> list[dict]:
             daily_index.append(i)
             last_date = trade_date
 
-    peak = daily_equity[0]
+    peak = 0.0
     start_candidate = 0
     current_mdd = {"value": 0.0, "start_idx": 0, "end_idx": 0, "end_idx2": 0}
     result: list[dict] = []
