@@ -23,56 +23,62 @@ def _get_year_month(dt: datetime, minterval: int) -> int:
     return year * 100 + (month0 // minterval) * minterval + 1
 
 
-def _calc_year_month_profit(
-    trades: list[dict], minterval: int
-) -> tuple[list[int], list[int], list[float], list[float], list[float], list[float]]:
-    years: list[int] = []
-    months: list[int] = []
-    year_profits: list[float] = []
-    month_profits: list[float] = []
-    year_mdd: list[float] = []
-    month_mdd: list[float] = []
+def _daily_mdd_from_profits(daily_profits: list[float]) -> float:
+    equity = 0.0
+    peak = 0.0
+    mdd = 0.0
 
-    cur_year = 0
-    cur_month = 0
-    year_dd = 0.0
-    month_dd = 0.0
+    for profit in daily_profits:
+        equity += profit
+        if equity > peak:
+            peak = equity
+        drawdown = peak - equity
+        if drawdown > mdd:
+            mdd = drawdown
+
+    return mdd
+
+
+def _calc_period_profit_mdd(trades: list[dict], period_key) -> list[dict]:
+    rows: list[dict] = []
+    cur_key = None
+    cur_profit = 0.0
+    daily_profits: list[float] = []
+    last_date = ""
+
+    def flush() -> None:
+        if cur_key is None:
+            return
+        rows.append(
+            {
+                "period": cur_key,
+                "profit": cur_profit,
+                "mdd": _daily_mdd_from_profits(daily_profits),
+            }
+        )
 
     for t in trades:
         dt = datetime.strptime(str(t["trade_date2"])[:10], "%Y-%m-%d")
+        key = period_key(dt)
         profit = float(t["net_profit"])
+        trade_date = dt.strftime("%Y-%m-%d")
 
-        ym = _get_year_month(dt, minterval)
-        if ym == cur_year:
-            year_profits[-1] += profit
-            year_dd -= profit
-            if year_dd < 0:
-                year_dd = 0
-            if year_dd > year_mdd[-1]:
-                year_mdd[-1] = year_dd
+        if key != cur_key:
+            flush()
+            cur_key = key
+            cur_profit = 0.0
+            daily_profits = []
+            last_date = ""
+
+        cur_profit += profit
+        if daily_profits and trade_date == last_date:
+            daily_profits[-1] += profit
         else:
-            cur_year = ym
-            years.append(cur_year)
-            year_profits.append(profit)
-            year_dd = max(-profit, 0.0)
-            year_mdd.append(year_dd)
+            daily_profits.append(profit)
+            last_date = trade_date
 
-        ym = _get_year_month(dt, 1)
-        if ym == cur_month:
-            month_profits[-1] += profit
-            month_dd -= profit
-            if month_dd < 0:
-                month_dd = 0
-            if month_dd > month_mdd[-1]:
-                month_mdd[-1] = month_dd
-        else:
-            cur_month = ym
-            months.append(cur_month)
-            month_profits.append(profit)
-            month_dd = max(-profit, 0.0)
-            month_mdd.append(month_dd)
-
-    return years, months, year_profits, month_profits, year_mdd, month_mdd
+    flush()
+    return rows
 
 
 def _calc_daily_mdds(trades: list[dict]) -> list[dict]:
@@ -203,55 +209,44 @@ def build_report(
     downside_std = sqrt(sum(x * x for x in downside) / len(downside)) if downside else 0.0
     sortino = (sqrt(n) * ep_mean / downside_std) if downside_std > 0 and n > 0 else 0.0
 
-    years, months, year_profits, month_profits, year_mdd, month_mdd = _calc_year_month_profit(
-        trades, 12
-    )
+    year_rows = _calc_period_profit_mdd(trades, lambda dt: _get_year_month(dt, 12))
     annual_rows = []
-    for i in range(len(years)):
+    for row in year_rows:
         annual_rows.append(
             {
-                "period": str(years[i] // 100),
-                "profit": round(year_profits[i], 6),
-                "mdd": round(year_mdd[i], 6),
+                "period": str(row["period"] // 100),
+                "profit": round(row["profit"], 6),
+                "mdd": round(row["mdd"], 6),
             }
         )
 
+    month_rows = _calc_period_profit_mdd(trades, lambda dt: _get_year_month(dt, 1))
     monthly_rows = []
-    for i in range(len(months)):
-        y = months[i] // 100
-        m = months[i] % 100
+    for row in month_rows:
+        y = row["period"] // 100
+        m = row["period"] % 100
         monthly_rows.append(
             {
                 "period": f"{y}/{m:02d}",
-                "profit": round(month_profits[i], 6),
-                "mdd": round(month_mdd[i], 6),
+                "profit": round(row["profit"], 6),
+                "mdd": round(row["mdd"], 6),
             }
         )
 
     # Weekly (same Sunday anchor semantics as WinForm IsSameWeek baseline style).
-    weeks: list[str] = []
-    week_profit: list[float] = []
-    cur_week = None
-    for t in trades:
-        dt = datetime.strptime(str(t["trade_date2"])[:10], "%Y-%m-%d")
-        sunday = dt.date().toordinal() - ((dt.weekday() + 1) % 7)
-        key = sunday
-        if key == cur_week:
-            week_profit[-1] += float(t["net_profit"])
-        else:
-            cur_week = key
-            ds = datetime.fromordinal(sunday)
-            weeks.append(ds.strftime("%Y/%m/%d"))
-            week_profit.append(float(t["net_profit"]))
+    week_rows = _calc_period_profit_mdd(
+        trades, lambda dt: dt.date().toordinal() - ((dt.weekday() + 1) % 7)
+    )
     weekly_rows = []
     total_week = 0.0
-    for i in range(len(weeks)):
-        total_week += week_profit[i]
+    for row in week_rows:
+        total_week += row["profit"]
         weekly_rows.append(
             {
-                "period": weeks[i],
-                "profit": round(week_profit[i], 6),
+                "period": datetime.fromordinal(row["period"]).strftime("%Y/%m/%d"),
+                "profit": round(row["profit"], 6),
                 "cumulative": round(total_week, 6),
+                "mdd": round(row["mdd"], 6),
             }
         )
 

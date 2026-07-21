@@ -20,11 +20,12 @@ function render() {
   if (!chart) chart = echarts.init(chartRef.value)
   chart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['每週獲利', '累積獲利'] },
+    legend: { data: ['每週獲利', 'MDD', '累積獲利'] },
     xAxis: { type: 'category', data: analysis.value.weekly.map((w) => w.period) },
     yAxis: [{ type: 'value' }, { type: 'value' }],
     series: [
       { name: '每週獲利', type: 'bar', data: analysis.value.weekly.map((w) => w.profit), yAxisIndex: 0 },
+      { name: 'MDD', type: 'bar', data: analysis.value.weekly.map((w) => w.mdd || 0), yAxisIndex: 0 },
       { name: '累積獲利', type: 'line', data: analysis.value.weekly.map((w) => w.cumulative), yAxisIndex: 1, smooth: true }
     ]
   })

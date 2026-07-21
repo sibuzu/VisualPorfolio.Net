@@ -77,3 +77,17 @@ def test_summary_mdd_counts_initial_daily_loss_from_zero():
 
     assert report["summary"]["mdd"] == 100.0
     assert report["mdd_markers"][0]["value"] == -100.0
+
+
+def test_period_mdd_uses_daily_equity_not_intraday_troughs():
+    trades = [
+        {"trade_date2": "2026-01-01 10:00:00", "net_profit": 100.0, "trade_amount": 1.0},
+        {"trade_date2": "2026-01-02 09:00:00", "net_profit": -200.0, "trade_amount": 1.0},
+        {"trade_date2": "2026-01-02 13:30:00", "net_profit": 150.0, "trade_amount": 1.0},
+    ]
+
+    report = build_report(trades)
+
+    assert report["annual"][0]["mdd"] == 50.0
+    assert report["monthly"][0]["mdd"] == 50.0
+    assert report["weekly"][0]["mdd"] == 50.0
