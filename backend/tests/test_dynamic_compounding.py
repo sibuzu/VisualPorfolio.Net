@@ -86,7 +86,7 @@ def test_dynamic_compounding_reach_10x_date():
     assert monthly["reach_10x_date"] == "2024-02-10"
 
 
-def test_dynamic_compounding_monthly_curve_aligns_weekly_sampling():
+def test_dynamic_compounding_curve_is_weekly_sampled_but_mdd_is_intratrade():
     cfg = DynamicCompoundingConfig(
         initial_capital=100.0,
         initial_ratio=1.0,
@@ -105,9 +105,12 @@ def test_dynamic_compounding_monthly_curve_aligns_weekly_sampling():
     weekly = out["weekly"]
     monthly = out["monthly"]
     assert [p["date"] for p in weekly["curve"]] == [p["date"] for p in monthly["curve"]]
-    # same-week noise is ignored by weekly sampling; MDD is measured on week-end net values only.
-    assert abs(monthly["mdd_amount"] - 10.0) < 1e-6
-    assert abs(monthly["mdd_pct"] - (10.0 / 120.0) * 100.0) < 1e-6
+    # The curve stays weekly, but same-week highs and lows are included in MDD.
+    for result in (weekly, monthly):
+        assert abs(result["mdd_amount"] - 100.0) < 1e-6
+        assert abs(result["mdd_pct"] - 50.0) < 1e-6
+        assert result["mdd_amount_date"] == "2024-01-03"
+        assert result["mdd_pct_date"] == "2024-01-03"
 
 
 def test_dynamic_compounding_rollback_percent_trigger():

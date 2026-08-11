@@ -183,21 +183,24 @@ def _simulate(
     sample_last_date = ""
     sample_last_equity = initial
 
-    def _flush_week_sample() -> None:
+    def _update_mdd(point_date: str) -> None:
         nonlocal mdd_peak, mdd_amount, mdd_pct_max, mdd_amount_date, mdd_pct_date
-        if not sample_last_date:
-            return
-        dd = max(mdd_peak - sample_last_equity, 0.0)
+        dd = max(mdd_peak - equity, 0.0)
         if dd > mdd_amount:
             mdd_amount = dd
-            mdd_amount_date = sample_last_date
+            mdd_amount_date = point_date
         if mdd_peak > 0:
             dd_pct = (dd / mdd_peak) * 100.0
             if dd_pct > mdd_pct_max:
                 mdd_pct_max = dd_pct
-                mdd_pct_date = sample_last_date
-        if sample_last_equity > mdd_peak:
-            mdd_peak = sample_last_equity
+                mdd_pct_date = point_date
+        if equity > mdd_peak:
+            mdd_peak = equity
+
+    def _flush_week_sample() -> None:
+        if not sample_last_date:
+            return
+        dd = max(mdd_peak - sample_last_equity, 0.0)
         curve.append(
             {
                 "date": sample_last_date,
@@ -227,25 +230,22 @@ def _simulate(
                 point_date = str(item.get("date", row.get("end_date", "")))
                 point_week = _iso_week_key(point_date) if point_date else None
                 raw_p = float(item.get("profit", 0.0))
-                step_pnl = raw_p * (trading_capital / baseline_capital)
-                equity += step_pnl
-                if equity > logic_peak:
-                    logic_peak = equity
-
                 if point_week is not None:
                     if sample_week_key is None:
                         sample_week_key = point_week
                     elif point_week != sample_week_key:
                         _flush_week_sample()
                         sample_week_key = point_week
+                step_pnl = raw_p * (trading_capital / baseline_capital)
+                equity += step_pnl
+                if equity > logic_peak:
+                    logic_peak = equity
+                _update_mdd(point_date)
+                if point_week is not None:
                     sample_last_date = point_date
                     sample_last_equity = equity
         else:
             profit = float(row.get("profit", 0.0))
-            period_pnl = profit * (trading_capital / baseline_capital)
-            equity += period_pnl
-            if equity > logic_peak:
-                logic_peak = equity
             point_date = str(row.get("end_date", ""))
             point_week = _iso_week_key(point_date) if point_date else None
             if point_week is not None:
@@ -254,6 +254,12 @@ def _simulate(
                 elif point_week != sample_week_key:
                     _flush_week_sample()
                     sample_week_key = point_week
+            period_pnl = profit * (trading_capital / baseline_capital)
+            equity += period_pnl
+            if equity > logic_peak:
+                logic_peak = equity
+            _update_mdd(point_date)
+            if point_week is not None:
                 sample_last_date = point_date
                 sample_last_equity = equity
 
