@@ -53,8 +53,40 @@
       <thead>
         <tr>
           <th>項目</th>
-          <th>每週調整</th>
-          <th>每月調整</th>
+          <th>
+            <span class="column-head">
+              <span>每週調整</span>
+              <button
+                type="button"
+                class="download-btn"
+                title="下載每週調整 .sea 報表"
+                aria-label="下載每週調整 .sea 報表"
+                :disabled="downloadingMode !== '' || portfolioStore.loading"
+                @click="downloadReport('weekly')"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/>
+                </svg>
+              </button>
+            </span>
+          </th>
+          <th>
+            <span class="column-head">
+              <span>每月調整</span>
+              <button
+                type="button"
+                class="download-btn"
+                title="下載每月調整 .sea 報表"
+                aria-label="下載每月調整 .sea 報表"
+                :disabled="downloadingMode !== '' || portfolioStore.loading"
+                @click="downloadReport('monthly')"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/>
+                </svg>
+              </button>
+            </span>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -148,6 +180,7 @@ import * as echarts from 'echarts'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { downloadDynamicCompoundingReport } from '../api'
 import { usePortfolioStore } from '../stores/portfolio'
 
 const props = defineProps({
@@ -166,6 +199,7 @@ const configError = ref('')
 const committingByEnter = ref(false)
 const editInputRef = ref(null)
 const logScale = ref(false)
+const downloadingMode = ref('')
 
 const draft = ref({
   initial_capital: 80000000,
@@ -284,6 +318,49 @@ function cancelEdit() {
 
 function openHelp() {
   helpDialogRef.value?.showModal()
+}
+
+async function downloadReport(mode) {
+  configError.value = ''
+  downloadingMode.value = mode
+  try {
+    const dateRangeConfig = portfolioStore.dateRangeConfig || {}
+    const options = {
+      capital: Number(portfolioStore.sharpeConfig?.capital || 100),
+      risk_free_rate: Number(portfolioStore.sharpeConfig?.risk_free_rate || 0),
+      mdd_count: 5,
+      commission_per_trade: 0,
+      dynamic_compounding: {
+        initial_capital: Number(draft.value.initial_capital || 0),
+        initial_ratio: Number(draft.value.initial_ratio || 0),
+        add_threshold_profit: Number(draft.value.add_threshold_profit || 0),
+        add_ratio: Number(draft.value.add_ratio || 0),
+        rollback_amount: Number(draft.value.rollback_amount || 0),
+        rollback_percent: Number(draft.value.rollback_percent || 0),
+        max_multiple: Number(draft.value.max_multiple || 0)
+      }
+    }
+    const payload = {
+      equities: portfolioStore.equities,
+      date_range: dateRangeConfig.enabled
+        ? { all: false, start: dateRangeConfig.start || null, end: dateRangeConfig.end || null }
+        : { all: true },
+      options
+    }
+    const { blob, filename } = await downloadDynamicCompoundingReport(route.params.projectId, mode, payload)
+    const href = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = href
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(href)
+  } catch (error) {
+    configError.value = error.message || '下載動態複利報表失敗'
+  } finally {
+    downloadingMode.value = ''
+  }
 }
 
 function rollbackDisplayText() {
@@ -570,6 +647,38 @@ onBeforeUnmount(() => {
 .grid th:first-child,
 .grid td:first-child {
   text-align: left;
+}
+.column-head {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.download-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+}
+.download-btn:hover:not(:disabled) {
+  color: var(--accent);
+  background: rgba(0, 0, 0, 0.06);
+}
+.download-btn:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+.download-btn svg {
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
 }
 .curve-chart {
   width: 100%;

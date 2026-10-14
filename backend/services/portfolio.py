@@ -18,6 +18,7 @@ def merge_trades(
         contract_mul = float(equity_cfg.get("contract", 1.0))
 
         for t in trades:
+            report_contract = t.contract * contract_mul * weight * factor
             scaled = TradeItem(
                 idx=t.idx,
                 trade_date1=t.trade_date1,
@@ -33,6 +34,9 @@ def merge_trades(
                 strategy_index=t.strategy_index,
             )
             merged.append(scaled)
+            # Dynamic-compounding exports materialize weighting as adjusted
+            # quantity so the downloaded SEA reproduces the simulated P&L.
+            setattr(scaled, "report_contract", report_contract)
 
     merged.sort(key=lambda t: (t.trade_date2, t.idx))
 
@@ -44,6 +48,7 @@ def merge_trades(
         if end and t.trade_date2 > end:
             continue
         item = asdict(t)
+        item["report_contract"] = float(getattr(t, "report_contract", t.contract))
         item["trade_date1"] = t.trade_date1.strftime("%Y-%m-%d %H:%M:%S")
         item["trade_date2"] = t.trade_date2.strftime("%Y-%m-%d %H:%M:%S")
         item["aux_idx"] = aux_idx

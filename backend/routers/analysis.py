@@ -4,18 +4,22 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Lock
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from starlette.responses import Response
 
 from backend.services.commission import CommissionCfg, build_commission
 from backend.services.auth import require_auth
 from backend.services.diversity import build_diversity
 from backend.services.dynamic_compounding import (
     build_dynamic_compounding,
+    build_dynamic_compounding_report,
     normalize_dynamic_compounding_config,
 )
+from backend.services.dynamic_compounding_report import safe_report_stem, serialize_dynamic_compounding_sea
 from backend.services.parser import parse_file
 from backend.services.portfolio import merge_trades
 from backend.services.project_access import get_project_access, project_dir, touch_access_time
@@ -106,10 +110,7 @@ def _parse_date(value: str | None) -> datetime | None:
     return datetime.strptime(value, "%Y-%m-%d")
 
 
-def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
-    if not payload.equities:
-        return _empty_analysis()
-
+def _load_merged_trades(project_id: str, payload: AnalysisRequest) -> tuple[list[dict], list[dict]]:
     folder = project_dir(project_id)
     strategy_trades: list[tuple[list, dict]] = []
 
@@ -139,6 +140,14 @@ def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
     if start:
         start_s = start.strftime("%Y-%m-%d")
         merged_dynamic = [t for t in merged_dynamic if str(t.get("trade_date2", ""))[:10] >= start_s]
+    return merged, merged_dynamic
+
+
+def _build_analysis(project_id: str, payload: AnalysisRequest) -> dict:
+    if not payload.equities:
+        return _empty_analysis()
+
+    merged, merged_dynamic = _load_merged_trades(project_id, payload)
 
     report = build_report(
         merged,
@@ -290,6 +299,56 @@ def run_analysis(project_id: str, payload: AnalysisRequest, current_user: str = 
     result = _build_analysis(project_id, payload)
     touch_access_time(project_id)
     return result
+
+
+@router.post("/dynamic-compounding/{mode}/download")
+def download_dynamic_compounding_report(
+    project_id: str,
+    mode: str,
+    payload: AnalysisRequest,
+    current_user: str = Depends(require_auth),
+):
+    project, _access = get_project_access(project_id, current_user)
+    normalized_mode = str(mode or "").strip().lower()
+    if normalized_mode not in {"weekly", "monthly"}:
+        raise HTTPException(status_code=400, detail="mode must be weekly or monthly")
+    if not payload.equities:
+        raise HTTPException(status_code=400, detail="No performance files selected")
+
+    merged, merged_dynamic = _load_merged_trades(project_id, payload)
+    report = build_report(
+        merged,
+        risk_free_rate=payload.options.risk_free_rate,
+        mdd_count=payload.options.mdd_count,
+        capital=(float(payload.options.capital) if float(payload.options.capital) > 0 else 100.0) * 10_000.0,
+    )
+    config = normalize_dynamic_compounding_config(
+        {
+            **(payload.options.dynamic_compounding or {}),
+            "base_mdd": float(report.get("summary", {}).get("mdd", 0.0)),
+        }
+    )
+    simulation = build_dynamic_compounding_report(merged_dynamic, config, normalized_mode)
+    adjusted_trades = simulation.get("trades") if isinstance(simulation.get("trades"), list) else []
+    if not adjusted_trades:
+        raise HTTPException(status_code=400, detail="No trades available for dynamic compounding report")
+
+    mode_label = "每週調整" if normalized_mode == "weekly" else "每月調整"
+    project_name = str(project.get("project_name") or project_id)
+    display_name = f"{project_name}_{mode_label}"
+    filename = f"{safe_report_stem(display_name)}.sea"
+    content = serialize_dynamic_compounding_sea(
+        display_name=display_name,
+        mode=normalized_mode,
+        initial_capital=config.initial_capital,
+        trades=adjusted_trades,
+    )
+    touch_access_time(project_id)
+    return Response(
+        content=content,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
+    )
 
 
 @router.post("/jobs")

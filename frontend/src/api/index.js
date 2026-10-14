@@ -238,6 +238,28 @@ export async function downloadProjectPackage(projectId) {
   }
 }
 
+export async function downloadDynamicCompoundingReport(projectId, mode, payload) {
+  try {
+    const response = await api.post(
+      `/projects/${projectId}/analysis/dynamic-compounding/${encodeURIComponent(mode)}/download`,
+      payload,
+      { responseType: 'blob', timeout: 120000 }
+    )
+    const disposition = String(response.headers?.['content-disposition'] || '')
+    const encodedMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+    const plainMatch = disposition.match(/filename="?([^";]+)"?/i)
+    let filename = `${projectId}-${mode}.sea`
+    if (encodedMatch?.[1]) {
+      filename = decodeURIComponent(encodedMatch[1].trim())
+    } else if (plainMatch?.[1]) {
+      filename = plainMatch[1].trim()
+    }
+    return { blob: response.data, filename }
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function uploadProjectPackage(projectId, projectName, file) {
   try {
     const form = new FormData()

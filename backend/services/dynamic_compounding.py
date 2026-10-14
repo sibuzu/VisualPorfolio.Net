@@ -48,6 +48,14 @@ def _iso_week_key(date_text: str) -> tuple[int, int]:
     return int(iso.year), int(iso.week)
 
 
+def _period_point(trade: dict, date_text: str, profit: float) -> dict:
+    return {
+        "date": date_text,
+        "profit": profit,
+        "trade": trade,
+    }
+
+
 def _weekly_periods(trades: list[dict]) -> list[dict]:
     rows: list[dict] = []
     cur_key = None
@@ -75,12 +83,12 @@ def _weekly_periods(trades: list[dict]) -> list[dict]:
             cur_profit = p
             cur_end = ds
             cur_profits = [p]
-            cur_points = [{"date": ds, "profit": p}]
+            cur_points = [_period_point(t, ds, p)]
         else:
             cur_profit += p
             cur_end = ds
             cur_profits.append(p)
-            cur_points.append({"date": ds, "profit": p})
+            cur_points.append(_period_point(t, ds, p))
     if cur_key is not None:
         rows.append(
             {
@@ -119,12 +127,12 @@ def _monthly_periods(trades: list[dict]) -> list[dict]:
             cur_profit = p
             cur_end = ds
             cur_profits = [p]
-            cur_points = [{"date": ds, "profit": p}]
+            cur_points = [_period_point(t, ds, p)]
         else:
             cur_profit += p
             cur_end = ds
             cur_profits.append(p)
-            cur_points.append({"date": ds, "profit": p})
+            cur_points.append(_period_point(t, ds, p))
     if cur_key is not None:
         rows.append(
             {
@@ -143,6 +151,7 @@ def _simulate(
     *,
     cagr_start_date: str = "",
     cagr_end_date: str = "",
+    include_trades: bool = False,
 ) -> dict:
     initial = float(cfg.initial_capital)
     if initial <= 0:
@@ -182,6 +191,7 @@ def _simulate(
     sample_week_key: tuple[int, int] | None = None
     sample_last_date = ""
     sample_last_equity = initial
+    adjusted_trades: list[dict] = []
 
     def _update_mdd(point_date: str) -> None:
         nonlocal mdd_peak, mdd_amount, mdd_pct_max, mdd_amount_date, mdd_pct_date
@@ -224,6 +234,7 @@ def _simulate(
         trading_capital = raw_trading_capital
         if cap_limit > 0:
             trading_capital = min(trading_capital, cap_limit)
+        exposure_scale = trading_capital / baseline_capital
         points = row.get("points")
         if isinstance(points, list) and points:
             for item in points:
@@ -236,7 +247,18 @@ def _simulate(
                     elif point_week != sample_week_key:
                         _flush_week_sample()
                         sample_week_key = point_week
-                step_pnl = raw_p * (trading_capital / baseline_capital)
+                step_pnl = raw_p * exposure_scale
+                if include_trades:
+                    source_trade = item.get("trade") if isinstance(item.get("trade"), dict) else {}
+                    base_contract = float(source_trade.get("report_contract", source_trade.get("contract", 0.0)) or 0.0)
+                    adjusted_trades.append(
+                        {
+                            **source_trade,
+                            "adjusted_contract": round(abs(base_contract) * exposure_scale, 12),
+                            "adjusted_net_profit": round(step_pnl, 12),
+                            "exposure_scale": round(exposure_scale, 12),
+                        }
+                    )
                 equity += step_pnl
                 if equity > logic_peak:
                     logic_peak = equity
@@ -254,7 +276,7 @@ def _simulate(
                 elif point_week != sample_week_key:
                     _flush_week_sample()
                     sample_week_key = point_week
-            period_pnl = profit * (trading_capital / baseline_capital)
+            period_pnl = profit * exposure_scale
             equity += period_pnl
             if equity > logic_peak:
                 logic_peak = equity
@@ -306,7 +328,7 @@ def _simulate(
     else:
         cagr_pct = 0.0
 
-    return {
+    result = {
         "initial_net_value": round(initial, 6),
         "final_net_value": round(equity, 6),
         "profit_multiple": round(multiple, 6),
@@ -320,6 +342,9 @@ def _simulate(
         "reach_10x_date": reach_10x_date or "未達成",
         "curve": curve,
     }
+    if include_trades:
+        result["trades"] = adjusted_trades
+    return result
 
 
 def build_dynamic_compounding(trades: list[dict], config: DynamicCompoundingConfig) -> dict:
@@ -355,3 +380,36 @@ def build_dynamic_compounding(trades: list[dict], config: DynamicCompoundingConf
             cagr_end_date=cagr_end_date,
         ),
     }
+
+
+def build_dynamic_compounding_report(
+    trades: list[dict],
+    config: DynamicCompoundingConfig,
+    mode: str,
+) -> dict:
+    """Build one downloadable mode with one adjusted row per source trade."""
+    normalized_mode = str(mode or "").strip().lower()
+    if normalized_mode == "weekly":
+        periods = _weekly_periods(trades)
+    elif normalized_mode == "monthly":
+        periods = _monthly_periods(trades)
+    else:
+        raise ValueError("mode must be weekly or monthly")
+
+    dates: list[datetime] = []
+    for trade in trades:
+        date_text = str(trade.get("trade_date2", ""))[:10]
+        if not date_text:
+            continue
+        try:
+            dates.append(_dt(date_text))
+        except ValueError:
+            continue
+    dates.sort()
+    return _simulate(
+        periods,
+        config,
+        cagr_start_date=dates[0].strftime("%Y-%m-%d") if dates else "",
+        cagr_end_date=dates[-1].strftime("%Y-%m-%d") if dates else "",
+        include_trades=True,
+    )

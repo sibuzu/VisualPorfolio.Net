@@ -53,6 +53,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
     allow_origin_regex=r"^https?://([a-zA-Z0-9.-]+)(:\d+)?$",
 )
 
