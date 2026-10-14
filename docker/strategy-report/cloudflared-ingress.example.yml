@@ -1,0 +1,5 @@
+# Add this rule before the catch-all ingress rule in the existing tunnel.
+ingress:
+  - hostname: strategyreport.sibuzu.com
+    service: http://strategy-report-frontend:80
+  - service: http_status:404

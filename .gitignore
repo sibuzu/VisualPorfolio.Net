@@ -5,8 +5,11 @@ __pycache__/
 .DS_Store
 .env
 .env.*
-frontend/node_modules/
-frontend/dist/
+visual-portfolio/frontend/node_modules/
+visual-portfolio/frontend/dist/
+visual-portfolio/data/
+strategy-report/frontend/node_modules/
+strategy-report/frontend/dist/
 data/db/*.db
 data/projects/
 data-beta/projects/

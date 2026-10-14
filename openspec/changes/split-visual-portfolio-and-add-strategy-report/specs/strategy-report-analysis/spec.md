@@ -38,11 +38,11 @@ In backtest already calculated mode, Strategy Report SHALL use quantities embedd
 - **THEN** Strategy Report SHALL replay earlier events to calculate the range start capital and open positions before showing filtered results
 
 ### Requirement: Match reference calculations
-The Web report's supported metric definitions SHALL be documented, and fixture tests SHALL compare the numerical summary, trade detail, annual/monthly/weekly/daily totals, and drawdown to C# StrategyReport output within explicit tolerances.
+The Web report's supported metric definitions SHALL be documented, and fixture tests SHALL compare the numerical summary, trade detail, annual/monthly/weekly/daily totals, and drawdown to expectations derived from C# StrategyReport source and paired format examples within explicit tolerances. Desktop output SHALL be compared when it becomes available; until then parity claims SHALL state the validation limit.
 
 #### Scenario: SRP and SEA parity fixture
 - **WHEN** equivalent `.srp` and `.sea` reference fixtures are analyzed with the same settings
-- **THEN** both Web results SHALL agree with each other and the C# reference values within the recorded tolerances
+- **THEN** both Web results SHALL agree with each other and the recorded source-derived expectations within the recorded tolerances
 
 ### Requirement: Export browser friendly reports
 Strategy Report SHALL allow the user to download displayed detail and period tables as CSV and print the current summary and charts with a readable browser print layout.

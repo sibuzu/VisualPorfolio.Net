@@ -1,0 +1,37 @@
+services:
+  strategy-report-backend:
+    build:
+      context: ../..
+      dockerfile: docker/strategy-report/Dockerfile.backend
+    container_name: strategy-report-backend
+    restart: unless-stopped
+    networks:
+      - sibuzu-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  strategy-report-frontend:
+    build:
+      context: ../..
+      dockerfile: docker/strategy-report/Dockerfile.frontend
+    container_name: strategy-report-frontend
+    depends_on:
+      strategy-report-backend:
+        condition: service_healthy
+    ports:
+      - "${STRATEGY_REPORT_BIND:-127.0.0.1:8088}:80"
+    restart: unless-stopped
+    networks:
+      - sibuzu-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  sibuzu-net:
+    external: true
