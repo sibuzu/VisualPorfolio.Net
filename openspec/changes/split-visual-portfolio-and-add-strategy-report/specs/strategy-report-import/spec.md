@@ -1,5 +1,20 @@
 ## ADDED Requirements
 
+### Requirement: Reuse Visual Portfolio account credentials
+Strategy Report SHALL offer a login and sign-up screen consistent with Visual Portfolio and SHALL authenticate accounts through Visual Portfolio's existing authentication service. It SHALL keep its browser session on the Strategy Report hostname and SHALL validate the session before processing an uploaded report.
+
+#### Scenario: Existing account login
+- **WHEN** a user submits a valid Visual Portfolio user ID and password on Strategy Report
+- **THEN** Strategy Report SHALL start a session on its own hostname and allow the user to import reports
+
+#### Scenario: Unauthenticated upload
+- **WHEN** a user submits a report without a valid session
+- **THEN** the report API SHALL reject the request without parsing the uploaded file
+
+#### Scenario: Existing account logout
+- **WHEN** a user logs out of Strategy Report
+- **THEN** its hostname session SHALL be cleared without changing the user's Visual Portfolio session
+
 ### Requirement: Import SRP and SEA reports
 Strategy Report SHALL accept one `.srp` XML file or one `.sea` archive and normalize its strategy metadata, settings, ordered trade events, quantities, prices, symbols, timestamps, point values, and available initial capital.
 

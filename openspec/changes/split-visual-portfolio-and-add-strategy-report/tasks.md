@@ -28,6 +28,7 @@
 - [x] 4.6 Implement target margin and Kelly stake modes with field specific validation and C# quantity rules.
 - [x] 4.7 Build compound detail, summary, equity, drawdown, and period aggregates from one consistent post-management series; compare every capital mode to reference fixtures.
 - [x] 4.8 Verify import isolation, temporary file cleanup, non finite input rejection, and concurrent request separation.
+- [x] 4.9 Delegate account signup, login, and session validation to Visual Portfolio's authentication API; require a valid non-guest session before parsing report uploads.
 
 ## 5. Strategy Report frontend
 
@@ -37,12 +38,15 @@
 - [x] 5.4 Add capital management mode controls that show relevant fields and recalculate the report; preserve the selected file in the browser for a new request without server persistence.
 - [x] 5.5 Add CSV downloads for the displayed detail and period tables plus a readable browser print/PDF layout labeled with source and settings.
 - [x] 5.6 Build the frontend and verify key flows at desktop and narrow viewport widths, including keyboard navigation and chart/table readability.
+- [x] 5.7 Remove the introductory banner and align Strategy Report's responsive CSS and sidebar/content layout with Visual Portfolio.
+- [x] 5.8 Add a Visual Portfolio style login/sign-up screen and Strategy Report hostname session/logout controls.
 
 ## 6. Containers and hostname route
 
 - [x] 6.1 Add `docker/strategy-report/` backend/frontend Dockerfiles, Compose stack, nginx `/api/` proxy, and health checks with unique service names on `sibuzu-net`.
 - [x] 6.2 Add a Cloudflare ingress example for `strategyreport.sibuzu.com`, request limits, deployment steps, and rollback steps that leave Visual Portfolio data untouched.
 - [x] 6.3 Add and run local smoke checks for homepage, API health, valid `.srp`/`.sea` import, and invalid upload rejection.
+- [x] 6.3a Update smoke checks for login protection and optional authenticated import using an existing Visual Portfolio account.
 - [ ] 6.4 Have the operator apply the live DNS/tunnel route, then verify HTTPS homepage and API upload through `strategyreport.sibuzu.com` before declaring the public domain live.
 
 ## 7. Final acceptance

@@ -1,6 +1,6 @@
 <script setup>
 import * as echarts from 'echarts'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const modeOptions = [
   { value: 'backtest', label: '回測時已計算' },
@@ -43,6 +43,14 @@ const settings = ref({
   chip_size: 0, maximum_quantity: 0, integer_quantity: false,
   date_start: '', date_end: ''
 })
+const authUser = ref('')
+const authReady = ref(false)
+const authBusy = ref(false)
+const authMode = ref('login')
+const authUserId = ref('')
+const authPassword = ref('')
+const authPasswordConfirm = ref('')
+const authError = ref('')
 const fileInput = ref(null)
 const selectedFile = ref(null)
 const report = ref(null)
@@ -112,6 +120,88 @@ function messageFromDetail(detail) {
   return '計算失敗，請檢查檔案與設定。'
 }
 
+async function refreshAuth() {
+  try {
+    const response = await fetch('/api/auth/me', { credentials: 'same-origin' })
+    if (response.ok) {
+      const data = await response.json()
+      authUser.value = data.user_id || ''
+    } else if (response.status !== 401) {
+      const data = await response.json().catch(() => ({}))
+      authError.value = messageFromDetail(data.detail)
+    }
+  } catch {
+    authError.value = '無法連線到登入服務。'
+  } finally {
+    authReady.value = true
+  }
+}
+
+async function submitAuth() {
+  if (!authUserId.value || !authPassword.value || authBusy.value) return
+  if (authMode.value === 'signup' && authPassword.value !== authPasswordConfirm.value) {
+    authError.value = 'Password confirm mismatch'
+    return
+  }
+  authBusy.value = true
+  authError.value = ''
+  try {
+    const payload = { user_id: authUserId.value.trim(), password: authPassword.value }
+    if (authMode.value === 'signup') {
+      const signupResponse = await fetch('/api/auth/signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', body: JSON.stringify(payload)
+      })
+      const signupData = await signupResponse.json().catch(() => ({}))
+      if (!signupResponse.ok) throw new Error(messageFromDetail(signupData.detail))
+    }
+    const response = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify(payload)
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(messageFromDetail(data.detail))
+    authUser.value = data.user_id
+    authMode.value = 'login'
+    authPassword.value = ''
+    authPasswordConfirm.value = ''
+  } catch (cause) {
+    authError.value = cause.message || '登入失敗。'
+  } finally {
+    authBusy.value = false
+  }
+}
+
+function toggleAuthMode() {
+  authMode.value = authMode.value === 'login' ? 'signup' : 'login'
+  authError.value = ''
+  authPasswordConfirm.value = ''
+}
+
+function clearReport() {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  chart?.dispose()
+  chart = null
+  selectedFile.value = null
+  report.value = null
+  settingsDirty.value = false
+  if (fileInput.value) fileInput.value.value = ''
+}
+
+async function logout() {
+  try {
+    const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+    if (!response.ok) throw new Error('登出失敗。')
+    authUser.value = ''
+    authMode.value = 'login'
+    authPassword.value = ''
+    clearReport()
+  } catch (cause) {
+    error.value = cause.message || '登出失敗。'
+  }
+}
+
 async function calculate() {
   if (!selectedFile.value || busy.value) return
   busy.value = true
@@ -123,8 +213,15 @@ async function calculate() {
     const form = new FormData()
     form.append('file', selectedFile.value)
     form.append('settings', JSON.stringify(payload))
-    const response = await fetch('/api/report', { method: 'POST', body: form })
+    const response = await fetch('/api/report', { method: 'POST', body: form, credentials: 'same-origin' })
     const data = await response.json().catch(() => ({}))
+    if (response.status === 401) {
+      authUser.value = ''
+      authMode.value = 'login'
+      clearReport()
+      authError.value = '登入已失效，請重新登入。'
+      return
+    }
     if (!response.ok) throw new Error(messageFromDetail(data.detail))
     report.value = data
     settingsDirty.value = false
@@ -151,17 +248,19 @@ function renderChart() {
     resizeObserver.observe(chartElement.value)
   }
   const curve = currentSection.value.curve || []
+  const showZoom = curve.length > 30
+  const hasDrawdown = curve.some(row => row.drawdown > 0)
   chart.setOption({
     animationDuration: 350,
-    grid: { left: 66, right: 70, top: 28, bottom: 55 },
+    grid: { left: 66, right: hasDrawdown ? 70 : 24, top: 28, bottom: showZoom ? 60 : 38 },
     tooltip: { trigger: 'axis', valueFormatter: value => formatNumber(value, 2) },
     legend: { bottom: 4, data: ['淨值', '回撤'] },
     xAxis: { type: 'category', data: curve.map(row => row.timestamp.slice(0, 10)), boundaryGap: false, axisLabel: { hideOverlap: true } },
     yAxis: [
       { type: 'value', scale: true, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { lineStyle: { color: '#e6ecec' } } },
-      { type: 'value', name: '回撤', min: 0, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { show: false } }
+      { type: 'value', name: '回撤', min: 0, show: hasDrawdown, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { show: false } }
     ],
-    dataZoom: [{ type: 'inside' }, { type: 'slider', height: 14, bottom: 33, borderColor: 'transparent' }],
+    dataZoom: [{ type: 'inside' }, ...(showZoom ? [{ type: 'slider', height: 14, bottom: 32, borderColor: 'transparent' }] : [])],
     series: [
       { name: '淨值', type: 'line', data: curve.map(row => row.equity), showSymbol: false, smooth: false, lineStyle: { width: 2.5, color: '#0b7183' }, areaStyle: { color: 'rgba(11,113,131,.10)' } },
       { name: '回撤', type: 'line', yAxisIndex: 1, data: curve.map(row => row.drawdown), showSymbol: false, lineStyle: { width: 1.5, color: '#d77953' } }
@@ -208,33 +307,33 @@ function downloadCsv(kind) {
 }
 
 onBeforeUnmount(() => {
-  resizeObserver?.disconnect()
-  chart?.dispose()
+  clearReport()
 })
+onMounted(refreshAuth)
 </script>
 
 <template>
-  <div class="app-shell">
-    <header class="site-header">
-      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-      <div class="brand-text"><strong>STRATEGY REPORT</strong><small>策略績效報表</small></div>
-      <div class="header-tag">SRP · SEA</div>
-    </header>
-
+  <div v-if="!authReady" class="auth-wrap"><section class="panel auth-card"><p>檢查登入狀態...</p></section></div>
+  <div v-else-if="!authUser" class="auth-wrap">
+    <section class="panel auth-card">
+      <h1>{{ authMode === 'login' ? 'Login' : 'Sign up' }}</h1>
+      <form class="auth-form" @submit.prevent="submitAuth">
+        <input v-model.trim="authUserId" type="text" placeholder="user_id" autocomplete="username" required />
+        <input v-model="authPassword" type="password" placeholder="password" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" required />
+        <input v-if="authMode === 'signup'" v-model="authPasswordConfirm" type="password" placeholder="confirm password" autocomplete="new-password" required />
+        <button type="submit" :disabled="authBusy">{{ authBusy ? '處理中...' : authMode === 'login' ? 'Login' : 'Create Account' }}</button>
+      </form>
+      <p v-if="authError" class="auth-error" role="alert">{{ authError }}</p>
+      <button type="button" class="auth-switch" @click="toggleAuthMode">{{ authMode === 'login' ? 'Sign up' : 'Back to login' }}</button>
+    </section>
+  </div>
+  <div v-else class="app-shell">
     <main>
-      <section class="hero">
-        <div class="hero-copy">
-          <div class="eyebrow">策略分析工作台 <span class="eyebrow-line"></span> WEB EDITION</div>
-          <h1>讓每一筆交易，<br><em>說清楚績效。</em></h1>
-          <p>匯入策略報表，檢視單純績效與資金管理後的結果。從淨值曲線、回撤到逐筆交易，都有清楚的脈絡。</p>
-        </div>
-        <div class="hero-orbit" aria-hidden="true"><div class="orbit-inner"><svg viewBox="0 0 220 120"><path d="M0 95 L27 80 L48 91 L72 45 L96 59 L120 36 L140 52 L165 20 L184 37 L220 8"/></svg></div></div>
-      </section>
-
       <div class="workspace">
-        <aside class="sidebar">
-          <section class="panel upload-panel">
-            <div class="panel-heading"><span class="step-no">01</span><div><h2>匯入報表</h2><p>選擇策略檔案開始分析</p></div></div>
+        <aside class="panel sidebar">
+          <div class="sidebar-title"><h1>Strategy Report</h1><p>策略績效報表</p><div class="session-line"><span>{{ authUser }}</span><button type="button" @click="logout">Logout</button></div></div>
+          <section class="upload-panel">
+            <div class="panel-heading"><h2>匯入報表</h2></div>
             <div class="drop-zone" :class="{ dragging }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop">
               <div class="upload-icon" aria-hidden="true">↥</div>
               <strong>{{ selectedFile ? selectedFile.name : '拖曳檔案到這裡' }}</strong>
@@ -245,8 +344,8 @@ onBeforeUnmount(() => {
             <p class="privacy-note">檔案僅用於本次計算，不會儲存為專案。上限 20 MiB。</p>
           </section>
 
-          <section class="panel settings-panel">
-            <div class="panel-heading"><span class="step-no">02</span><div><h2>資金管理</h2><p>設定計算方式與日期範圍</p></div></div>
+          <section class="settings-panel">
+            <div class="panel-heading"><h2>資金管理</h2></div>
             <div class="form-stack">
               <label class="field"><span>管理模式</span><select v-model="settings.mode"><option v-for="option in modeOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
               <p v-if="settings.mode === 'backtest'" class="mode-hint">直接使用報表口數與報表初始資金；若報表未提供初始資金，採用 100,000。</p>
@@ -265,17 +364,16 @@ onBeforeUnmount(() => {
           </section>
         </aside>
 
-        <section class="results">
-          <div v-if="!report" class="empty-state panel">
+        <section class="panel results">
+          <div v-if="!report" class="empty-state">
             <div class="empty-illustration" aria-hidden="true"><div class="empty-line one"></div><div class="empty-line two"></div><div class="empty-line three"></div></div>
-            <span class="empty-kicker">READY WHEN YOU ARE</span>
-            <h2>報表即將在此展開</h2>
+            <h2>尚無報表</h2>
             <p>先選擇 .srp 或 .sea 檔案，再按「產生績效報表」。</p>
           </div>
 
           <template v-else>
             <div class="results-header">
-              <div><div class="eyebrow dark">分析結果 <span class="eyebrow-line"></span> {{ source.format.toUpperCase() }}</div><h2>{{ source.strategy }}</h2><p>{{ source.filename }} · {{ formatNumber(source.trade_count, 0) }} 筆交易 · {{ source.symbol }}</p></div>
+              <div><h2>{{ source.strategy }}</h2><p>{{ source.filename }} · {{ source.format.toUpperCase() }} · {{ formatNumber(source.trade_count, 0) }} 筆交易 · {{ source.symbol }}</p></div>
               <button type="button" class="print-button" @click="printReport">列印 / 儲存 PDF <span aria-hidden="true">↗</span></button>
             </div>
             <p class="print-meta">資金管理：{{ activeSection === 'simple' ? '單純績效' : resultModeLabel }} · 初始資金：{{ formatNumber(currentSummary.initial_capital) }} · 分析區間：{{ currentSummary.start_date || '—' }} 至 {{ currentSummary.end_date || '—' }}</p>
@@ -304,6 +402,5 @@ onBeforeUnmount(() => {
       </div>
     </main>
 
-    <footer><span>STRATEGY REPORT</span><span>從交易資料到清楚的決策依據</span></footer>
   </div>
 </template>

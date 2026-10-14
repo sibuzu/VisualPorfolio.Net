@@ -18,7 +18,7 @@ The requested public hostname is `strategyreport.sibuzu.com`. Its live DNS and t
 - Add features to Visual Portfolio, change its calculations, or extract its parser into a shared package.
 - Rewrite the C# desktop application or duplicate its dockable window layout and RDLC implementation.
 - Add `.pfo`, `.gsea`, `.xrp`, or directory uploads in this change; the new import boundary can be extended later.
-- Combine the two apps' users, project databases, or saved report state in the first release.
+- Combine the two apps' project databases or saved report state in the first release. Strategy Report reuses Visual Portfolio's existing account credentials through its authentication API.
 - Change live DNS or tunnel settings without access to the deployment account.
 
 ## Decisions
@@ -39,9 +39,13 @@ Alternative considered: extract Visual Portfolio's parser into a shared package.
 
 Use a separate Vue app and FastAPI API. A user selects one `.srp` or `.sea` file, sees parsed metadata and an initial report, changes date range and capital management inputs, and receives recalculated simple and compound sections. Map the C# docked forms into tabs/sections: summary, equity curves, annual/monthly/weekly/daily tables, trade detail, and capital management. Support CSV for tabular data and browser print/PDF styling; leave native `.srp`/`.sea` output for later unless parity testing reveals it is essential.
 
+Use Visual Portfolio's existing visual language for the Strategy Report Web page: its gray-blue background, white bordered panels, teal accent, compact controls, and sidebar/content workspace. Keep the applications independent in code and deployment. The login screen uses Visual Portfolio's centered card. After login, report controls and results are visible without an introductory banner.
+
 The first release is stateless: calculation requests use the uploaded file only during the request, and no uploaded report is written to the Visual Portfolio data directories. If subsequent interaction needs a cached parse result, use a short lived session cache with explicit expiry and per-session isolation. The API shall enforce upload and decompression limits, reject unsafe ZIP members, and return clear validation errors. The deployment shall impose request size and abuse limits.
 
-Alternative considered: reuse Visual Portfolio's project/account workflow. The requested single report workflow does not require shared project ownership, and cross-app database coupling would slow the first release. Access control for the public hostname remains an operational decision before launch.
+Strategy Report presents the same login and sign-up flow as Visual Portfolio. Its backend sends credentials to Visual Portfolio's existing authentication API over the internal Docker network, then issues host-only cookies on `strategyreport.sibuzu.com` containing the returned signed session values. Every report request validates those cookies through Visual Portfolio's `/auth/me`. The sites therefore share user IDs and passwords while each hostname maintains its own login session. Strategy Report does not mount or copy `users.db`, and Visual Portfolio application code remains unchanged.
+
+Alternative considered: mount Visual Portfolio's `users.db` and token secret in Strategy Report. Delegating authentication to the existing API keeps account storage and token verification in one place. The requested single report workflow does not require shared project ownership.
 
 ### Capital management parity
 
@@ -62,6 +66,7 @@ Alternative considered: expose a second public API hostname. A same-origin proxy
 - [C# capital calculations have hidden edge cases] → Inventory every mode and parameter, then compare trade detail, equity, MDD, and period totals with C# golden outputs for flat, losing, overlapping, and date filtered trades.
 - [Untrusted SEA ZIP consumes excessive resources or escapes paths] → Inspect archive entries without extraction, enforce compressed/uncompressed size and entry count limits, and reject malformed or unsafe members.
 - [Public upload endpoint is abused or leaks report data] → Do not persist uploads by default; restrict request size, isolate sessions, avoid logging report contents, and set deployment rate/access controls before exposing the hostname.
+- [Shared account service is unavailable] → Return a service error for login and protected report requests; keep health checks independent of the account service.
 - [DNS/tunnel work is unavailable from this workspace] → Commit a tested ingress example and deployment checklist; verify the live route only once the operator applies it.
 
 ## Migration Plan
@@ -73,6 +78,5 @@ Alternative considered: expose a second public API hostname. A same-origin proxy
 
 ## Open Questions
 
-- Should the public Strategy Report site use an existing identity provider or an access policy? The implementation can proceed with stateless sessions, but a public launch needs an explicit access decision.
 - Which exact C# report fields and capital modes are release critical beyond the requested `.srp`/`.sea` import? This design plans all visible modes and core report sections; the parity inventory will identify unsupported edge cases before launch.
 - Who controls the Cloudflare tunnel and DNS record for `strategyreport.sibuzu.com`? The code can prepare and test the route definition; going live needs that operator's action.

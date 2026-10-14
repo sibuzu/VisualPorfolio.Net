@@ -4,6 +4,8 @@ services:
       context: ../..
       dockerfile: docker/strategy-report/Dockerfile.backend
     container_name: strategy-report-backend
+    environment:
+      VISUAL_PORTFOLIO_AUTH_URL: http://visualportfolio-backend:8000
     restart: unless-stopped
     networks:
       - sibuzu-net

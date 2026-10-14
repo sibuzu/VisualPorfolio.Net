@@ -50,3 +50,10 @@ Strategy Report SHALL allow the user to download displayed detail and period tab
 #### Scenario: Export selected range
 - **WHEN** the user exports after changing settings or date range
 - **THEN** the CSV and print view SHALL represent the currently displayed calculation and identify its source report and settings
+
+### Requirement: Match Visual Portfolio's Web presentation
+Strategy Report SHALL use Visual Portfolio's gray-blue background, white bordered panels, teal accent, compact form controls, and sidebar/content layout without an introductory banner.
+
+#### Scenario: Open the authenticated Strategy Report workspace
+- **WHEN** a signed-in user opens the page at desktop or narrow viewport width
+- **THEN** import controls and the report area SHALL be visible without an introductory banner in a responsive layout consistent with Visual Portfolio
