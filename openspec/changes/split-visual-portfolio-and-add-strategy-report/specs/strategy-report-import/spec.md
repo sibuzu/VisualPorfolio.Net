@@ -53,7 +53,7 @@ The import API SHALL reject unsupported formats, malformed source content, and a
 - **THEN** the API SHALL reject it without writing archive content outside its temporary request context
 
 ### Requirement: Isolate uploaded report data
-Strategy Report SHALL not write uploaded reports into Visual Portfolio's `data/` or `data-beta/` directories or make one user's report available to another user. A saved performance SHALL remain within Strategy Report's own data store.
+Strategy Report SHALL not write uploaded reports into Visual Portfolio's project or database directories or `data-beta/`. Saved performances SHALL remain in Strategy Report's `data/reports/` store and require authentication; non-owner viewers SHALL not persist changes to another user's performance.
 
 #### Scenario: Complete one-request calculation
 - **WHEN** a report is submitted to the temporary `/api/report` calculation endpoint

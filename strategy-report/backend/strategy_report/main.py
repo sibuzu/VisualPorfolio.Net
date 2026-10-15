@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from io import BytesIO
 import json
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -13,11 +14,17 @@ from .auth import require_user, router as auth_router
 from .importer import MAX_UPLOAD_BYTES, ReportFormatError, parse_report
 from .storage import (
     copy_performance, create_performance, delete_performance, get_performance,
-    list_important_performances, list_performances, save_settings, update_performance,
+    initialize_storage, list_important_performances, list_performances, save_settings, update_performance,
 )
 
 
-app = FastAPI(title="Strategy Report API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initialize_storage()
+    yield
+
+
+app = FastAPI(title="Strategy Report API", version="0.1.0", lifespan=lifespan)
 app.include_router(auth_router)
 
 

@@ -72,3 +72,5 @@
 - [x] 9.4 Update the performance workspace to copy/download and automatically recalculate when settings change; verify the flow in the browser and Docker stack.
 - [x] 9.5 Match Visual Portfolio's report sidebar title, ID/action rows, and optional date range placement without extra workspace actions.
 - [x] 9.6 Bind root `data/reports/` into the Strategy Report backend, migrate existing Docker volume reports there, and verify saved files remain readable after rebuilding.
+
+- [x] 9.7 Keep performance index metadata in SQLite, move capital management/date settings to per-report `config.json`, migrate existing settings, and verify owner persistence, viewer isolation, copying, and restart behavior.

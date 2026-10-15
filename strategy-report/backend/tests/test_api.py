@@ -132,6 +132,8 @@ def test_saved_performance_management_and_user_isolation(fake_visual_portfolio_a
         assert item["name"] == expected_name
         assert created.json()["created"] is True
         assert (tmp_path / "reports" / item_id / "source.srp").read_bytes() == payload
+        config_path = tmp_path / "reports" / item_id / "config.json"
+        assert json.loads(config_path.read_text()) == item["settings"]
 
         duplicate = client.post("/api/performances", files={"file": ("renamed.srp", payload)}, data={"name": "Different"})
         assert duplicate.status_code == 200
@@ -149,6 +151,8 @@ def test_saved_performance_management_and_user_isolation(fake_visual_portfolio_a
         assert len(listed) == 1
         assert listed[0]["settings"]["initial_capital"] == "120000"
         assert listed[0]["important"] is True
+        saved_config = config_path.read_bytes()
+        assert json.loads(saved_config)["initial_capital"] == "120000"
 
         copied = client.post(f"/api/performances/{item_id}/copy", json={"name": "我的副本"})
         assert copied.status_code == 201
@@ -180,6 +184,7 @@ def test_saved_performance_management_and_user_isolation(fake_visual_portfolio_a
         assert temporary.status_code == 200
         assert temporary.json()["compound"]["summary"]["initial_capital"] == 250000
         assert other_client.get(f"/api/performances/{item_id}").json()["performance"]["settings"]["initial_capital"] == "120000"
+        assert config_path.read_bytes() == saved_config
         assert other_client.patch(f"/api/performances/{item_id}", json={"name": "No"}).status_code == 403
         assert other_client.delete(f"/api/performances/{item_id}").status_code == 403
         own_copy = other_client.post(f"/api/performances/{item_id}/copy", json={})
@@ -249,3 +254,5 @@ def test_legacy_blob_reports_migrate_to_report_directories(monkeypatch, tmp_path
     with sqlite3.connect(tmp_path / "performances.db") as connection:
         columns = {row[1] for row in connection.execute("PRAGMA table_info(performances)")}
     assert "content" not in columns and "owner_id" in columns
+    assert "settings_json" not in columns
+    assert json.loads((tmp_path / "reports" / item_id / "config.json").read_text()) == item["settings"]

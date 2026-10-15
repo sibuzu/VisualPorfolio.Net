@@ -50,8 +50,16 @@ All saved-performance operations SHALL require login. Owner lists SHALL contain 
 - **THEN** Strategy Report SHALL reject the change
 
 ### Requirement: Keep saved data independent of Visual Portfolio
-Strategy Report SHALL persist original reports under the repository's root `data/reports/SR-XXXXXX/`, bind mounted into its container, with metadata in its own SQLite database and named Docker volume. It SHALL migrate original report bytes previously stored as SQLite BLOBs into report directories without losing existing performances. It SHALL not modify Visual Portfolio's project or user databases when creating, editing, or deleting a performance.
+Strategy Report SHALL persist original reports under the repository's root `data/reports/SR-XXXXXX/`, bind mounted into its container, with performance index metadata (ID, owner, name, importance, source information, and timestamps) in its own SQLite database and named Docker volume. Capital management and date range settings SHALL be read and written in each report’s `config.json`. It SHALL migrate existing SQLite analysis settings into JSON and legacy BLOB report bytes into report directories without losing existing performances. It SHALL retain a pre-migration database backup and remove the obsolete settings column after successful export. It SHALL not modify Visual Portfolio's project or user databases when creating, editing, or deleting a performance.
 
 #### Scenario: Recreate Strategy Report containers
 - **WHEN** the application containers are rebuilt while root `data/reports/` and the Strategy Report data volume are retained
 - **THEN** saved performances SHALL remain available to their owners
+
+#### Scenario: Migrate existing settings
+- **WHEN** the service starts with analysis settings still stored in SQLite
+- **THEN** it SHALL export those settings to each report’s `config.json` while preserving the performance index and a pre-migration database backup
+
+#### Scenario: Resume interrupted settings migration
+- **WHEN** migration restarts after only some settings files were exported
+- **THEN** it SHALL preserve completed files, export the remaining settings, and remove the old SQLite settings column only after all settings files are validated

@@ -1,9 +1,9 @@
 ## ADDED Requirements
 
 ### Requirement: Deploy Strategy Report independently
-The repository SHALL provide `docker/strategy-report/` Dockerfiles and Compose configuration with unique frontend/backend service names on `sibuzu-net`, without mounting Visual Portfolio's production or beta data directories.
+The repository SHALL provide `docker/strategy-report/` Dockerfiles and Compose configuration with unique frontend/backend service names on `sibuzu-net`, without mounting Visual Portfolio's project or account database directories.
 
-The backend SHALL mount a separate persistent Strategy Report data volume for saved performances.
+The backend SHALL bind mount root `data/reports/` for original sources and per-report `config.json` files. The separate Strategy Report data volume SHALL hold its performance index database and migration backups.
 
 #### Scenario: Start Strategy Report containers
 - **WHEN** an operator builds and starts the Strategy Report Compose stack
