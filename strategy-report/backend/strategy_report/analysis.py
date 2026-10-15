@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .model import ReportSource, TradeEvent
+from .buy_hold import BuyHoldSettings
 
 
 Mode = Literal[
@@ -42,6 +43,7 @@ class CalculationSettings(BaseModel):
     integer_quantity: bool = False
     date_start: date | None = None
     date_end: date | None = None
+    buy_hold: BuyHoldSettings | None = None
 
     @model_validator(mode="after")
     def validate_range(self):
@@ -239,16 +241,22 @@ def _periods(records: list[dict], starting: Decimal, compound: bool) -> dict[str
         "daily": lambda dt: dt.strftime("%Y/%m/%d"),
     }
     for name, key_fn in keys.items():
-        groups: dict[str, Decimal] = {}
+        groups: dict[str, list[dict]] = {}
         for record in records:
             period = key_fn(record["timestamp"])
-            groups[period] = groups.get(period, Decimal(0)) + record["profit"]
+            groups.setdefault(period, []).append(record)
         running = starting
         rows: list[dict] = []
-        for period, profit in groups.items():
+        for period, period_records in groups.items():
+            profit = sum((record["profit"] for record in period_records), Decimal(0))
             rate = profit / running * 100 if compound and running != 0 else Decimal(0)
+            peak, equity, mdd = running, running, Decimal(0)
+            for record in period_records:
+                equity += record["profit"]
+                peak = max(peak, equity)
+                mdd = max(mdd, peak - equity)
             running += profit
-            rows.append({"period": period, "profit": float(profit), "cumulative": float(running), "return_pct": float(rate)})
+            rows.append({"period": period, "profit": float(profit), "cumulative": float(running), "return_pct": float(rate), "mdd": float(mdd)})
         output[name] = rows
     return output
 
@@ -325,6 +333,8 @@ def _section(source: ReportSource, cfg: CalculationSettings, *, compound: bool) 
         "big_point_value": float(source.point_value), "trade_cost": source.slippage,
         "win_rate_pct": winning_count / len(profits) * 100 if profits else 0.0,
         "profit_factor": float(-winning_profit / losing_profit) if losing_profit < 0 else 100.0,
+        "winning_profit": float(winning_profit), "losing_profit": float(losing_profit),
+        "winning_count": winning_count, "losing_count": sum(profit <= 0 for profit in profits),
         "sharpe_ratio": _ratio(profits, False, timestamps),
         "sortino_ratio": _ratio(profits, True, timestamps),
         "start_date": timestamps[0].date().isoformat() if timestamps else None,

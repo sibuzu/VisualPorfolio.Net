@@ -10,6 +10,7 @@ services:
       STRATEGY_REPORT_DATA_DIR: /app/data
       STRATEGY_REPORT_REPORTS_DIR: /app/data/reports
       STRATEGY_REPORT_LEGACY_DB: /app/legacy-data/performances.db
+      FINMIND_TOKEN: ${FINMIND_TOKEN:-}
     volumes:
       - ../../data/db:/app/data/db
       - ../../data/reports:/app/data/reports

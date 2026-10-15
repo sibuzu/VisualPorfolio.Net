@@ -76,6 +76,7 @@ button.status-inline:hover, button.status-inline:focus-visible { color: var(--ac
 .range-date-input:disabled { opacity: .5; }
 .range-sep { color: var(--muted); }
 .capital-title { margin: 12px 0 10px; font-size: 16px; }
+.buy-hold-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 14px; margin-bottom: 8px; }
 .drop-zone { border: 1px dashed var(--line); border-radius: 8px; background: #f9fbfd; padding: 16px; min-height: 122px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; }
 .drop-zone.dragging { border-color: var(--accent); background: #eaf6f8; }
 .upload-icon { color: var(--accent); font-size: 25px; line-height: 1; }
@@ -95,7 +96,13 @@ button.status-inline:hover, button.status-inline:focus-visible { color: var(--ac
 .check-field { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .check-field input { accent-color: var(--accent); width: 15px; height: 15px; }
 .error-message { margin: 10px 0 0; color: #b00020; font-size: 13px; line-height: 1.5; }
-.results { flex: 1 1 auto; min-width: 0; padding: 12px; }
+.results { flex: 1 1 auto; min-width: 0; padding: 12px; position: relative; }
+.report-help-button { position: absolute; top: 12px; right: 12px; display: inline-flex; border: 0; background: transparent; padding: 0; color: #6b7280; }
+.report-help-button svg { width: 24px; height: 24px; fill: currentColor; }
+.report-help-button:hover { color: var(--accent); }
+.report-help { color: var(--muted); font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+.report-help p { margin: 8px 0; }
+.report-help details { margin-bottom: 8px; }
 .empty-state { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
 .empty-illustration { width: 170px; height: 130px; position: relative; border: 1px solid var(--line); border-radius: 8px; background: repeating-linear-gradient(0deg, white 0 25px, #edf1f5 26px 27px); overflow: hidden; }
 .empty-line { position: absolute; height: 3px; background: var(--accent); border-radius: 5px; transform-origin: left center; }
@@ -112,9 +119,10 @@ button.status-inline:hover, button.status-inline:focus-visible { color: var(--ac
 .print-button span { margin-left: 6px; }
 .segment-bar, .tab-bar, .period-switch { display: flex; flex-wrap: wrap; gap: 8px; }
 .segment-bar { margin-bottom: 12px; }
-.tab-bar { margin-bottom: 12px; }
+.tab-bar { margin-bottom: 12px; padding-right: 34px; }
 .segment-bar button, .tab-bar button, .period-switch button { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--text); font-size: 13px; white-space: nowrap; }
 .segment-bar button.active, .tab-bar button.active, .period-switch button.active { border-color: var(--accent); color: var(--accent); }
+.tab-bar button { font-size: 16px; }
 .report-content { display: grid; gap: 14px; }
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .metric-card { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
@@ -176,7 +184,7 @@ tbody tr:hover { background: #f5f7fb; }
 
 @media print {
   :root, body { background: white; }
-  .sidebar, .tab-bar, .segment-bar, .print-button, .secondary-button { display: none !important; }
+  .sidebar, .tab-bar, .segment-bar, .print-button, .secondary-button, .report-help-button, .report-help, .buy-hold-dialog { display: none !important; }
   .workspace { display: block; min-height: 0; padding: 0; }
   .results { border: 0; padding: 0; }
   .results-header { margin-bottom: 8px; }

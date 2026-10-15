@@ -54,6 +54,41 @@ def _login(client: TestClient) -> None:
     assert response.json()["user_id"] == "demo"
 
 
+def test_buy_hold_owner_persistence_copy_and_viewer_isolation(fake_visual_portfolio_auth, monkeypatch, tmp_path):
+    import strategy_report.buy_hold as bh
+    monkeypatch.setattr(bh, "_market_data", lambda *args: ([
+        {"date": "2024-01-02", "close": 100}, {"date": "2024-01-05", "close": 110}], []))
+    body = ('<策略回測><參數><策略>Demo</策略></參數><策略交易>'
+            '<Trade time_stamp="2024/01/02 09:00:00" bs="B" contract="1" price="100"/>'
+            '<Trade time_stamp="2024/01/05 09:00:00" bs="S" contract="1" price="105"/>'
+            '</策略交易></策略回測>').encode()
+    with TestClient(app) as client:
+        _login(client)
+        item = client.post("/api/performances", files={"file": ("demo.srp", body)}).json()["performance"]
+        item_id = item["performance_id"]
+        path = tmp_path / "reports" / item_id / "config.json"
+        response = client.post(f"/api/performances/{item_id}/report", json={"buy_hold": {"amount_wan": 100}})
+        assert response.status_code == 200
+        assert response.json()["buy_hold"]["final_capital"] == 1100000
+        saved = path.read_bytes()
+        assert json.loads(saved)["buy_hold"]["amount_wan"] == "100"
+        copy = client.post(f"/api/performances/{item_id}/copy", json={}).json()["performance"]
+        assert copy["performance_id"] != item_id
+        assert copy["settings"]["buy_hold"] == json.loads(saved)["buy_hold"]
+        client.post("/api/auth/login", json={"user_id": "other", "password": "example"})
+        response = client.post(f"/api/performances/{item_id}/report", json={"buy_hold": {"amount_wan": 200}})
+        assert response.status_code == 200
+        assert response.json()["buy_hold"]["final_capital"] == 2200000
+        assert path.read_bytes() == saved
+        response = client.post(f"/api/performances/{item_id}/report", json={"buy_hold": None})
+        assert response.json()["buy_hold"] is None
+        assert path.read_bytes() == saved
+        _login(client)
+        client.post(f"/api/performances/{item_id}/report", json={"buy_hold": None})
+        assert json.loads(path.read_bytes())["buy_hold"] is None
+        assert (path.parent / "source.srp").read_bytes() == body
+
+
 def test_health_and_report_api(fake_visual_portfolio_auth):
     with TestClient(app) as client:
         assert client.get("/api/health").json() == {"status": "ok"}

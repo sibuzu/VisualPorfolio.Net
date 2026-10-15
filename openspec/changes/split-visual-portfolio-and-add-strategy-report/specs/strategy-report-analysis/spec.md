@@ -57,3 +57,32 @@ Strategy Report SHALL use Visual Portfolio's gray-blue background, white bordere
 #### Scenario: Open the authenticated Strategy Report workspace
 - **WHEN** a signed-in user opens the page at desktop or narrow viewport width
 - **THEN** import controls and the report area SHALL be visible without an introductory banner in a responsive layout consistent with Visual Portfolio
+
+### Requirement: Optional independent Buy and Hold reference
+Strategy Report SHALL offer a Visual Portfolio styled Buy&Hold settings button after the date range and before capital settings, followed by the reference name or 無. The dialog SHALL offer 無, 股票, and 期貨, amount in ten-thousands, code, and futures leverage, without a date field. Its confirmation button SHALL read 設定. The reference SHALL use its own capital and leverage and SHALL be invariant under every strategy capital management mode.
+
+#### Scenario: Automatic reference dates
+- **WHEN** a reference is enabled
+- **THEN** its start SHALL use the specified range start, else the report start, else the first trade date; its end SHALL use the specified end, else report end or last event date
+- **AND** the first available quote on or after the start SHALL define the purchase price
+
+#### Scenario: Reference persistence and disabling
+- **WHEN** the owner applies Buy&Hold settings or selects 無
+- **THEN** the report's config.json SHALL persist the setting, and copying SHALL preserve it under the new report ID
+- **AND** non-owner changes SHALL affect only the current calculation
+
+#### Scenario: Compare capital modes
+- **WHEN** strategy mode, capital, quantity, or risk parameters change while reference settings and dates remain fixed
+- **THEN** the reference series SHALL remain identical; simple curves SHALL show reference profit and compound curves SHALL show its own equity
+
+#### Scenario: Unavailable reference data
+- **WHEN** the provider fails or no prices exist for the requested range
+- **THEN** the strategy report SHALL remain available with a visible reference error and no fabricated reference curve
+
+### Requirement: Desktop report tab labels and Visual Portfolio summary layout
+Strategy Report SHALL use the tabs 單口策略績效, 複合投資績效, 單口獲利曲線, 單口交易明細, 複合投資明細, 逐年獲利分佈, 複合資金曲線. Summary cards, labels, responsive columns, MDD table, Annual Profits and Month Profits tables SHALL match Visual Portfolio's presentation.
+
+#### Scenario: Navigate and recalculate
+- **WHEN** users select a report tab and change capital settings
+- **THEN** that tab SHALL remain selected while its results update automatically
+- **AND** simple and compound tabs SHALL show their respective calculations

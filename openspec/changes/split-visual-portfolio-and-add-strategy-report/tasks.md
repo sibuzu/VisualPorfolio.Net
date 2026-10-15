@@ -76,3 +76,10 @@
 - [x] 9.7 Keep performance index metadata in SQLite, move capital management/date settings to per-report `config.json`, migrate existing settings, and verify owner persistence, viewer isolation, copying, and restart behavior.
 - [x] 9.8 Rename the performance index to root `data/db/reporsts.db`, bind mount host `data/db/`, and migrate and verify existing database records.
 - [x] 9.9 Make the owner's edit status icon open the home page rename flow and verify workspace/home name updates and non-owner view-only status.
+
+## 10. Buy&Hold reference and report presentation
+
+- [x] 10.1 Add optional independent stock/futures Buy&Hold calculations, automatic report/range dates, cached market data, and graceful provider failure handling.
+- [x] 10.2 Add the Visual Portfolio style Buy&Hold settings dialog with 無, no date input, 設定 action, and reference label/curves; preserve owner persistence and viewer isolation.
+- [x] 10.3 Match Visual Portfolio Summary cards, MDD and period tables, and replace report navigation with the seven desktop StrategyReport tab names.
+- [x] 10.4 Verify calculation invariance, date selection, stock/futures fixtures, saved/copy settings, browser layout, and deployed containers.

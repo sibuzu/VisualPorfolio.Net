@@ -1,5 +1,7 @@
 <script setup>
 import * as echarts from 'echarts'
+import BuyHoldDialog from './BuyHoldDialog.vue'
+import SummaryPanel from './SummaryPanel.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const modeOptions = [
@@ -41,7 +43,7 @@ const settings = ref({
   initial_risk_ratio: 0.02, profit_risk_ratio: 0.05, loss_per_trade: 10000,
   margin_ratio: 0.1, margin_per_quantity: 100000, stake_percent: 10,
   chip_size: 0, maximum_quantity: 0, integer_quantity: false,
-  date_start: '', date_end: ''
+  date_start: '', date_end: '', buy_hold: null
 })
 const authUser = ref('')
 const authReady = ref(false)
@@ -65,9 +67,10 @@ const report = ref(null)
 const settingsDirty = ref(false)
 const busy = ref(false)
 const error = ref('')
-const activeTab = ref('overview')
-const activeSection = ref('compound')
-const activePeriod = ref('monthly')
+const activeTab = ref('simple-summary')
+const activePeriod = ref('annual')
+const buyHoldOpen = ref(false)
+const reportHelpOpen = ref(false)
 const chartElement = ref(null)
 let chart = null
 let resizeObserver = null
@@ -84,11 +87,27 @@ const currentDetails = computed(() => currentSection.value?.detail || [])
 const source = computed(() => report.value?.source || null)
 const periodLabels = { annual: '年度', monthly: '月份', weekly: '週別', daily: '日期' }
 const tabs = [
-  { value: 'overview', label: '績效總覽' },
-  { value: 'periods', label: '週期報表' },
-  { value: 'details', label: '交易明細' },
-  { value: 'parameters', label: '策略參數' }
+  { value: 'simple-summary', label: '單口策略績效', section: 'simple', view: 'summary' },
+  { value: 'compound-summary', label: '複合投資績效', section: 'compound', view: 'summary' },
+  { value: 'simple-curve', label: '單口獲利曲線', section: 'simple', view: 'curve' },
+  { value: 'simple-details', label: '單口交易明細', section: 'simple', view: 'details' },
+  { value: 'compound-details', label: '複合投資明細', section: 'compound', view: 'details' },
+  { value: 'periods', label: '逐年獲利分佈', section: 'compound', view: 'periods' },
+  { value: 'compound-curve', label: '複合資金曲線', section: 'compound', view: 'curve' }
 ]
+const selectedTab = computed(() => tabs.find(tab => tab.value === activeTab.value) || tabs[0])
+const activeSection = computed(() => selectedTab.value.section)
+const activeView = computed(() => selectedTab.value.view)
+const buyHoldName = computed(() => {
+  const bh = settings.value.buy_hold
+  if (!bh) return '無'
+  const suffix = bh.product_type === '期貨' ? `_${Number(bh.leverage)}X` : ''
+  return `BH${bh.code}_${Number(bh.amount_wan)}萬${suffix}`
+})
+function applyBuyHold(value) {
+  settings.value.buy_hold = value
+  buyHoldOpen.value = false
+}
 
 function formatNumber(value, digits = 2) {
   return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(Number(value || 0))
@@ -165,7 +184,8 @@ async function openPerformance(itemId, pushRoute = true) {
     settings.value = {
       ...settings.value, ...data.performance.settings,
       date_start: data.performance.settings.date_start || '',
-      date_end: data.performance.settings.date_end || ''
+      date_end: data.performance.settings.date_end || '',
+      buy_hold: data.performance.settings.buy_hold || null
     }
     dateRangeEnabled.value = Boolean(settings.value.date_start || settings.value.date_end)
     if (pushRoute) window.history.pushState({}, '', `/performances/${itemId}`)
@@ -377,6 +397,9 @@ function toggleAuthMode() {
 }
 
 function clearReport() {
+  buyHoldOpen.value = false
+  reportHelpOpen.value = false
+  activeTab.value = 'simple-summary'
   reportRequestId += 1
   clearTimeout(recalculateTimer)
   recalculateTimer = null
@@ -443,7 +466,6 @@ async function calculate() {
     report.value = data
     currentPerformance.value = { ...currentPerformance.value, settings: payload }
     settingsDirty.value = JSON.stringify(settingsPayload()) !== payloadKey
-    activeTab.value = 'overview'
     await nextTick()
     renderChart()
   } catch (cause) {
@@ -461,7 +483,7 @@ async function calculate() {
 }
 
 function renderChart() {
-  if (activeTab.value !== 'overview' || !chartElement.value || !currentSection.value) return
+  if (!['curve', 'periods'].includes(activeView.value) || !chartElement.value || !currentSection.value) return
   if (chart && chart.getDom() !== chartElement.value) {
     resizeObserver?.disconnect()
     chart.dispose()
@@ -472,29 +494,52 @@ function renderChart() {
     resizeObserver = new ResizeObserver(() => chart?.resize())
     resizeObserver.observe(chartElement.value)
   }
+  if (activeView.value === 'periods') {
+    const simple = report.value.simple.periods[activePeriod.value] || []
+    const compound = report.value.compound.periods[activePeriod.value] || []
+    const periods = [...new Set([...simple, ...compound].map(row => row.period))].sort()
+    chart.setOption({
+      tooltip: { trigger: 'axis', valueFormatter: value => formatNumber(value) },
+      legend: { bottom: 4 }, grid: { left: 70, right: 24, top: 28, bottom: 60 },
+      xAxis: { type: 'category', data: periods },
+      yAxis: { type: 'value', axisLabel: { formatter: value => formatNumber(value, 0) } },
+      dataZoom: [{ type: 'inside' }, { type: 'slider', height: 14, bottom: 32 }],
+      series: [
+        { name: '單口策略績效', type: 'bar', itemStyle: { color: '#0b7183' }, data: periods.map(period => simple.find(row => row.period === period)?.profit ?? 0) },
+        { name: '複合投資績效', type: 'bar', itemStyle: { color: '#d77953' }, data: periods.map(period => compound.find(row => row.period === period)?.profit ?? 0) }
+      ]
+    }, true)
+    chart.resize()
+    return
+  }
   const curve = currentSection.value.curve || []
-  const showZoom = curve.length > 30
+  const reference = report.value.buy_hold
+  const hasReference = Boolean(reference?.curve?.length)
+  const showZoom = Math.max(curve.length, reference?.curve?.length || 0) > 30
   const hasDrawdown = curve.some(row => row.drawdown > 0)
+  const timestamp = value => new Date(value.length === 10 ? `${value}T00:00:00` : value.replace(' ', 'T')).getTime()
+  const equityName = activeSection.value === 'simple' ? '獲利' : '資金'
   chart.setOption({
     animationDuration: 350,
     grid: { left: 66, right: hasDrawdown ? 70 : 24, top: 28, bottom: showZoom ? 60 : 38 },
     tooltip: { trigger: 'axis', valueFormatter: value => formatNumber(value, 2) },
-    legend: { bottom: 4, data: ['淨值', '回撤'] },
-    xAxis: { type: 'category', data: curve.map(row => row.timestamp.slice(0, 10)), boundaryGap: false, axisLabel: { hideOverlap: true } },
+    legend: { bottom: 4, data: [equityName, '回撤', ...(hasReference ? [reference.name] : [])] },
+    xAxis: { type: 'time', boundaryGap: false, axisLabel: { hideOverlap: true } },
     yAxis: [
       { type: 'value', scale: true, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { lineStyle: { color: '#e6ecec' } } },
       { type: 'value', name: '回撤', min: 0, show: hasDrawdown, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { show: false } }
     ],
     dataZoom: [{ type: 'inside' }, ...(showZoom ? [{ type: 'slider', height: 14, bottom: 32, borderColor: 'transparent' }] : [])],
     series: [
-      { name: '淨值', type: 'line', data: curve.map(row => row.equity), showSymbol: false, smooth: false, lineStyle: { width: 2.5, color: '#0b7183' }, areaStyle: { color: 'rgba(11,113,131,.10)' } },
-      { name: '回撤', type: 'line', yAxisIndex: 1, data: curve.map(row => row.drawdown), showSymbol: false, lineStyle: { width: 1.5, color: '#d77953' } }
+      { name: equityName, type: 'line', data: curve.map(row => [timestamp(row.timestamp), row.equity]), showSymbol: false, smooth: false, lineStyle: { width: 2.5, color: '#0b7183' }, itemStyle: { color: '#0b7183' }, areaStyle: { color: 'rgba(11,113,131,.10)' } },
+      { name: '回撤', type: 'line', yAxisIndex: 1, data: curve.map(row => [timestamp(row.timestamp), row.drawdown]), showSymbol: false, lineStyle: { width: 1.5, color: '#d77953' }, itemStyle: { color: '#d77953' } },
+      ...(hasReference ? [{ name: reference.name, type: 'line', data: reference.curve.map(row => [timestamp(row.timestamp), activeSection.value === 'simple' ? row.profit : row.equity]), showSymbol: false, lineStyle: { width: 2, color: '#7c3aed' }, itemStyle: { color: '#7c3aed' } }] : [])
     ]
   }, true)
   chart.resize()
 }
 
-watch([activeTab, activeSection, report], () => nextTick(renderChart))
+watch([activeTab, activePeriod, report], () => nextTick(renderChart))
 function scheduleRecalculation() {
   if (!report.value || !currentPerformance.value) return
   settingsDirty.value = true
@@ -645,6 +690,11 @@ onMounted(() => {
               <span class="range-sep">~</span>
               <input v-model="settings.date_end" type="date" class="range-date-input" aria-label="結束日期" :disabled="!dateRangeEnabled" />
             </div>
+            <div class="buy-hold-row">
+              <button type="button" class="copy-project-btn" @click="buyHoldOpen = true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" /></svg><span>Buy&amp;Hold</span></button>
+              <span class="muted">{{ buyHoldName }}</span>
+            </div>
+            <p v-if="report?.buy_hold?.error" class="error-message" role="alert">{{ report.buy_hold.error }}</p>
             <h3 class="capital-title">資金管理</h3>
             <div class="form-stack">
               <label class="field"><span>管理模式</span><select v-model="settings.mode"><option v-for="option in modeOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
@@ -668,35 +718,32 @@ onMounted(() => {
           </div>
 
           <template v-else>
-            <div class="results-header">
-              <div><h2>{{ currentPerformance.name }}</h2><p>{{ source.strategy }} · {{ source.filename }} · {{ source.format.toUpperCase() }} · {{ formatNumber(source.trade_count, 0) }} 筆交易 · {{ source.symbol }}</p></div>
-              <button type="button" class="print-button" @click="printReport">列印 / 儲存 PDF <span aria-hidden="true">↗</span></button>
+            <nav class="tab-bar" aria-label="報表內容"><button v-for="tab in tabs" :key="tab.value" type="button" :class="{ active: activeTab === tab.value }" :aria-pressed="activeTab === tab.value" @click="activeTab = tab.value">{{ tab.label }}</button></nav>
+            <button type="button" class="report-help-button" aria-label="報表說明" title="報表說明" :aria-expanded="reportHelpOpen" @click="reportHelpOpen = !reportHelpOpen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" /></svg></button>
+            <div v-if="reportHelpOpen" class="report-help">
+              <p>{{ source.strategy }} · {{ source.filename }} · {{ source.format.toUpperCase() }}</p>
+              <p>單口策略績效顯示原始策略損益；複合投資績效套用左側資金管理設定（{{ resultModeLabel }}）。Buy&amp;Hold 使用自己的金額，單口獲利曲線顯示其損益，複合資金曲線顯示其資金淨值。</p>
+              <p>初始資金：{{ formatNumber(currentSummary.initial_capital) }} · 最終淨值：{{ formatNumber(currentSummary.final_capital) }} · 每大點價值：{{ formatNumber(source.point_value) }} · 交易成本：{{ currentSummary.trade_cost }}</p>
+              <details><summary>策略參數</summary><div class="table-scroll"><table><thead><tr><th>參數</th><th>數值</th></tr></thead><tbody><tr v-for="(value, name) in { ...source.params, ...source.strategy_params }" :key="name"><td>{{ name }}</td><td>{{ value }}</td></tr></tbody></table></div></details>
+              <button type="button" class="print-button" @click="printReport">列印 / 儲存 PDF</button>
             </div>
-            <p class="print-meta">資金管理：{{ activeSection === 'simple' ? '單純績效' : resultModeLabel }} · 初始資金：{{ formatNumber(currentSummary.initial_capital) }} · 分析區間：{{ currentSummary.start_date || '—' }} 至 {{ currentSummary.end_date || '—' }}</p>
-            <div class="segment-bar"><button type="button" :class="{ active: activeSection === 'simple' }" @click="activeSection = 'simple'">單純績效</button><button type="button" :class="{ active: activeSection === 'compound' }" @click="activeSection = 'compound'">資金管理 · {{ resultModeLabel }}</button></div>
-            <nav class="tab-bar" aria-label="報表內容"><button v-for="tab in tabs" :key="tab.value" type="button" :class="{ active: activeTab === tab.value }" @click="activeTab = tab.value">{{ tab.label }}</button></nav>
-
-            <div v-if="activeTab === 'overview'" class="report-content">
-              <div class="metric-grid">
-                <div class="metric-card primary"><span>最終淨值</span><strong>{{ formatNumber(currentSummary.final_capital) }}</strong><small>起始 {{ formatNumber(currentSummary.initial_capital) }}</small></div>
-                <div class="metric-card"><span>淨利</span><strong :class="{ negative: currentSummary.net_profit < 0 }">{{ formatNumber(currentSummary.net_profit) }}</strong><small>{{ formatNumber(currentSummary.trade_count, 0) }} 筆交易</small></div>
-                <div class="metric-card"><span>最大回撤</span><strong class="drawdown-value">{{ formatNumber(currentSummary.max_drawdown) }}</strong><small>{{ formatPercent(currentSummary.max_drawdown_pct) }}</small></div>
-                <div class="metric-card"><span>獲利 / 回撤</span><strong>{{ formatNumber(currentSummary.profit_over_mdd, 3) }}</strong><small>Sharpe {{ formatNumber(currentSummary.sharpe_ratio) }}</small></div>
-              </div>
-              <div class="panel chart-panel"><div class="section-heading"><div><span class="section-kicker">PERFORMANCE CURVE</span><h3>淨值與回撤</h3></div><span class="date-badge">{{ currentSummary.start_date || '—' }} → {{ currentSummary.end_date || '—' }}</span></div><div ref="chartElement" class="chart" role="img" :aria-label="`淨值與回撤圖，最終淨值 ${formatNumber(currentSummary.final_capital)}`"></div></div>
-              <div class="panel detail-metrics"><div class="section-heading"><div><span class="section-kicker">KEY METRICS</span><h3>績效指標</h3></div></div><div class="metrics-list"><div><span>平均每筆淨利</span><strong>{{ formatNumber(currentSummary.average_net_profit) }}</strong></div><div><span>勝率</span><strong>{{ formatPercent(currentSummary.win_rate_pct) }}</strong></div><div><span>獲利因子</span><strong>{{ formatNumber(currentSummary.profit_factor) }}</strong></div><div><span>Sortino</span><strong>{{ formatNumber(currentSummary.sortino_ratio) }}</strong></div><div><span>Earning Power</span><strong>{{ formatPercent(currentSummary.earning_power_pct) }}</strong></div><div><span>每大點價值</span><strong>{{ formatNumber(currentSummary.big_point_value) }}</strong></div><div><span>交易成本</span><strong>{{ currentSummary.trade_cost }}</strong></div><div v-if="activeSection === 'compound'"><span>年化報酬率</span><strong>{{ formatPercent(currentSummary.annual_return_pct) }}</strong></div></div></div>
-              <div v-if="currentSection.drawdowns?.length" class="panel drawdown-panel"><div class="section-heading"><div><span class="section-kicker">DRAWDOWN</span><h3>主要回撤區間</h3></div></div><div class="table-scroll"><table><thead><tr><th>起點</th><th>谷底</th><th>恢復</th><th class="numeric">金額</th><th class="numeric">比率</th></tr></thead><tbody><tr v-for="(row, index) in currentSection.drawdowns" :key="index"><td>{{ row.started_at?.slice(0, 10) }}</td><td>{{ row.bottomed_at?.slice(0, 10) }}</td><td>{{ row.recovered_at?.slice(0, 10) || '未恢復' }}</td><td class="numeric">{{ formatNumber(row.amount) }}</td><td class="numeric">{{ formatPercent(row.percent) }}</td></tr></tbody></table></div></div>
+            <p class="print-meta">{{ currentPerformance.name }} · {{ selectedTab.label }} · 資金管理：{{ resultModeLabel }} · 初始資金：{{ formatNumber(currentSummary.initial_capital) }} · Buy&amp;Hold：{{ buyHoldName }}</p>
+            <SummaryPanel v-if="activeView === 'summary'" :section="currentSection" />
+            <div v-else-if="activeView === 'curve'" class="chart-panel">
+              <h3>{{ selectedTab.label }}</h3>
+              <div ref="chartElement" class="chart" role="img" :aria-label="`${selectedTab.label}，Buy&Hold：${report.buy_hold?.name || '無'}`"></div>
             </div>
 
-            <div v-else-if="activeTab === 'periods'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">PERIOD REPORT</span><h3>週期績效</h3></div><button type="button" class="secondary-button" :disabled="!currentPeriods.length" @click="downloadCsv('periods')">下載 CSV ↓</button></div><div class="period-switch"><button v-for="(label, key) in periodLabels" :key="key" type="button" :class="{ active: activePeriod === key }" @click="activePeriod = key">{{ label }}</button></div><div class="table-scroll"><table><thead><tr><th>期間</th><th class="numeric">損益</th><th class="numeric">累積</th><th v-if="activeSection === 'compound'" class="numeric">報酬率</th></tr></thead><tbody><tr v-for="row in currentPeriods" :key="row.period"><td>{{ row.period }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.cumulative) }}</td><td v-if="activeSection === 'compound'" class="numeric">{{ formatPercent(row.return_pct) }}</td></tr><tr v-if="!currentPeriods.length"><td colspan="4" class="no-data">此區間沒有資料</td></tr></tbody></table></div></div>
+            <div v-else-if="activeView === 'periods'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">PERIOD REPORT</span><h3>逐年獲利分佈</h3></div><button type="button" class="secondary-button" :disabled="!currentPeriods.length" @click="downloadCsv('periods')">下載 CSV ↓</button></div><div class="period-switch"><button v-for="(label, key) in periodLabels" :key="key" type="button" :class="{ active: activePeriod === key }" @click="activePeriod = key">{{ label }}</button></div><div ref="chartElement" class="chart" role="img" aria-label="單口策略與複合投資獲利分佈"></div><div class="table-scroll"><table><thead><tr><th>期間</th><th class="numeric">損益</th><th class="numeric">累積</th><th v-if="activeSection === 'compound'" class="numeric">報酬率</th></tr></thead><tbody><tr v-for="row in currentPeriods" :key="row.period"><td>{{ row.period }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.cumulative) }}</td><td v-if="activeSection === 'compound'" class="numeric">{{ formatPercent(row.return_pct) }}</td></tr><tr v-if="!currentPeriods.length"><td colspan="4" class="no-data">此區間沒有資料</td></tr></tbody></table></div></div>
 
-            <div v-else-if="activeTab === 'details'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">TRADE LOG</span><h3>逐筆交易明細</h3><p>共 {{ formatNumber(currentDetails.length, 0) }} 筆</p></div><button type="button" class="secondary-button" :disabled="!currentDetails.length" @click="downloadCsv('details')">下載 CSV ↓</button></div><div class="table-scroll detail-table"><table><thead><tr><th>時間</th><th>標的</th><th>買賣</th><th class="numeric">口數</th><th class="numeric">價格</th><th class="numeric">部位</th><th class="numeric">損益</th><th class="numeric">累積淨值</th><th>訊號</th></tr></thead><tbody><tr v-for="row in currentDetails" :key="row.index"><td>{{ row.timestamp }}</td><td>{{ row.symbol }}</td><td><span class="side-pill" :class="row.side === 'B' ? 'buy' : 'sell'">{{ row.side === 'B' ? '買進' : '賣出' }}</span></td><td class="numeric">{{ formatNumber(row.quantity, 4) }}</td><td class="numeric">{{ formatNumber(row.price, 4) }}</td><td class="numeric">{{ formatNumber(row.position, 4) }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.equity) }}</td><td>{{ row.action || '—' }}</td></tr><tr v-if="!currentDetails.length"><td colspan="9" class="no-data">此區間沒有交易</td></tr></tbody></table></div></div>
+            <div v-else-if="activeView === 'details'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">TRADE LOG</span><h3>{{ selectedTab.label }}</h3><p>共 {{ formatNumber(currentDetails.length, 0) }} 筆</p></div><button type="button" class="secondary-button" :disabled="!currentDetails.length" @click="downloadCsv('details')">下載 CSV ↓</button></div><div class="table-scroll detail-table"><table><thead><tr><th>時間</th><th>標的</th><th>買賣</th><th class="numeric">口數</th><th class="numeric">價格</th><th class="numeric">部位</th><th class="numeric">損益</th><th class="numeric">累積淨值</th><th>訊號</th></tr></thead><tbody><tr v-for="row in currentDetails" :key="row.index"><td>{{ row.timestamp }}</td><td>{{ row.symbol }}</td><td><span class="side-pill" :class="row.side === 'B' ? 'buy' : 'sell'">{{ row.side === 'B' ? '買進' : '賣出' }}</span></td><td class="numeric">{{ formatNumber(row.quantity, 4) }}</td><td class="numeric">{{ formatNumber(row.price, 4) }}</td><td class="numeric">{{ formatNumber(row.position, 4) }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.equity) }}</td><td>{{ row.action || '—' }}</td></tr><tr v-if="!currentDetails.length"><td colspan="9" class="no-data">此區間沒有交易</td></tr></tbody></table></div></div>
 
-            <div v-else class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">SOURCE PARAMETERS</span><h3>策略參數</h3></div></div><div class="metadata-summary"><div><span>來源格式</span><strong>{{ source.format.toUpperCase() }}</strong></div><div><span>每大點價值</span><strong>{{ formatNumber(source.point_value) }}</strong></div><div><span>報表初始資金</span><strong>{{ source.source_initial_capital == null ? '未提供' : formatNumber(source.source_initial_capital) }}</strong></div><div><span>資金管理模式</span><strong>{{ resultModeLabel }}</strong></div></div><div class="table-scroll"><table><thead><tr><th>參數</th><th>數值</th></tr></thead><tbody><tr v-for="(value, name) in { ...source.params, ...source.strategy_params }" :key="name"><td>{{ name }}</td><td>{{ value }}</td></tr></tbody></table></div></div>
+
           </template>
         </section>
       </div>
     </main>
 
+    <BuyHoldDialog v-if="buyHoldOpen" :settings="settings.buy_hold" @apply="applyBuyHold" @close="buyHoldOpen = false" />
   </div>
 </template>

@@ -8,9 +8,11 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, ValidationError
 from starlette.datastructures import UploadFile
+from starlette.concurrency import run_in_threadpool
 
 from .analysis import CalculationSettings, analyze_report
 from .auth import require_user, router as auth_router
+from .buy_hold import analyze_buy_hold
 from .importer import MAX_UPLOAD_BYTES, ReportFormatError, parse_report
 from .storage import (
     copy_performance, create_performance, delete_performance, get_performance,
@@ -26,6 +28,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Strategy Report API", version="0.1.0", lifespan=lifespan)
 app.include_router(auth_router)
+
+
+def analyze_with_reference(source, settings: CalculationSettings) -> dict:
+    result = analyze_report(source, settings)
+    result["buy_hold"] = analyze_buy_hold(source, settings.buy_hold, settings.date_start, settings.date_end)
+    return result
 
 
 class PerformancePatch(BaseModel):
@@ -62,7 +70,7 @@ async def create_report(request: Request, _: str = Depends(require_user)) -> dic
             raise HTTPException(status_code=413, detail="Report exceeds 20 MiB upload limit")
         try:
             source = parse_report(file.filename or "", content)
-            return analyze_report(source, cfg)
+            return await run_in_threadpool(analyze_with_reference, source, cfg)
         except ReportFormatError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -138,7 +146,7 @@ def calculate_performance(item_id: str, settings: CalculationSettings, user_id: 
     item, content = get_performance(user_id, item_id, include_content=True)
     try:
         source = parse_report(item["filename"], content or b"")
-        result = analyze_report(source, settings)
+        result = analyze_with_reference(source, settings)
     except ReportFormatError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     save_settings(user_id, item_id, settings)

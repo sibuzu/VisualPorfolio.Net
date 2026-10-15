@@ -81,3 +81,9 @@ Alternative considered: expose a second public API hostname. A same-origin proxy
 
 - Which exact C# report fields and capital modes are release critical beyond the requested `.srp`/`.sea` import? This design plans all visible modes and core report sections; the parity inventory will identify unsupported edge cases before launch.
 - Who controls the Cloudflare tunnel and DNS record for `strategyreport.sibuzu.com`? The code can prepare and test the route definition; going live needs that operator's action.
+
+### Buy&Hold and report presentation
+
+A nullable `buy_hold` object in CalculationSettings stores product, code, amount_wan and futures leverage in the existing per-report config.json. A separate calculation accepts only these fields and the effective date range, never strategy sizing parameters. FinMind quotes are cached in a bounded hourly in-memory cache. Stock references reinvest cash dividends on ex-dates, apply stock dividends and recognize large integer split ratios using Visual Portfolio's price-ratio heuristic. Futures references use the nearest monthly daytime contract, fixed initial exposure, and roll at the prior session's prices so contract spreads are not counted as returns. Missing rollover quotes produce a reference error. No benchmark source files or Visual Portfolio projects are created.
+
+The benchmark response carries its own equity and profit series. Time axes align it with strategy event times; the simple chart shows profit and the compound chart shows equity. The seven desktop tabs replace the former section selector and Web-specific tabs. SummaryPanel reproduces Visual Portfolio's card labels and styles with existing StrategyReport metrics; period MDD is calculated within each period. The report help panel retains source parameters and browser printing.

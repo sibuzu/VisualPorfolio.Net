@@ -68,3 +68,15 @@ docker compose -f docker/strategy-report/docker-compose.yml down
 Visual Portfolio containers and their `data/` and `data-beta/` directories remain in place.
 
 To revert to a Strategy Report backend from before per-report JSON settings, stop the stack and restore a matching pre-upgrade database and report-directory backup. `reporsts.db.before-config-json` (or the older `performances.db.before-config-json` backup) preserves the database at the settings migration boundary; it does not include later edits.
+
+## Buy&Hold reference
+
+The button below the date range opens the Visual Portfolio style settings dialog. Select 無 to disable the reference, 股票 for a stock/ETF, or 期貨 for a futures contract. Set amount in 萬, code (for example 0050 or TX), and futures leverage, then press 設定. No manual benchmark date is needed: the selected range start takes priority over the source report start, falling back to the first trade. The selected range end, source report end, or last event limits quotes. Holidays advance the purchase to the first available trading day.
+
+The reference uses its own amount and leverage; strategy capital management never rescales it. Stock cash dividends are reinvested on ex-dates; stock dividends and large integer price splits are accounted for (split detection follows Visual Portfolio's heuristic, not a full corporate-action database). Futures use daytime nearest-month prices, fixed initial exposure, and prior-session rollover prices to exclude contract spreads. Both omit commissions and taxes. A provider error or missing rollover quote shows a message while retaining the strategy report.
+
+行情來源：[FinMind 股票行情](https://finmind.github.io/tutor/TaiwanMarket/Technical/)、[配息欄位](https://finmind.github.io/tutor/TaiwanMarket/Fundamental/)、[期貨行情](https://finmind.github.io/tutor/TaiwanMarket/Derivative/)。The backend caches successful quote requests for the current hour. Optionally provide `FINMIND_TOKEN` through the shell or Compose `--env-file`; the token stays in the backend environment. Anonymous access remains subject to FinMind's limits.
+
+`config.json` stores `buy_hold: null` for 無, or for example `{"product_type":"股票","code":"0050","amount_wan":"100","leverage":"5"}`. Existing configs default to 無. Owner edits persist; viewer edits remain temporary; copies inherit the saved reference settings. No extra report directories or database columns are needed.
+
+The report uses the desktop tab labels: 單口策略績效、複合投資績效、單口獲利曲線、單口交易明細、複合投資明細、逐年獲利分佈、複合資金曲線. Summary cards and tables follow Visual Portfolio. The question-mark control contains report help, source parameters, and print/PDF.

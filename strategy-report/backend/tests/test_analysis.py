@@ -73,6 +73,25 @@ def test_slippage_is_charged_to_trade_profit():
     assert report["simple"]["summary"]["net_profit"] == 1600
 
 
+def test_summary_win_loss_totals_and_period_drawdowns():
+    original = _source()
+    events = original.events + (
+        TradeEvent(2, datetime(2024, 2, 1, 9), "B", Decimal(1), Decimal(100), "TXF"),
+        TradeEvent(3, datetime(2024, 2, 2, 9), "S", Decimal(1), Decimal(95), "TXF"),
+    )
+    source = ReportSource("srp", "demo.srp", "Demo", "TXF", {}, {}, events, point_value=Decimal(200))
+    report = analyze_report(source, CalculationSettings(mode="backtest"))
+    for name in ("simple", "compound"):
+        section = report[name]
+        summary = section["summary"]
+        assert summary["winning_profit"] == 2000
+        assert summary["losing_profit"] == -1000
+        assert summary["winning_profit"] + summary["losing_profit"] == summary["net_profit"]
+        assert summary["winning_count"] + summary["losing_count"] == summary["trade_count"]
+        assert [row["mdd"] for row in section["periods"]["monthly"]] == [0, 1000]
+        assert section["periods"]["annual"][0]["mdd"] == 1000
+
+
 def test_losing_trade_and_overlapping_strategies():
     original = _source()
     loss_events = (
