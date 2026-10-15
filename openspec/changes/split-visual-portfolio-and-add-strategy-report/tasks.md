@@ -75,3 +75,4 @@
 
 - [x] 9.7 Keep performance index metadata in SQLite, move capital management/date settings to per-report `config.json`, migrate existing settings, and verify owner persistence, viewer isolation, copying, and restart behavior.
 - [x] 9.8 Rename the performance index to root `data/db/reporsts.db`, bind mount host `data/db/`, and migrate and verify existing database records.
+- [x] 9.9 Make the owner's edit status icon open the home page rename flow and verify workspace/home name updates and non-owner view-only status.

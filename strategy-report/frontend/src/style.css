@@ -61,6 +61,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .copy-project-btn svg { width: 16px; height: 16px; fill: currentColor; }
 .copy-project-btn:hover { border-color: var(--accent); color: var(--accent); }
 .status-inline { display: inline-flex; align-items: center; justify-content: center; flex: none; color: #6b7280; }
+button.status-inline { border: 0; padding: 0; background: transparent; }
+button.status-inline:hover, button.status-inline:focus-visible { color: var(--accent); }
 .status-inline svg { width: 18px; height: 18px; fill: currentColor; }
 .hint { margin: 0 0 4px; color: #0f766e; font-size: 12px; }
 .upload-panel, .settings-panel { padding: 12px 0; }

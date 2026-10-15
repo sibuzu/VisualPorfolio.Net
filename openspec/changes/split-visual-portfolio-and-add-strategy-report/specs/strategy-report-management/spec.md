@@ -38,6 +38,10 @@ The report workspace sidebar SHALL follow Visual Portfolio's project page layout
 - **WHEN** the owner changes the display name
 - **THEN** subsequent list and report views SHALL show the new name while the `SR-` ID remains fixed
 
+#### Scenario: Rename from the workspace
+- **WHEN** the owner clicks the workspace's edit status icon
+- **THEN** it SHALL open the same rename prompt as the home page and update the workspace and home listing after saving; a non-owner's view status icon SHALL remain informational
+
 ### Requirement: Enforce account ownership
 All saved-performance operations SHALL require login. Owner lists SHALL contain only the caller's records; important lists and known performance URLs SHALL allow signed-in viewers. Metadata changes and deletion SHALL require ownership. A non-owner SHALL be allowed to recalculate with temporary settings without changing the saved settings.
 
