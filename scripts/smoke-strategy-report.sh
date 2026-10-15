@@ -28,6 +28,8 @@ curl --fail --silent --show-error "$base_url/" | grep -q 'Strategy Report'
 curl --fail --silent --show-error "$base_url/api/health" | python3 -c 'import json,sys; assert json.load(sys.stdin)["status"] == "ok"'
 status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$base_url/api/auth/me")"
 test "$status" = 401
+status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$base_url/api/performances")"
+test "$status" = 401
 status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -F "file=@$scratch/demo.srp" "$base_url/api/report")"
 test "$status" = 401
 

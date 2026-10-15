@@ -5,7 +5,7 @@ The repository currently places Visual Portfolio's application code at the root,
 ## What Changes
 
 - **BREAKING** for source paths and build commands: move the existing `backend/` and `frontend/` into `visual-portfolio/`, and update only the paths, scripts, documentation, and Docker build references needed for the move. Preserve Visual Portfolio's code behavior, URLs, API, and persistent data; add no Visual Portfolio features or shared parser refactor.
-- Add an independent `strategy-report/` Web app based on the C# StrategyReport. It imports `.srp` and `.sea` and presents its single strategy and capital managed summaries, details, tables, and charts in a browser, with browser friendly report export.
+- Add an independent `strategy-report/` Web app based on the C# StrategyReport. It imports `.srp` and `.sea`, saves each user's performances with stable file-derived IDs, and presents single strategy and capital managed summaries, details, tables, and charts in a browser, with browser friendly report export.
 - Add `docker/strategy-report/` for the new frontend and backend, including the ingress configuration needed for `https://strategyreport.sibuzu.com/`.
 - Define parity fixtures and acceptance checks against C# StrategyReport, including reports whose capital management was already calculated during backtesting.
 
@@ -17,6 +17,7 @@ The repository currently places Visual Portfolio's application code at the root,
 - `strategy-report-import`: Safe upload and normalization of `.srp` and `.sea` strategy reports, including report metadata and capital management flags.
 - `strategy-report-analysis`: Single strategy and capital managed summary, detail, periodic tables, and charts with C# parity rules.
 - `strategy-report-deployment`: Container deployment and documented hostname routing for the Strategy Report Web app.
+- `strategy-report-management`: A Visual Portfolio style management home for saved, user-owned performances, stable IDs, names, and reopening reports.
 
 ### Modified Capabilities
 

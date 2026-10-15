@@ -6,7 +6,7 @@ COPY strategy-report/backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY strategy-report/backend/strategy_report/ ./strategy_report/
 
-RUN useradd --system --uid 10001 --home-dir /app strategyreport
+RUN useradd --system --uid 10001 --home-dir /app strategyreport && mkdir -p /app/data && chown strategyreport:strategyreport /app/data
 USER strategyreport
 
 EXPOSE 8000

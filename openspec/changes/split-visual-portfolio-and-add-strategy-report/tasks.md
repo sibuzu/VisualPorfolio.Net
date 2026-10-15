@@ -35,7 +35,7 @@
 - [x] 5.1 Scaffold `strategy-report/frontend/` as an independent Vue/Vite app with an import screen, validation feedback, and source metadata display.
 - [x] 5.2 Add responsive summary, simple/compound equity and drawdown charts, and annual/monthly/weekly/daily report sections.
 - [x] 5.3 Add chronological trade detail, date range selection, and consistent loading/error/empty states.
-- [x] 5.4 Add capital management mode controls that show relevant fields and recalculate the report; preserve the selected file in the browser for a new request without server persistence.
+- [x] 5.4 Add capital management mode controls that show relevant fields and recalculate the report.
 - [x] 5.5 Add CSV downloads for the displayed detail and period tables plus a readable browser print/PDF layout labeled with source and settings.
 - [x] 5.6 Build the frontend and verify key flows at desktop and narrow viewport widths, including keyboard navigation and chart/table readability.
 - [x] 5.7 Remove the introductory banner and align Strategy Report's responsive CSS and sidebar/content layout with Visual Portfolio.
@@ -54,3 +54,20 @@
 - [x] 7.1 Re-run Visual Portfolio regression tests, frontend build, and production/beta Compose checks; verify its application code changed only as required by source relocation.
 - [x] 7.2 Run the full Strategy Report parity matrix and record any intentional presentation differences or numerical exceptions.
 - [x] 7.3 Document the final repository layout, both applications' local commands, data ownership, supported input formats, and operational limits.
+
+## 8. Saved performance management
+
+- [x] 8.1 Add owner-scoped persistent storage for the original report, name, importance, source metadata, and latest settings on a Strategy Report-only data volume.
+- [x] 8.2 Derive deterministic `SR-` plus six-letter IDs from file SHA-256, reuse the same user's existing record on duplicate upload, and reject abbreviated-ID collisions.
+- [x] 8.3 Add authenticated list, create, open, rename, importance, delete, and saved-report calculation APIs with ownership tests.
+- [x] 8.4 Replace the post-login landing view with Visual Portfolio style performance management and support reopening, renaming, marking important, deleting, and returning from the report workspace.
+- [x] 8.5 Verify the full management flow in a browser and container deployment, including persistence after container rebuild and responsive layout.
+- [x] 8.6 Update the user and deployment documentation for saved performances, their volume, and stable IDs.
+
+## 9. Saved report directories, copies, and shared viewing
+
+- [x] 9.1 Move uploaded report bytes from SQLite BLOBs to `data/reports/SR-XXXXXX/`, including migration of existing saved performances.
+- [x] 9.2 Give copied performances fresh random IDs and separate directories; add copy and download APIs.
+- [x] 9.3 Let authenticated non-owners view and temporarily recalculate a performance while only its owner may persist settings or metadata.
+- [x] 9.4 Update the performance workspace to copy/download and automatically recalculate when settings change; verify the flow in the browser and Docker stack.
+- [x] 9.5 Match Visual Portfolio's report sidebar title, ID/action rows, and optional date range placement without extra workspace actions.

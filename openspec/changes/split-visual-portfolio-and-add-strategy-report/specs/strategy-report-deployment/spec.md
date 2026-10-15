@@ -3,6 +3,8 @@
 ### Requirement: Deploy Strategy Report independently
 The repository SHALL provide `docker/strategy-report/` Dockerfiles and Compose configuration with unique frontend/backend service names on `sibuzu-net`, without mounting Visual Portfolio's production or beta data directories.
 
+The backend SHALL mount a separate persistent Strategy Report data volume for saved performances.
+
 #### Scenario: Start Strategy Report containers
 - **WHEN** an operator builds and starts the Strategy Report Compose stack
 - **THEN** its frontend and backend SHALL become healthy without replacing or stopping Visual Portfolio containers

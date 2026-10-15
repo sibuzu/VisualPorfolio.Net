@@ -10,6 +10,7 @@ visual-portfolio/frontend/dist/
 visual-portfolio/data/
 strategy-report/frontend/node_modules/
 strategy-report/frontend/dist/
+strategy-report/data/
 data/db/*.db
 data/projects/
 data-beta/projects/

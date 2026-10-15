@@ -18,7 +18,7 @@ The requested public hostname is `strategyreport.sibuzu.com`. Its live DNS and t
 - Add features to Visual Portfolio, change its calculations, or extract its parser into a shared package.
 - Rewrite the C# desktop application or duplicate its dockable window layout and RDLC implementation.
 - Add `.pfo`, `.gsea`, `.xrp`, or directory uploads in this change; the new import boundary can be extended later.
-- Combine the two apps' project databases or saved report state in the first release. Strategy Report reuses Visual Portfolio's existing account credentials through its authentication API.
+- Combine the two apps' project databases or saved report state. Strategy Report reuses Visual Portfolio's existing account credentials through its authentication API and stores saved performances in its own data volume.
 - Change live DNS or tunnel settings without access to the deployment account.
 
 ## Decisions
@@ -37,15 +37,15 @@ Alternative considered: extract Visual Portfolio's parser into a shared package.
 
 ### Web interaction and report contract
 
-Use a separate Vue app and FastAPI API. A user selects one `.srp` or `.sea` file, sees parsed metadata and an initial report, changes date range and capital management inputs, and receives recalculated simple and compound sections. Map the C# docked forms into tabs/sections: summary, equity curves, annual/monthly/weekly/daily tables, trade detail, and capital management. Support CSV for tabular data and browser print/PDF styling; leave native `.srp`/`.sea` output for later unless parity testing reveals it is essential.
+Use a separate Vue app and FastAPI API. After login, the user sees a Visual Portfolio style performance management page. The user selects one `.srp` or `.sea` file, optionally names the performance, and opens its saved report. The saved source can be reopened and recalculated after changing date range and capital management inputs. Map the C# docked forms into tabs/sections: summary, equity curves, annual/monthly/weekly/daily tables, trade detail, and capital management. Support CSV for tabular data and browser print/PDF styling; leave native `.srp`/`.sea` output for later unless parity testing reveals it is essential.
 
 Use Visual Portfolio's existing visual language for the Strategy Report Web page: its gray-blue background, white bordered panels, teal accent, compact controls, and sidebar/content workspace. Keep the applications independent in code and deployment. The login screen uses Visual Portfolio's centered card. After login, report controls and results are visible without an introductory banner.
 
-The first release is stateless: calculation requests use the uploaded file only during the request, and no uploaded report is written to the Visual Portfolio data directories. If subsequent interaction needs a cached parse result, use a short lived session cache with explicit expiry and per-session isolation. The API shall enforce upload and decompression limits, reject unsafe ZIP members, and return clear validation errors. The deployment shall impose request size and abuse limits.
+Saved performances use Strategy Report's own SQLite database and Docker volume, with globally unique IDs and an authenticated owner per record. Original file bytes live in `data/reports/SR-XXXXXX/source.srp` or `source.sea`; SQLite holds names, owners, importance, and latest analysis settings. Uploaded `SR-` IDs use six uppercase base-26 letters derived from SHA-256 of the original bytes; copies use six random uppercase letters and a separate directory. Reuploading identical bytes opens the existing record, while a shortened-ID collision with different bytes is rejected. The first start after the storage upgrade migrates legacy SQLite BLOBs into report directories. All authenticated users can view a known performance or an important performance and recalculate with temporary settings. Only the owner may persist settings or edit metadata. The original one-request `/api/report` calculation remains available without saving. Neither path writes to Visual Portfolio's data directories. The API enforces upload and decompression limits, rejects unsafe ZIP members, and returns clear validation errors. The deployment imposes request size and abuse limits.
 
 Strategy Report presents the same login and sign-up flow as Visual Portfolio. Its backend sends credentials to Visual Portfolio's existing authentication API over the internal Docker network, then issues host-only cookies on `strategyreport.sibuzu.com` containing the returned signed session values. Every report request validates those cookies through Visual Portfolio's `/auth/me`. The sites therefore share user IDs and passwords while each hostname maintains its own login session. Strategy Report does not mount or copy `users.db`, and Visual Portfolio application code remains unchanged.
 
-Alternative considered: mount Visual Portfolio's `users.db` and token secret in Strategy Report. Delegating authentication to the existing API keeps account storage and token verification in one place. The requested single report workflow does not require shared project ownership.
+Alternative considered: mount Visual Portfolio's `users.db` and token secret in Strategy Report. Delegating authentication to the existing API keeps account storage and token verification in one place. Saved performances are owned within Strategy Report and never appear as Visual Portfolio projects.
 
 ### Capital management parity
 
@@ -65,7 +65,8 @@ Alternative considered: expose a second public API hostname. A same-origin proxy
 - [Strategy Report's new parser differs from C# results] → Compare paired `.srp`/`.sea` fixtures and C# golden outputs; do not change Visual Portfolio's parser to make them match.
 - [C# capital calculations have hidden edge cases] → Inventory every mode and parameter, then compare trade detail, equity, MDD, and period totals with C# golden outputs for flat, losing, overlapping, and date filtered trades.
 - [Untrusted SEA ZIP consumes excessive resources or escapes paths] → Inspect archive entries without extraction, enforce compressed/uncompressed size and entry count limits, and reject malformed or unsafe members.
-- [Public upload endpoint is abused or leaks report data] → Do not persist uploads by default; restrict request size, isolate sessions, avoid logging report contents, and set deployment rate/access controls before exposing the hostname.
+- [Public upload endpoint is abused or leaks report data] → Require authentication before multipart parsing, restrict request size, enforce user ownership on saved records, avoid logging report contents, and set deployment rate controls before exposing the hostname.
+- [Saved reports are lost during redeployment] → Keep the Strategy Report data directory in its own named Docker volume and document backup and rollback behavior.
 - [Shared account service is unavailable] → Return a service error for login and protected report requests; keep health checks independent of the account service.
 - [DNS/tunnel work is unavailable from this workspace] → Commit a tested ingress example and deployment checklist; verify the live route only once the operator applies it.
 

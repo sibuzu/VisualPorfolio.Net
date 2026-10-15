@@ -6,6 +6,9 @@ services:
     container_name: strategy-report-backend
     environment:
       VISUAL_PORTFOLIO_AUTH_URL: http://visualportfolio-backend:8000
+      STRATEGY_REPORT_DATA_DIR: /app/data
+    volumes:
+      - strategy-report-data:/app/data
     restart: unless-stopped
     networks:
       - sibuzu-net
@@ -37,3 +40,6 @@ services:
 networks:
   sibuzu-net:
     external: true
+
+volumes:
+  strategy-report-data:

@@ -51,19 +51,29 @@ const authUserId = ref('')
 const authPassword = ref('')
 const authPasswordConfirm = ref('')
 const authError = ref('')
+const performances = ref([])
+const importantPerformances = ref([])
+const currentPerformance = ref(null)
+const managementBusy = ref(false)
+const managementError = ref('')
+const newPerformanceName = ref('')
+const copyHint = ref('')
+const dateRangeEnabled = ref(false)
 const fileInput = ref(null)
 const selectedFile = ref(null)
 const report = ref(null)
 const settingsDirty = ref(false)
 const busy = ref(false)
 const error = ref('')
-const dragging = ref(false)
 const activeTab = ref('overview')
 const activeSection = ref('compound')
 const activePeriod = ref('monthly')
 const chartElement = ref(null)
 let chart = null
 let resizeObserver = null
+let reportRequestId = 0
+let recalculateTimer = null
+let calculateQueued = false
 
 const resultModeLabel = computed(() => modeOptions.find(row => row.value === report.value?.settings?.mode)?.label || '')
 const visibleFields = computed(() => fields.filter(row => row.modes.includes(settings.value.mode)))
@@ -89,29 +99,28 @@ function formatPercent(value) {
 }
 
 function chooseFile(file) {
-  if (!file) return
+  selectedFile.value = null
+  if (!file) return false
   const ext = file.name.toLowerCase().split('.').pop()
   if (!['srp', 'sea'].includes(ext)) {
-    error.value = '請選擇 .srp 或 .sea 檔案。'
-    return
+    managementError.value = '請選擇 .srp 或 .sea 檔案。'
+    return false
   }
   if (file.size > 20 * 1024 * 1024) {
-    error.value = '檔案不可超過 20 MiB。'
-    return
+    managementError.value = '檔案不可超過 20 MiB。'
+    return false
   }
   selectedFile.value = file
-  error.value = ''
+  managementError.value = ''
   report.value = null
   settingsDirty.value = false
+  return true
 }
 
-function handleFileInput(event) {
-  chooseFile(event.target.files?.[0])
-}
-
-function handleDrop(event) {
-  dragging.value = false
-  chooseFile(event.dataTransfer?.files?.[0])
+async function handleFileInput(event) {
+  const valid = chooseFile(event.target.files?.[0])
+  event.target.value = ''
+  if (valid) await createPerformance()
 }
 
 function messageFromDetail(detail) {
@@ -120,12 +129,195 @@ function messageFromDetail(detail) {
   return '計算失敗，請檢查檔案與設定。'
 }
 
+function routePerformanceId() {
+  return window.location.pathname.match(/^\/performances\/(SR-[A-Z]{6})\/?$/)?.[1] || ''
+}
+
+function settingsPayload() {
+  const payload = { ...settings.value }
+  if (!dateRangeEnabled.value || !payload.date_start) delete payload.date_start
+  if (!dateRangeEnabled.value || !payload.date_end) delete payload.date_end
+  return payload
+}
+
+async function loadPerformances() {
+  const [ownedResponse, importantResponse] = await Promise.all([
+    fetch('/api/performances', { credentials: 'same-origin' }),
+    fetch('/api/performances/important', { credentials: 'same-origin' })
+  ])
+  const [owned, important] = await Promise.all([
+    ownedResponse.json().catch(() => ({})), importantResponse.json().catch(() => ({}))
+  ])
+  if (!ownedResponse.ok) throw new Error(messageFromDetail(owned.detail))
+  if (!importantResponse.ok) throw new Error(messageFromDetail(important.detail))
+  performances.value = owned.performances || []
+  importantPerformances.value = important.performances || []
+}
+
+async function openPerformance(itemId, pushRoute = true) {
+  managementError.value = ''
+  try {
+    const response = await fetch(`/api/performances/${itemId}`, { credentials: 'same-origin' })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(messageFromDetail(data.detail))
+    clearReport()
+    currentPerformance.value = data.performance
+    settings.value = {
+      ...settings.value, ...data.performance.settings,
+      date_start: data.performance.settings.date_start || '',
+      date_end: data.performance.settings.date_end || ''
+    }
+    dateRangeEnabled.value = Boolean(settings.value.date_start || settings.value.date_end)
+    if (pushRoute) window.history.pushState({}, '', `/performances/${itemId}`)
+    await calculate()
+  } catch (cause) {
+    managementError.value = cause.message || '無法開啟績效。'
+  }
+}
+
+function goHome(pushRoute = true) {
+  currentPerformance.value = null
+  clearReport()
+  if (pushRoute) window.history.pushState({}, '', '/')
+  loadPerformances().catch(cause => { managementError.value = cause.message || '無法載入績效。' })
+}
+
+async function handleRouteChange() {
+  const itemId = routePerformanceId()
+  if (itemId) await openPerformance(itemId, false)
+  else goHome(false)
+}
+
+async function createPerformance() {
+  if (!selectedFile.value || managementBusy.value) return
+  managementBusy.value = true
+  managementError.value = ''
+  try {
+    const form = new FormData()
+    form.append('file', selectedFile.value)
+    form.append('name', newPerformanceName.value.trim())
+    const response = await fetch('/api/performances', { method: 'POST', body: form, credentials: 'same-origin' })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(messageFromDetail(data.detail))
+    newPerformanceName.value = ''
+    await loadPerformances()
+    await openPerformance(data.performance.performance_id)
+  } catch (cause) {
+    managementError.value = cause.message || '建立績效失敗。'
+  } finally {
+    selectedFile.value = null
+    managementBusy.value = false
+  }
+}
+
+async function patchPerformance(itemId, changes) {
+  const response = await fetch(`/api/performances/${itemId}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin', body: JSON.stringify(changes)
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(messageFromDetail(data.detail))
+  performances.value = performances.value.map(item => item.performance_id === itemId ? data.performance : item)
+  if (currentPerformance.value?.performance_id === itemId) currentPerformance.value = data.performance
+  await loadPerformances()
+}
+
+async function copyPerformance(item) {
+  const name = window.prompt('請輸入複製後的績效名稱', `${item.name} 副本`)
+  if (name === null) return
+  try {
+    const response = await fetch(`/api/performances/${item.performance_id}/copy`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify({ name: name.trim() })
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(messageFromDetail(data.detail))
+    await loadPerformances()
+    await openPerformance(data.performance.performance_id)
+  } catch (cause) {
+    if (currentPerformance.value) error.value = cause.message || '複製績效失敗。'
+    else managementError.value = cause.message || '複製績效失敗。'
+  }
+}
+
+function downloadPerformance(item) {
+  window.location.href = `/api/performances/${item.performance_id}/download`
+}
+
+async function copyPerformanceLink(item) {
+  try {
+    const url = `${window.location.origin}/performances/${item.performance_id}`
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = url
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      textarea.remove()
+    }
+    copyHint.value = '已複製績效連結'
+    setTimeout(() => { copyHint.value = '' }, 1500)
+  } catch (cause) {
+    error.value = cause.message || '複製連結失敗。'
+  }
+}
+
+async function renamePerformance(item) {
+  const entered = window.prompt('請輸入新績效名稱', item.name)
+  if (entered === null) return
+  try {
+    await patchPerformance(item.performance_id, { name: entered.trim() })
+  } catch (cause) {
+    if (currentPerformance.value) error.value = cause.message || '改名失敗。'
+    else managementError.value = cause.message || '改名失敗。'
+  }
+}
+
+async function toggleImportant(item) {
+  try {
+    await patchPerformance(item.performance_id, { important: !item.important })
+  } catch (cause) {
+    managementError.value = cause.message || '更新失敗。'
+  }
+}
+
+async function removePerformance(item) {
+  if (!window.confirm(`確定刪除績效「${item.name}」嗎？`)) return
+  try {
+    const response = await fetch(`/api/performances/${item.performance_id}`, {
+      method: 'DELETE', credentials: 'same-origin'
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(messageFromDetail(data.detail))
+    if (currentPerformance.value?.performance_id === item.performance_id) goHome()
+    else await loadPerformances()
+  } catch (cause) {
+    managementError.value = cause.message || '刪除失敗。'
+  }
+}
+
+function formatDate(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('sv-SE')
+}
+
 async function refreshAuth() {
   try {
     const response = await fetch('/api/auth/me', { credentials: 'same-origin' })
     if (response.ok) {
       const data = await response.json()
       authUser.value = data.user_id || ''
+      try {
+        await loadPerformances()
+        if (routePerformanceId()) await openPerformance(routePerformanceId(), false)
+      } catch (cause) {
+        managementError.value = cause.message || '無法載入績效。'
+      }
     } else if (response.status !== 401) {
       const data = await response.json().catch(() => ({}))
       authError.value = messageFromDetail(data.detail)
@@ -165,6 +357,12 @@ async function submitAuth() {
     authMode.value = 'login'
     authPassword.value = ''
     authPasswordConfirm.value = ''
+    try {
+      await loadPerformances()
+      if (routePerformanceId()) await openPerformance(routePerformanceId(), false)
+    } catch (cause) {
+      managementError.value = cause.message || '無法載入績效。'
+    }
   } catch (cause) {
     authError.value = cause.message || '登入失敗。'
   } finally {
@@ -179,6 +377,11 @@ function toggleAuthMode() {
 }
 
 function clearReport() {
+  reportRequestId += 1
+  clearTimeout(recalculateTimer)
+  recalculateTimer = null
+  calculateQueued = false
+  busy.value = false
   resizeObserver?.disconnect()
   resizeObserver = null
   chart?.dispose()
@@ -196,6 +399,11 @@ async function logout() {
     authUser.value = ''
     authMode.value = 'login'
     authPassword.value = ''
+    currentPerformance.value = null
+    performances.value = []
+    importantPerformances.value = []
+    managementError.value = ''
+    window.history.replaceState({}, '', '/')
     clearReport()
   } catch (cause) {
     error.value = cause.message || '登出失敗。'
@@ -203,35 +411,52 @@ async function logout() {
 }
 
 async function calculate() {
-  if (!selectedFile.value || busy.value) return
+  if (!currentPerformance.value) return
+  if (busy.value) {
+    calculateQueued = true
+    return
+  }
+  const itemId = currentPerformance.value.performance_id
+  const requestId = ++reportRequestId
+  const payload = settingsPayload()
+  const payloadKey = JSON.stringify(payload)
   busy.value = true
   error.value = ''
   try {
-    const payload = { ...settings.value }
-    if (!payload.date_start) delete payload.date_start
-    if (!payload.date_end) delete payload.date_end
-    const form = new FormData()
-    form.append('file', selectedFile.value)
-    form.append('settings', JSON.stringify(payload))
-    const response = await fetch('/api/report', { method: 'POST', body: form, credentials: 'same-origin' })
+    const response = await fetch(`/api/performances/${itemId}/report`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: payloadKey, credentials: 'same-origin'
+    })
     const data = await response.json().catch(() => ({}))
+    if (requestId !== reportRequestId || currentPerformance.value?.performance_id !== itemId) return
     if (response.status === 401) {
       authUser.value = ''
       authMode.value = 'login'
+      currentPerformance.value = null
+      performances.value = []
+      importantPerformances.value = []
       clearReport()
       authError.value = '登入已失效，請重新登入。'
       return
     }
     if (!response.ok) throw new Error(messageFromDetail(data.detail))
     report.value = data
-    settingsDirty.value = false
+    currentPerformance.value = { ...currentPerformance.value, settings: payload }
+    settingsDirty.value = JSON.stringify(settingsPayload()) !== payloadKey
     activeTab.value = 'overview'
     await nextTick()
     renderChart()
   } catch (cause) {
-    error.value = cause.message || '無法連線到報表服務。'
+    if (requestId === reportRequestId) error.value = cause.message || '無法連線到報表服務。'
   } finally {
-    busy.value = false
+    if (requestId === reportRequestId) {
+      busy.value = false
+      if (calculateQueued || JSON.stringify(settingsPayload()) !== payloadKey) {
+        calculateQueued = false
+        clearTimeout(recalculateTimer)
+        recalculateTimer = setTimeout(calculate, 350)
+      }
+    }
   }
 }
 
@@ -270,7 +495,14 @@ function renderChart() {
 }
 
 watch([activeTab, activeSection, report], () => nextTick(renderChart))
-watch(settings, () => { if (report.value) settingsDirty.value = true }, { deep: true })
+function scheduleRecalculation() {
+  if (!report.value || !currentPerformance.value) return
+  settingsDirty.value = true
+  clearTimeout(recalculateTimer)
+  recalculateTimer = setTimeout(calculate, 350)
+}
+watch(settings, scheduleRecalculation, { deep: true })
+watch(dateRangeEnabled, scheduleRecalculation)
 
 function csvCell(value) {
   const raw = String(value ?? '')
@@ -307,9 +539,13 @@ function downloadCsv(kind) {
 }
 
 onBeforeUnmount(() => {
+  window.removeEventListener('popstate', handleRouteChange)
   clearReport()
 })
-onMounted(refreshAuth)
+onMounted(() => {
+  window.addEventListener('popstate', handleRouteChange)
+  refreshAuth()
+})
 </script>
 
 <template>
@@ -327,25 +563,87 @@ onMounted(refreshAuth)
       <button type="button" class="auth-switch" @click="toggleAuthMode">{{ authMode === 'login' ? 'Sign up' : 'Back to login' }}</button>
     </section>
   </div>
+  <main v-else-if="!currentPerformance" class="performance-home">
+    <section class="panel home-card">
+      <h1>StrategyReport.Net</h1>
+      <p class="muted">使用者：{{ authUser }}</p>
+      <div class="home-actions">
+        <input v-model.trim="newPerformanceName" type="text" maxlength="160" placeholder="輸入新績效名稱，留空使用 StrategyName" aria-label="新績效名稱" />
+        <input ref="fileInput" type="file" accept=".srp,.sea" class="sr-only" tabindex="-1" @change="handleFileInput" />
+        <button type="button" class="home-file-button" :disabled="managementBusy" @click="fileInput?.click()">{{ managementBusy ? '上傳中…' : '上傳績效' }}</button>
+        <span class="home-spacer"></span>
+        <button type="button" class="home-outline-button" @click="logout">Logout</button>
+      </div>
+      <p class="field-help">績效名稱建立後仍可修改。</p>
+      <p v-if="managementError" class="error-message" role="alert">{{ managementError }}</p>
+    </section>
+
+    <section class="panel home-card">
+      <h2>重要績效</h2>
+      <ul class="performance-list">
+        <li v-for="item in importantPerformances" :key="`important-${item.performance_id}`" class="performance-item">
+          <div><strong>{{ item.name }}</strong><p class="muted">{{ item.performance_id }} · {{ item.owner_id }} <span v-if="formatDate(item.created_at)">({{ formatDate(item.created_at) }})</span></p></div>
+          <button type="button" @click="openPerformance(item.performance_id)">開啟</button>
+        </li>
+      </ul>
+      <p v-if="!importantPerformances.length" class="muted">目前沒有重要績效</p>
+    </section>
+
+    <section class="panel home-card">
+      <h2>個人績效</h2>
+      <ul class="performance-list">
+        <li v-for="item in performances" :key="item.performance_id" class="performance-item">
+          <div><strong>{{ item.name }}</strong><p class="muted">{{ item.performance_id }} <span v-if="formatDate(item.created_at)">({{ formatDate(item.created_at) }})</span> · {{ item.filename }}</p></div>
+          <div class="performance-actions">
+            <button type="button" @click="openPerformance(item.performance_id)">開啟</button>
+            <button type="button" class="home-outline-button" @click="copyPerformance(item)">複製</button>
+            <button type="button" class="home-outline-button" @click="renamePerformance(item)">改名</button>
+            <button type="button" class="home-outline-button" @click="toggleImportant(item)">{{ item.important ? '取消重要' : '設為重要' }}</button>
+            <button type="button" class="home-outline-button" @click="removePerformance(item)">刪除</button>
+          </div>
+        </li>
+      </ul>
+      <p v-if="!performances.length" class="muted">目前沒有績效，請先上傳 .srp 或 .sea 檔案。</p>
+    </section>
+  </main>
   <div v-else class="app-shell">
     <main>
       <div class="workspace">
         <aside class="panel sidebar">
-          <div class="sidebar-title"><h1>Strategy Report</h1><p>策略績效報表</p><div class="session-line"><span>{{ authUser }}</span><button type="button" @click="logout">Logout</button></div></div>
-          <section class="upload-panel">
-            <div class="panel-heading"><h2>匯入報表</h2></div>
-            <div class="drop-zone" :class="{ dragging }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop">
-              <div class="upload-icon" aria-hidden="true">↥</div>
-              <strong>{{ selectedFile ? selectedFile.name : '拖曳檔案到這裡' }}</strong>
-              <span>{{ selectedFile ? `${selectedFile.size < 1024 ? '<1' : formatNumber(selectedFile.size / 1024, 0)} KB · 已選取` : '或點選下方按鈕選擇檔案' }}</span>
-              <input ref="fileInput" type="file" accept=".srp,.sea" class="sr-only" tabindex="-1" @change="handleFileInput" />
-              <button type="button" class="file-button" @click="fileInput?.click()">選擇 .srp / .sea 檔案</button>
-            </div>
-            <p class="privacy-note">檔案僅用於本次計算，不會儲存為專案。上限 20 MiB。</p>
-          </section>
+          <div class="title-row">
+            <h1 class="project-title">{{ currentPerformance.name }}</h1>
+            <a class="back-link" href="/" @click.prevent="goHome()">回主頁</a>
+          </div>
+          <div class="id-line">
+            <span>{{ currentPerformance.performance_id }}</span>
+            <button type="button" class="copy-link-btn" title="複製績效連結" aria-label="複製績效連結" @click="copyPerformanceLink(currentPerformance)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8,11h8v2H8V11z M20.1,12H22c0-2.76-2.24-5-5-5h-4v1.9h4C18.71,8.9,20.1,10.29,20.1,12z M3.9,12c0-1.71,1.39-3.1,3.1-3.1h4 V7H7c-2.76,0-5,2.24-5,5s2.24,5,5,5h4v-1.9H7C5.29,15.1,3.9,13.71,3.9,12z M19,12h-2v3h-3v2h3v3h2v-3h3v-2h-3V12z"/></svg>
+            </button>
+            <span class="status-inline" :title="currentPerformance.is_owner ? '可編輯' : '可檢視'" :aria-label="currentPerformance.is_owner ? '可編輯' : '可檢視'">
+              <svg v-if="currentPerformance.is_owner" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.111,2.293,9.384,11.021a.977.977,0,0,0-.241.39L8.052,14.684A1,1,0,0,0,9,16a.987.987,0,0,0,.316-.052l3.273-1.091a.977.977,0,0,0,.39-.241l8.728-8.727a1,1,0,0,0,0-1.414L19.525,2.293A1,1,0,0,0,18.111,2.293ZM11.732,13.035l-1.151.384.384-1.151L16.637,6.6l.767.767Zm7.854-7.853-.768.767-.767-.767.767-.768ZM3,5h8a1,1,0,0,1,0,2H4V20H17V13a1,1,0,0,1,2,0v8a1,1,0,0,1-1,1H3a1,1,0,0,1-1-1V6A1,1,0,0,1,3,5Z"/></svg>
+              <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062,12.346C3.773,17,7.675,20,12,20s8.227-3,9.938-7.654a.993.993,0,0,0,0-.692C20.227,7,16.325,4,12,4S3.773,7,2.062,11.654A.993.993,0,0,0,2.062,12.346ZM12,6c3.373,0,6.451,2.343,7.929,6-1.478,3.657-4.556,6-7.929,6s-6.451-2.343-7.929-6C5.549,8.343,8.627,6,12,6Zm0,10a4,4,0,1,0-4-4A4,4,0,0,0,12,16Zm0-6a2,2,0,1,1-2,2A2,2,0,0,1,12,10Z"/></svg>
+            </span>
+            <span class="id-line-spacer"></span>
+            <button type="button" class="copy-project-btn" @click="copyPerformance(currentPerformance)">
+              <svg viewBox="0 0 512 512" aria-hidden="true"><path d="M464 0H144c-26.51 0-48 21.49-48 48v48H48c-26.51 0-48 21.49-48 48v320c0 26.51 21.49 48 48 48h320c26.51 0 48-21.49 48-48v-48h48c26.51 0 48-21.49 48-48V48c0-26.51-21.49-48-48-48zM362 464H54a6 6 0 0 1-6-6V150a6 6 0 0 1 6-6h42v224c0 26.51 21.49 48 48 48h224v42a6 6 0 0 1-6 6zm96-96H150a6 6 0 0 1-6-6V54a6 6 0 0 1 6-6h308a6 6 0 0 1 6 6v308a6 6 0 0 1-6 6z"/></svg>
+              <span>複製績效</span>
+            </button>
+            <button type="button" class="copy-project-btn" @click="downloadPerformance(currentPerformance)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.293,13.707a1,1,0,1,1,1.414-1.414L11,14.586V3a1,1,0,0,1,2,0V14.586l2.293-2.293a1,1,0,0,1,1.414,1.414l-4,4a1,1,0,0,1-.325.216.986.986,0,0,1-.764,0,1,1,0,0,1-.325-.216ZM22,12a1,1,0,0,0-1,1v7H3V13a1,1,0,0,0-2,0v8a1,1,0,0,0,1,1H22a1,1,0,0,0,1-1V13A1,1,0,0,0,22,12Z"/></svg>
+              <span>下載績效</span>
+            </button>
+          </div>
+          <p v-if="copyHint" class="hint" role="status">{{ copyHint }}</p>
 
           <section class="settings-panel">
-            <div class="panel-heading"><h2>資金管理</h2></div>
+            <div class="panel-heading"><h2>績效資金管理</h2></div>
+            <div class="manager-range-row">
+              <label class="range-check-label"><input v-model="dateRangeEnabled" type="checkbox" /><span>指定</span></label>
+              <input v-model="settings.date_start" type="date" class="range-date-input" aria-label="開始日期" :disabled="!dateRangeEnabled" />
+              <span class="range-sep">~</span>
+              <input v-model="settings.date_end" type="date" class="range-date-input" aria-label="結束日期" :disabled="!dateRangeEnabled" />
+            </div>
+            <h3 class="capital-title">資金管理</h3>
             <div class="form-stack">
               <label class="field"><span>管理模式</span><select v-model="settings.mode"><option v-for="option in modeOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
               <p v-if="settings.mode === 'backtest'" class="mode-hint">直接使用報表口數與報表初始資金；若報表未提供初始資金，採用 100,000。</p>
@@ -353,13 +651,9 @@ onMounted(refreshAuth)
               <label v-for="field in visibleFields" :key="field.key" class="field"><span>{{ field.label }}</span><input v-model.number="settings[field.key]" type="number" min="0" :step="field.step" /></label>
               <label v-if="settings.mode === 'target_leverage'" class="field"><span>槓桿資金</span><select v-model="settings.leverage_funds"><option value="cumulative">累加獲利</option><option value="fixed">固定資金</option></select></label>
               <template v-if="settings.mode !== 'backtest'"><label class="field"><span>最大口數 <small>0 = 無上限</small></span><input v-model.number="settings.maximum_quantity" type="number" min="0" step="any" /></label><label class="check-field"><input v-model="settings.integer_quantity" type="checkbox" /><span>口數為整數</span></label></template>
-              <div class="field-divider"></div>
-              <div class="date-title">分析區間</div>
-              <div class="date-grid"><label class="field"><span>開始</span><input v-model="settings.date_start" type="date" /></label><label class="field"><span>結束</span><input v-model="settings.date_end" type="date" /></label></div>
-              <p class="field-help">留空代表全部期間。區間開始前的交易會用於計算起始資金。</p>
             </div>
-            <button type="button" class="run-button" :disabled="!selectedFile || busy" @click="calculate"><span>{{ busy ? '計算中…' : report ? '重新計算報表' : '產生績效報表' }}</span><span aria-hidden="true">↗</span></button>
-            <p v-if="settingsDirty" class="field-help" role="status">設定已變更，按「重新計算報表」更新結果。</p>
+            <p v-if="busy" class="field-help" role="status">正在計算報表…</p>
+            <p v-else-if="settingsDirty" class="field-help" role="status">設定已變更，將自動重新計算。</p>
             <p v-if="error" class="error-message" role="alert">{{ error }}</p>
           </section>
         </aside>
@@ -368,12 +662,12 @@ onMounted(refreshAuth)
           <div v-if="!report" class="empty-state">
             <div class="empty-illustration" aria-hidden="true"><div class="empty-line one"></div><div class="empty-line two"></div><div class="empty-line three"></div></div>
             <h2>尚無報表</h2>
-            <p>先選擇 .srp 或 .sea 檔案，再按「產生績效報表」。</p>
+            <p>正在載入已儲存的績效報表。</p>
           </div>
 
           <template v-else>
             <div class="results-header">
-              <div><h2>{{ source.strategy }}</h2><p>{{ source.filename }} · {{ source.format.toUpperCase() }} · {{ formatNumber(source.trade_count, 0) }} 筆交易 · {{ source.symbol }}</p></div>
+              <div><h2>{{ currentPerformance.name }}</h2><p>{{ source.strategy }} · {{ source.filename }} · {{ source.format.toUpperCase() }} · {{ formatNumber(source.trade_count, 0) }} 筆交易 · {{ source.symbol }}</p></div>
               <button type="button" class="print-button" @click="printReport">列印 / 儲存 PDF <span aria-hidden="true">↗</span></button>
             </div>
             <p class="print-meta">資金管理：{{ activeSection === 'simple' ? '單純績效' : resultModeLabel }} · 初始資金：{{ formatNumber(currentSummary.initial_capital) }} · 分析區間：{{ currentSummary.start_date || '—' }} 至 {{ currentSummary.end_date || '—' }}</p>
