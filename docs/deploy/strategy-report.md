@@ -1,6 +1,6 @@
 # Strategy Report deployment
 
-The new site has its own source under `strategy-report/` and its own `strategy-report-frontend` and `strategy-report-backend` containers. It uses Visual Portfolio's existing accounts for login and mounts only root `data/reports/` for original report files and analysis settings. It does not mount Visual Portfolio's `data/db/`, `data/projects/`, or `data-beta/`. Strategy Report asks `visualportfolio-backend` to validate credentials and sessions over `sibuzu-net`. The same user ID and password work in both sites. Each hostname has its own login cookie, so a user signs in separately on each site.
+The new site has its own source under `strategy-report/` and its own `strategy-report-frontend` and `strategy-report-backend` containers. It uses Visual Portfolio's existing accounts for login and bind mounts root `data/reports/` for report files/settings and root `data/db/` for its independent `reporsts.db`. Visual Portfolio continues to use `users.db` and `projects.db` in that directory; Strategy Report authenticates through its API. Strategy Report asks `visualportfolio-backend` to validate credentials and sessions over `sibuzu-net`. The same user ID and password work in both sites. Each hostname has its own login cookie, so a user signs in separately on each site.
 
 ## Local run
 
@@ -20,15 +20,16 @@ npm run dev
 
 Run Visual Portfolio's backend on port 8000 for local login, or set `VISUAL_PORTFOLIO_AUTH_URL` to its reachable internal URL. Vite proxies `/api/` to port 8001. Run backend tests with `PYTHONPATH=strategy-report/backend python -m pytest strategy-report/backend/tests -q` from the repository root.
 
-During local development, the backend stores the performance index (IDs, names, owners, importance, source metadata, and timestamps) in `strategy-report/data/performances.db`. Original uploads are in the repository's root `data/reports/SR-XXXXXX/source.srp` or `source.sea`; capital management and date range settings live beside them in `config.json`. That JSON contains analysis settings only and is the authoritative source for subsequent calculations. Set `STRATEGY_REPORT_DATA_DIR` and `STRATEGY_REPORT_REPORTS_DIR` to change those paths. This data is separate from Visual Portfolio's databases.
+During local development, the backend stores the performance index (IDs, names, owners, importance, source metadata, and timestamps) in `data/db/reporsts.db`. Original uploads are in the repository's root `data/reports/SR-XXXXXX/source.srp` or `source.sea`; capital management and date range settings live beside them in `config.json`. That JSON contains analysis settings only and is the authoritative source for subsequent calculations. Set `STRATEGY_REPORT_DATA_DIR` and `STRATEGY_REPORT_REPORTS_DIR` to change those paths. This data is separate from Visual Portfolio's databases.
 
 ## Containers
 
 The existing Docker network `sibuzu-net` and `visualportfolio-backend` service must be running. If this is a new host, create the network once with `docker network create sibuzu-net` and start Visual Portfolio first. From the repository root:
 
 ```bash
-docker compose -f docker/strategy-report/docker-compose.yml config --quiet
-docker compose -f docker/strategy-report/docker-compose.yml up -d --build
+mkdir -p data/db data/reports
+env UID="$(id -u)" GID="$(id -g)" docker compose -f docker/strategy-report/docker-compose.yml config --quiet
+env UID="$(id -u)" GID="$(id -g)" docker compose -f docker/strategy-report/docker-compose.yml up -d --build
 ./scripts/smoke-strategy-report.sh
 ```
 
@@ -36,7 +37,13 @@ The smoke script checks the homepage, health endpoint, and unauthenticated acces
 
 The frontend binds to `127.0.0.1:8088` by default for local verification. Set `STRATEGY_REPORT_BIND=127.0.0.1:<port>` if that port is taken. The tunnel reaches `strategy-report-frontend:80` over `sibuzu-net`; it does not need the host port.
 
-The backend stores original uploads in the repository's root `data/reports/SR-XXXXXX/`, bind mounted at `/app/data/reports/`. The named Docker volume `strategy-report-data` holds `/app/data/performances.db`, Strategy Report's independent performance index. This database is not mounted at the host's `data/db/` and does not share Visual Portfolio's `projects.db`; only account authentication is shared through Visual Portfolio's API. Back up **both** `data/reports/` and the named volume together; the database points to the files by performance ID. `docker compose down` preserves them. `down -v` deletes the database, even though the bind mounted report files remain. Original uploads with identical bytes resolve to the same file-derived `SR-` ID. A copy gets a fresh random `SR-` ID and its own source file and `config.json`; the optional “副本” suffix is only part of the display name. On startup, the backend backs up an older database as `performances.db.before-config-json`, exports each record’s saved analysis settings to its `config.json`, validates the files, and removes the obsolete SQLite settings column. IDs, owners, names, importance, and timestamps remain in the database. Interrupted exports can resume without replacing completed settings files. Legacy report BLOBs are also moved into these directories. Settings writes use atomic file replacement within a serialized storage operation; non-owner calculations leave the saved settings unchanged. When upgrading from an earlier Docker deployment that kept reports in the volume, copy its `/app/data/reports/` contents to root `data/reports/` before enabling the bind mount.
+The backend bind mounts host `data/db/` at `/app/data/db/` and stores its independent index at `/app/data/db/reporsts.db` (the filename intentionally follows the requested spelling). Report source files and `config.json` remain in host `data/reports/SR-XXXXXX/`, mounted at `/app/data/reports/`. The container runs with the host UID/GID, defaulting to `1000:1000`, so both paths remain writable from the host. For a different UID/GID, pass them through the Compose environment as shown above.
+
+On an upgrade, the previous `strategy-report-data` volume is mounted read-only at `/app/legacy-data/`. If `reporsts.db` does not yet exist, the backend uses SQLite backup to copy `STRATEGY_REPORT_LEGACY_DB` (set to `/app/legacy-data/performances.db` in Compose) into the new location. The old database remains untouched, and an existing target is never overwritten. Local development also recognizes the old `strategy-report/data/performances.db`. Before restarting an older deployment that created report files as UID 10001, change ownership of `data/reports/` to the host UID/GID used by the container. The old volume can be retained as a migration backup; current reads and writes use the host database.
+
+Back up `data/db/reporsts.db` and `data/reports/` together. Visual Portfolio's `users.db` and `projects.db` remain separate files. `docker compose down` preserves the host files. Original uploads with identical bytes resolve to the same file-derived `SR-` ID. A copy gets a fresh random `SR-` ID and its own source file and `config.json`; the optional “副本” suffix is only part of the display name.
+
+When migrating an older schema, the backend backs up the database as `reporsts.db.before-config-json`, exports its saved analysis settings to each report's `config.json`, validates them, and removes the obsolete SQLite settings column. IDs, owners, names, importance, and timestamps remain in the database. Interrupted exports can resume without replacing completed settings files. Legacy report BLOBs are also moved into the report directories. Settings writes use atomic file replacement within a serialized storage operation; non-owner calculations leave saved settings unchanged.
 
 Signed-in users can open a performance by its URL and see important performances on the management page. Only its owner can rename, mark important, delete, or persist capital management settings. A different signed-in viewer can change settings and recalculate for the current view, then copy the performance to become the owner of a separate copy. The download action returns a ZIP containing `source.srp` or `source.sea` plus `performance.json`.
 
@@ -60,4 +67,4 @@ docker compose -f docker/strategy-report/docker-compose.yml down
 
 Visual Portfolio containers and their `data/` and `data-beta/` directories remain in place.
 
-To revert to a Strategy Report backend from before per-report JSON settings, stop the stack and restore a matching pre-upgrade database and report-directory backup. `performances.db.before-config-json` preserves the database at the settings migration boundary; it does not include later edits.
+To revert to a Strategy Report backend from before per-report JSON settings, stop the stack and restore a matching pre-upgrade database and report-directory backup. `reporsts.db.before-config-json` (or the older `performances.db.before-config-json` backup) preserves the database at the settings migration boundary; it does not include later edits.

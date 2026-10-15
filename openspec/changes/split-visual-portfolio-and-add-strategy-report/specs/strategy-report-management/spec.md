@@ -50,10 +50,10 @@ All saved-performance operations SHALL require login. Owner lists SHALL contain 
 - **THEN** Strategy Report SHALL reject the change
 
 ### Requirement: Keep saved data independent of Visual Portfolio
-Strategy Report SHALL persist original reports under the repository's root `data/reports/SR-XXXXXX/`, bind mounted into its container, with performance index metadata (ID, owner, name, importance, source information, and timestamps) in its own SQLite database and named Docker volume. Capital management and date range settings SHALL be read and written in each report’s `config.json`. It SHALL migrate existing SQLite analysis settings into JSON and legacy BLOB report bytes into report directories without losing existing performances. It SHALL retain a pre-migration database backup and remove the obsolete settings column after successful export. It SHALL not modify Visual Portfolio's project or user databases when creating, editing, or deleting a performance.
+Strategy Report SHALL persist original reports under the repository's root `data/reports/SR-XXXXXX/`, bind mounted into its container, with performance index metadata (ID, owner, name, importance, source information, and timestamps) in its own host-mounted SQLite database at `data/db/reporsts.db`. Capital management and date range settings SHALL be read and written in each report’s `config.json`. It SHALL migrate existing SQLite analysis settings into JSON and legacy BLOB report bytes into report directories without losing existing performances. It SHALL retain a pre-migration database backup and remove the obsolete settings column after successful export. It SHALL not modify Visual Portfolio's project or user databases when creating, editing, or deleting a performance.
 
 #### Scenario: Recreate Strategy Report containers
-- **WHEN** the application containers are rebuilt while root `data/reports/` and the Strategy Report data volume are retained
+- **WHEN** the application containers are rebuilt while root `data/reports/` and `data/db/reporsts.db` are retained
 - **THEN** saved performances SHALL remain available to their owners
 
 #### Scenario: Migrate existing settings

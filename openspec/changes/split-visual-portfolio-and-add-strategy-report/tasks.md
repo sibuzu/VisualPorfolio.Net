@@ -57,12 +57,12 @@
 
 ## 8. Saved performance management
 
-- [x] 8.1 Add owner-scoped persistent storage for original reports in root `data/reports/` and for names, importance, source metadata, and latest settings in a Strategy Report-only data volume.
+- [x] 8.1 Add owner-scoped persistent storage for original reports in root `data/reports/` for names, importance, and source metadata in `data/db/reporsts.db`, and for analysis settings in each report’s `config.json`.
 - [x] 8.2 Derive deterministic `SR-` plus six-letter IDs from file SHA-256, reuse the same user's existing record on duplicate upload, and reject abbreviated-ID collisions.
 - [x] 8.3 Add authenticated list, create, open, rename, importance, delete, and saved-report calculation APIs with ownership tests.
 - [x] 8.4 Replace the post-login landing view with Visual Portfolio style performance management and support reopening, renaming, marking important, deleting, and returning from the report workspace.
 - [x] 8.5 Verify the full management flow in a browser and container deployment, including persistence after container rebuild and responsive layout.
-- [x] 8.6 Update the user and deployment documentation for saved performances, their report directories, metadata volume, and stable IDs.
+- [x] 8.6 Update the user and deployment documentation for saved performances, their report directories, host database, and stable IDs.
 
 ## 9. Saved report directories, copies, and shared viewing
 
@@ -74,3 +74,4 @@
 - [x] 9.6 Bind root `data/reports/` into the Strategy Report backend, migrate existing Docker volume reports there, and verify saved files remain readable after rebuilding.
 
 - [x] 9.7 Keep performance index metadata in SQLite, move capital management/date settings to per-report `config.json`, migrate existing settings, and verify owner persistence, viewer isolation, copying, and restart behavior.
+- [x] 9.8 Rename the performance index to root `data/db/reporsts.db`, bind mount host `data/db/`, and migrate and verify existing database records.

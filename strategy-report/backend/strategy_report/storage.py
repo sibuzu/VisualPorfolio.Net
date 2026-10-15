@@ -22,7 +22,8 @@ PUBLIC_COLUMNS = "performance_id, owner_id, name, strategy_name, filename, sourc
 
 
 def _data_dir() -> Path:
-    folder = Path(os.getenv("STRATEGY_REPORT_DATA_DIR", str(Path(__file__).resolve().parents[2] / "data")))
+    configured = os.getenv("STRATEGY_REPORT_DATA_DIR")
+    folder = Path(configured) if configured else Path(__file__).resolve().parents[3] / "data"
     folder.mkdir(parents=True, exist_ok=True)
     return folder
 
@@ -31,9 +32,40 @@ def _reports_dir() -> Path:
     configured = os.getenv("STRATEGY_REPORT_REPORTS_DIR")
     if configured:
         return Path(configured)
-    if os.getenv("STRATEGY_REPORT_DATA_DIR"):
-        return _data_dir() / "reports"
-    return Path(__file__).resolve().parents[3] / "data" / "reports"
+    return _data_dir() / "reports"
+
+
+def _database_path() -> Path:
+    return _data_dir() / "db" / "reporsts.db"
+
+
+def _migrate_database_location() -> None:
+    target = _database_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        return
+    configured = os.getenv("STRATEGY_REPORT_LEGACY_DB")
+    candidates = [Path(configured)] if configured else [_data_dir() / "performances.db"]
+    if not configured and not os.getenv("STRATEGY_REPORT_DATA_DIR"):
+        candidates.append(Path(__file__).resolve().parents[2] / "data" / "performances.db")
+    legacy = next((path for path in candidates if path.is_file()), None)
+    if legacy is None:
+        return
+    temporary = target.with_name(f".{target.name}.{secrets.token_hex(8)}.tmp")
+    source = sqlite3.connect(legacy.resolve().as_uri() + "?mode=ro", uri=True)
+    backup = sqlite3.connect(temporary)
+    try:
+        source.backup(backup)
+        backup.close()
+        # Publish only the complete snapshot; never replace an existing database.
+        try:
+            os.link(temporary, target)
+        except FileExistsError:
+            pass
+    finally:
+        backup.close()
+        source.close()
+        temporary.unlink(missing_ok=True)
 
 
 def _report_path(item_id: str, source_format: str) -> Path:
@@ -136,13 +168,14 @@ def _migrate_legacy(connection: sqlite3.Connection) -> None:
 
 @contextmanager
 def _connect():
-    database = _data_dir() / "performances.db"
+    _migrate_database_location()
+    database = _database_path()
     connection = sqlite3.connect(database, timeout=30)
     connection.row_factory = sqlite3.Row
     try:
         connection.execute("BEGIN IMMEDIATE")
         columns = {row["name"] for row in connection.execute("PRAGMA table_info(performances)")}
-        backup_path = database.with_name("performances.db.before-config-json")
+        backup_path = database.with_name(database.name + ".before-config-json")
         if "settings_json" in columns and not backup_path.exists():
             # Read through a separate connection before any schema writes; keep a
             # complete pre-migration database for rollback.

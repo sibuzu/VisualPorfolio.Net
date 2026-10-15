@@ -12,6 +12,8 @@ strategy-report/frontend/node_modules/
 strategy-report/frontend/dist/
 strategy-report/data/
 data/db/*.db
+data/db/reporsts.db*
+data/db/.reporsts.db.*.tmp
 data/projects/
 data/reports/
 data-beta/projects/

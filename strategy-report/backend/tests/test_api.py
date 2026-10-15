@@ -251,7 +251,7 @@ def test_legacy_blob_reports_migrate_to_report_directories(monkeypatch, tmp_path
     item, restored = storage.get_performance("demo", item_id, include_content=True)
     assert item["name"] == "原有績效" and restored == payload
     assert (tmp_path / "reports" / item_id / "source.srp").read_bytes() == payload
-    with sqlite3.connect(tmp_path / "performances.db") as connection:
+    with sqlite3.connect(tmp_path / "db" / "reporsts.db") as connection:
         columns = {row[1] for row in connection.execute("PRAGMA table_info(performances)")}
     assert "content" not in columns and "owner_id" in columns
     assert "settings_json" not in columns

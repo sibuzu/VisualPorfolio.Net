@@ -4,13 +4,16 @@ services:
       context: ../..
       dockerfile: docker/strategy-report/Dockerfile.backend
     container_name: strategy-report-backend
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       VISUAL_PORTFOLIO_AUTH_URL: http://visualportfolio-backend:8000
       STRATEGY_REPORT_DATA_DIR: /app/data
       STRATEGY_REPORT_REPORTS_DIR: /app/data/reports
+      STRATEGY_REPORT_LEGACY_DB: /app/legacy-data/performances.db
     volumes:
-      - strategy-report-data:/app/data
+      - ../../data/db:/app/data/db
       - ../../data/reports:/app/data/reports
+      - strategy-report-data:/app/legacy-data:ro
     restart: unless-stopped
     networks:
       - sibuzu-net
