@@ -54,6 +54,37 @@ def _login(client: TestClient) -> None:
     assert response.json()["user_id"] == "demo"
 
 
+def test_date_range_defaults_owner_memory_and_viewer_isolation(fake_visual_portfolio_auth, tmp_path):
+    body = ('<策略回測><參數><策略>Dates</策略><開始日期>2012/01/01</開始日期>'
+            '<結束日期>2026/12/31</結束日期></參數><策略交易>'
+            '<Trade time_stamp="2012/01/18 09:00:00" bs="B" contract="1" price="100"/>'
+            '<Trade time_stamp="2026/08/11 09:00:00" bs="S" contract="1" price="105"/>'
+            '</策略交易></策略回測>').encode()
+    with TestClient(app) as client:
+        _login(client)
+        item_id = client.post("/api/performances", files={"file": ("dates.srp", body)}).json()["performance"]["performance_id"]
+        url = f"/api/performances/{item_id}"
+        item = client.get(url).json()["performance"]
+        assert item["source_range"] == {"start": "2012-01-18", "end": "2026-08-11"}
+        assert item["settings"]["date_start"] is None
+        settings = {"date_start": "2026-01-01", "date_end": "2026-08-11", "date_range_enabled": True}
+        selected = client.post(url + "/report", json=settings)
+        assert selected.status_code == 200
+        assert selected.json()["simple"]["summary"]["trade_count"] == 1
+        assert selected.json()["source"]["date_range"] == item["source_range"]
+        settings["date_range_enabled"] = False
+        full = client.post(url + "/report", json=settings)
+        assert full.json()["simple"]["summary"]["trade_count"] == 2
+        path = tmp_path / "reports" / item_id / "config.json"
+        saved = path.read_bytes()
+        reopened = client.get(url).json()["performance"]["settings"]
+        assert all(reopened[key] == value for key, value in settings.items())
+        client.post("/api/auth/login", json={"user_id": "other", "password": "example"})
+        assert client.post(url + "/report", json={**settings, "date_start": "2015-01-01", "date_range_enabled": True}).status_code == 200
+        assert path.read_bytes() == saved
+        assert client.get(url).json()["performance"]["settings"] == reopened
+
+
 def test_buy_hold_owner_persistence_copy_and_viewer_isolation(fake_visual_portfolio_auth, monkeypatch, tmp_path):
     import strategy_report.buy_hold as bh
     monkeypatch.setattr(bh, "_market_data", lambda *args: ([

@@ -72,8 +72,6 @@ button.status-inline:hover, button.status-inline:focus-visible { color: var(--ac
 .manager-range-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
 .range-check-label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; white-space: nowrap; }
 .range-check-label input { accent-color: var(--accent); }
-.range-date-input { width: 128px; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font-size: 13px; }
-.range-date-input:disabled { opacity: .5; }
 .range-sep { color: var(--muted); }
 .capital-title { margin: 12px 0 10px; font-size: 16px; }
 .buy-hold-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 14px; margin-bottom: 8px; }

@@ -41,6 +41,18 @@ def test_none_never_fetches_market_data(monkeypatch):
     assert analyze_with_reference(source(), CalculationSettings())["buy_hold"] is None
 
 
+def test_unchecked_dates_do_not_limit_reference(monkeypatch):
+    calls = []
+    def market(product, code, start, end, hour):
+        calls.append((start, end))
+        return [{"date": "2024-01-02", "close": 100}, {"date": "2024-01-05", "close": 110}], []
+    monkeypatch.setattr(bh, "_market_data", market)
+    result = analyze_with_reference(source(), CalculationSettings(
+        buy_hold={}, date_start="2024-01-04", date_end="2024-01-04", date_range_enabled=False))
+    assert calls == [(date(2024, 1, 1), date(2024, 1, 5))]
+    assert result["buy_hold"]["start_date"] == "2024-01-02"
+
+
 def test_stock_reinvests_dividends_and_accounts_for_splits():
     rows = [{"date": "2024-01-02", "close": 100}, {"date": "2024-01-03", "close": 98},
             {"date": "2024-01-04", "close": 25}, {"date": "2024-01-08", "close": 50}]

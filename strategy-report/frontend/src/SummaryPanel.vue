@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 
-const props = defineProps({ section: { type: Object, required: true } })
+const props = defineProps({ section: { type: Object, required: true }, symbol: { type: String, default: '' } })
 const summary = computed(() => props.section.summary || {})
 const number = (value, digits = 2) => Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: digits })
 const money = value => `$ ${number(Math.round(Number(value || 0)), 0)}`
@@ -17,8 +17,9 @@ const cards = computed(() => {
   const years = duration == null ? 0 : (duration + 1) / 365.25
   const annualProfit = years ? s.net_profit / years : 0
   return [
+    { label: 'Symbol', value: props.symbol || '—' },
     { label: '期間', value: `${years.toFixed(2)} years` },
-    { label: '交易次數', value: number(s.trade_count, 0) },
+    { label: '交易成本', value: s.trade_cost ?? '—' },
     { label: '總獲利', value: money(s.net_profit) },
     { label: '年獲利', value: money(annualProfit) },
     { label: 'MDD', value: money(s.max_drawdown) },
@@ -27,8 +28,7 @@ const cards = computed(() => {
     { label: 'Sharpe Ratio', value: number(s.sharpe_ratio) },
     { label: 'Sortino Ratio', value: number(s.sortino_ratio) },
     { label: '獲利因子', value: number(s.profit_factor) },
-    { label: '贏錢總金額', value: money(s.winning_profit) },
-    { label: '輸錢總金額', value: money(s.losing_profit) },
+    { label: '交易次數', value: number(s.trade_count, 0) },
     { label: '贏錢次數', value: number(s.winning_count, 0) },
     { label: '輸錢次數', value: number(s.losing_count, 0) },
     { label: '贏錢機率', value: `${Number(s.win_rate_pct || 0).toFixed(2)}%` }

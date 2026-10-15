@@ -2,6 +2,7 @@
 import * as echarts from 'echarts'
 import BuyHoldDialog from './BuyHoldDialog.vue'
 import SummaryPanel from './SummaryPanel.vue'
+import ReportDateInput from './ReportDateInput.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const modeOptions = [
@@ -87,13 +88,13 @@ const currentDetails = computed(() => currentSection.value?.detail || [])
 const source = computed(() => report.value?.source || null)
 const periodLabels = { annual: '年度', monthly: '月份', weekly: '週別', daily: '日期' }
 const tabs = [
-  { value: 'simple-summary', label: '單口策略績效', section: 'simple', view: 'summary' },
-  { value: 'compound-summary', label: '複合投資績效', section: 'compound', view: 'summary' },
-  { value: 'simple-curve', label: '單口獲利曲線', section: 'simple', view: 'curve' },
-  { value: 'simple-details', label: '單口交易明細', section: 'simple', view: 'details' },
-  { value: 'compound-details', label: '複合投資明細', section: 'compound', view: 'details' },
-  { value: 'periods', label: '逐年獲利分佈', section: 'compound', view: 'periods' },
-  { value: 'compound-curve', label: '複合資金曲線', section: 'compound', view: 'curve' }
+  { value: 'simple-summary', label: '單口績效', section: 'simple', view: 'summary' },
+  { value: 'simple-curve', label: '單口曲線', section: 'simple', view: 'curve' },
+  { value: 'simple-details', label: '單口明細', section: 'simple', view: 'details' },
+  { value: 'compound-summary', label: '複合績效', section: 'compound', view: 'summary' },
+  { value: 'compound-curve', label: '複合曲線', section: 'compound', view: 'curve' },
+  { value: 'compound-details', label: '複合明細', section: 'compound', view: 'details' },
+  { value: 'periods', label: '逐年獲利', section: 'compound', view: 'periods' }
 ]
 const selectedTab = computed(() => tabs.find(tab => tab.value === activeTab.value) || tabs[0])
 const activeSection = computed(() => selectedTab.value.section)
@@ -111,6 +112,14 @@ function applyBuyHold(value) {
 
 function formatNumber(value, digits = 2) {
   return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(Number(value || 0))
+}
+
+function formatQuantity(value) {
+  const quantity = Number(value || 0)
+  const magnitude = Math.abs(quantity)
+  if (magnitude >= 10) return formatNumber(quantity, 1)
+  if (magnitude >= 1 || magnitude === 0) return formatNumber(quantity, 2)
+  return new Intl.NumberFormat('zh-TW', { maximumSignificantDigits: 2 }).format(quantity)
 }
 
 function formatPercent(value) {
@@ -149,13 +158,13 @@ function messageFromDetail(detail) {
 }
 
 function routePerformanceId() {
-  return window.location.pathname.match(/^\/performances\/(SR-[A-Z]{6})\/?$/)?.[1] || ''
+  return window.location.pathname.match(/^\/reports\/(SR-[A-Z]{6})\/?$/)?.[1] || ''
 }
 
 function settingsPayload() {
-  const payload = { ...settings.value }
-  if (!dateRangeEnabled.value || !payload.date_start) delete payload.date_start
-  if (!dateRangeEnabled.value || !payload.date_end) delete payload.date_end
+  const payload = { ...settings.value, date_range_enabled: dateRangeEnabled.value }
+  if (!payload.date_start) delete payload.date_start
+  if (!payload.date_end) delete payload.date_end
   return payload
 }
 
@@ -183,12 +192,13 @@ async function openPerformance(itemId, pushRoute = true) {
     currentPerformance.value = data.performance
     settings.value = {
       ...settings.value, ...data.performance.settings,
-      date_start: data.performance.settings.date_start || '',
-      date_end: data.performance.settings.date_end || '',
+      date_start: data.performance.settings.date_start || data.performance.source_range?.start || '',
+      date_end: data.performance.settings.date_end || data.performance.source_range?.end || '',
       buy_hold: data.performance.settings.buy_hold || null
     }
-    dateRangeEnabled.value = Boolean(settings.value.date_start || settings.value.date_end)
-    if (pushRoute) window.history.pushState({}, '', `/performances/${itemId}`)
+    dateRangeEnabled.value = data.performance.settings.date_range_enabled
+      ?? Boolean(data.performance.settings.date_start || data.performance.settings.date_end)
+    if (pushRoute) window.history.pushState({}, '', `/reports/${itemId}`)
     await calculate()
   } catch (cause) {
     managementError.value = cause.message || '無法開啟績效。'
@@ -266,7 +276,7 @@ function downloadPerformance(item) {
 
 async function copyPerformanceLink(item) {
   try {
-    const url = `${window.location.origin}/performances/${item.performance_id}`
+    const url = `${window.location.origin}/reports/${item.performance_id}`
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url)
     } else {
@@ -505,8 +515,8 @@ function renderChart() {
       yAxis: { type: 'value', axisLabel: { formatter: value => formatNumber(value, 0) } },
       dataZoom: [{ type: 'inside' }, { type: 'slider', height: 14, bottom: 32 }],
       series: [
-        { name: '單口策略績效', type: 'bar', itemStyle: { color: '#0b7183' }, data: periods.map(period => simple.find(row => row.period === period)?.profit ?? 0) },
-        { name: '複合投資績效', type: 'bar', itemStyle: { color: '#d77953' }, data: periods.map(period => compound.find(row => row.period === period)?.profit ?? 0) }
+        { name: '單口績效', type: 'bar', itemStyle: { color: '#0b7183' }, data: periods.map(period => simple.find(row => row.period === period)?.profit ?? 0) },
+        { name: '複合績效', type: 'bar', itemStyle: { color: '#d77953' }, data: periods.map(period => compound.find(row => row.period === period)?.profit ?? 0) }
       ]
     }, true)
     chart.resize()
@@ -686,9 +696,9 @@ onMounted(() => {
             <div class="panel-heading"><h2>績效資金管理</h2></div>
             <div class="manager-range-row">
               <label class="range-check-label"><input v-model="dateRangeEnabled" type="checkbox" /><span>指定</span></label>
-              <input v-model="settings.date_start" type="date" class="range-date-input" aria-label="開始日期" :disabled="!dateRangeEnabled" />
+              <ReportDateInput v-model="settings.date_start" label="開始日期" :disabled="!dateRangeEnabled" />
               <span class="range-sep">~</span>
-              <input v-model="settings.date_end" type="date" class="range-date-input" aria-label="結束日期" :disabled="!dateRangeEnabled" />
+              <ReportDateInput v-model="settings.date_end" label="結束日期" :disabled="!dateRangeEnabled" />
             </div>
             <div class="buy-hold-row">
               <button type="button" class="copy-project-btn" @click="buyHoldOpen = true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" /></svg><span>Buy&amp;Hold</span></button>
@@ -722,21 +732,21 @@ onMounted(() => {
             <button type="button" class="report-help-button" aria-label="報表說明" title="報表說明" :aria-expanded="reportHelpOpen" @click="reportHelpOpen = !reportHelpOpen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" /></svg></button>
             <div v-if="reportHelpOpen" class="report-help">
               <p>{{ source.strategy }} · {{ source.filename }} · {{ source.format.toUpperCase() }}</p>
-              <p>單口策略績效顯示原始策略損益；複合投資績效套用左側資金管理設定（{{ resultModeLabel }}）。Buy&amp;Hold 使用自己的金額，單口獲利曲線顯示其損益，複合資金曲線顯示其資金淨值。</p>
+              <p>單口績效顯示原始策略損益；複合績效套用左側資金管理設定（{{ resultModeLabel }}）。Buy&amp;Hold 使用自己的金額，單口曲線顯示其損益，複合曲線顯示其資金淨值。</p>
               <p>初始資金：{{ formatNumber(currentSummary.initial_capital) }} · 最終淨值：{{ formatNumber(currentSummary.final_capital) }} · 每大點價值：{{ formatNumber(source.point_value) }} · 交易成本：{{ currentSummary.trade_cost }}</p>
               <details><summary>策略參數</summary><div class="table-scroll"><table><thead><tr><th>參數</th><th>數值</th></tr></thead><tbody><tr v-for="(value, name) in { ...source.params, ...source.strategy_params }" :key="name"><td>{{ name }}</td><td>{{ value }}</td></tr></tbody></table></div></details>
               <button type="button" class="print-button" @click="printReport">列印 / 儲存 PDF</button>
             </div>
             <p class="print-meta">{{ currentPerformance.name }} · {{ selectedTab.label }} · 資金管理：{{ resultModeLabel }} · 初始資金：{{ formatNumber(currentSummary.initial_capital) }} · Buy&amp;Hold：{{ buyHoldName }}</p>
-            <SummaryPanel v-if="activeView === 'summary'" :section="currentSection" />
+            <SummaryPanel v-if="activeView === 'summary'" :section="currentSection" :symbol="source.symbol" />
             <div v-else-if="activeView === 'curve'" class="chart-panel">
               <h3>{{ selectedTab.label }}</h3>
               <div ref="chartElement" class="chart" role="img" :aria-label="`${selectedTab.label}，Buy&Hold：${report.buy_hold?.name || '無'}`"></div>
             </div>
 
-            <div v-else-if="activeView === 'periods'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">PERIOD REPORT</span><h3>逐年獲利分佈</h3></div><button type="button" class="secondary-button" :disabled="!currentPeriods.length" @click="downloadCsv('periods')">下載 CSV ↓</button></div><div class="period-switch"><button v-for="(label, key) in periodLabels" :key="key" type="button" :class="{ active: activePeriod === key }" @click="activePeriod = key">{{ label }}</button></div><div ref="chartElement" class="chart" role="img" aria-label="單口策略與複合投資獲利分佈"></div><div class="table-scroll"><table><thead><tr><th>期間</th><th class="numeric">損益</th><th class="numeric">累積</th><th v-if="activeSection === 'compound'" class="numeric">報酬率</th></tr></thead><tbody><tr v-for="row in currentPeriods" :key="row.period"><td>{{ row.period }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.cumulative) }}</td><td v-if="activeSection === 'compound'" class="numeric">{{ formatPercent(row.return_pct) }}</td></tr><tr v-if="!currentPeriods.length"><td colspan="4" class="no-data">此區間沒有資料</td></tr></tbody></table></div></div>
+            <div v-else-if="activeView === 'periods'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">PERIOD REPORT</span><h3>逐年獲利</h3></div><button type="button" class="secondary-button" :disabled="!currentPeriods.length" @click="downloadCsv('periods')">下載 CSV ↓</button></div><div class="period-switch"><button v-for="(label, key) in periodLabels" :key="key" type="button" :class="{ active: activePeriod === key }" @click="activePeriod = key">{{ label }}</button></div><div ref="chartElement" class="chart" role="img" aria-label="單口策略與複合投資獲利分佈"></div><div class="table-scroll"><table><thead><tr><th>期間</th><th class="numeric">損益</th><th class="numeric">累積</th><th v-if="activeSection === 'compound'" class="numeric">報酬率</th></tr></thead><tbody><tr v-for="row in currentPeriods" :key="row.period"><td>{{ row.period }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.cumulative) }}</td><td v-if="activeSection === 'compound'" class="numeric">{{ formatPercent(row.return_pct) }}</td></tr><tr v-if="!currentPeriods.length"><td colspan="4" class="no-data">此區間沒有資料</td></tr></tbody></table></div></div>
 
-            <div v-else-if="activeView === 'details'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">TRADE LOG</span><h3>{{ selectedTab.label }}</h3><p>共 {{ formatNumber(currentDetails.length, 0) }} 筆</p></div><button type="button" class="secondary-button" :disabled="!currentDetails.length" @click="downloadCsv('details')">下載 CSV ↓</button></div><div class="table-scroll detail-table"><table><thead><tr><th>時間</th><th>標的</th><th>買賣</th><th class="numeric">口數</th><th class="numeric">價格</th><th class="numeric">部位</th><th class="numeric">損益</th><th class="numeric">累積淨值</th><th>訊號</th></tr></thead><tbody><tr v-for="row in currentDetails" :key="row.index"><td>{{ row.timestamp }}</td><td>{{ row.symbol }}</td><td><span class="side-pill" :class="row.side === 'B' ? 'buy' : 'sell'">{{ row.side === 'B' ? '買進' : '賣出' }}</span></td><td class="numeric">{{ formatNumber(row.quantity, 4) }}</td><td class="numeric">{{ formatNumber(row.price, 4) }}</td><td class="numeric">{{ formatNumber(row.position, 4) }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.equity) }}</td><td>{{ row.action || '—' }}</td></tr><tr v-if="!currentDetails.length"><td colspan="9" class="no-data">此區間沒有交易</td></tr></tbody></table></div></div>
+            <div v-else-if="activeView === 'details'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">TRADE LOG</span><p>共 {{ formatNumber(currentDetails.length, 0) }} 筆</p></div><button type="button" class="secondary-button" :disabled="!currentDetails.length" @click="downloadCsv('details')">下載 CSV ↓</button></div><div class="table-scroll detail-table"><table><thead><tr><th>時間</th><th>標的</th><th>買賣</th><th class="numeric">口數</th><th class="numeric">價格</th><th class="numeric">部位</th><th class="numeric">損益</th><th class="numeric">累積淨值</th><th>訊號</th></tr></thead><tbody><tr v-for="row in currentDetails" :key="row.index"><td>{{ row.timestamp }}</td><td>{{ row.symbol }}</td><td><span class="side-pill" :class="row.side === 'B' ? 'buy' : 'sell'">{{ row.side === 'B' ? '買進' : '賣出' }}</span></td><td class="numeric">{{ formatQuantity(row.quantity) }}</td><td class="numeric">{{ formatNumber(row.price, 4) }}</td><td class="numeric">{{ formatQuantity(row.position) }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit, 0) }}</td><td class="numeric">{{ formatNumber(row.equity, 0) }}</td><td>{{ row.action || '—' }}</td></tr><tr v-if="!currentDetails.length"><td colspan="9" class="no-data">此區間沒有交易</td></tr></tbody></table></div></div>
 
 
           </template>

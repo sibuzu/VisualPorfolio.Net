@@ -43,6 +43,7 @@ class CalculationSettings(BaseModel):
     integer_quantity: bool = False
     date_start: date | None = None
     date_end: date | None = None
+    date_range_enabled: bool | None = None
     buy_hold: BuyHoldSettings | None = None
 
     @model_validator(mode="after")
@@ -147,9 +148,8 @@ def _run_events(source: ReportSource, cfg: CalculationSettings, *, compound: boo
         net = cash
         for symbol, position in positions.items():
             mark = last_prices.get(symbol, Decimal(0))
-            if compound:
-                mark_slip = _slippage(mark, source.slippage) if mark > 0 else Decimal(0)
-                mark = mark - mark_slip if position > 0 else mark + mark_slip
+            # Cash already includes this execution's cost. Open positions are marked
+            # at market price; exit costs are charged only when the exit executes.
             net += position * mark * source.point_value
         profit = net - last_net
         last_net = net
@@ -183,8 +183,8 @@ def _run_events(source: ReportSource, cfg: CalculationSettings, *, compound: boo
 
 
 def _range_steps(steps: list[dict], cfg: CalculationSettings, initial: Decimal, compound: bool) -> tuple[list[dict], Decimal]:
-    first = cfg.date_start or date.min
-    last = cfg.date_end or date.max
+    first = (cfg.date_start or date.min) if cfg.date_range_enabled is not False else date.min
+    last = (cfg.date_end or date.max) if cfg.date_range_enabled is not False else date.max
     previous = initial if compound else Decimal(0)
     selected: list[dict] = []
     for step in steps:
@@ -348,6 +348,12 @@ def _section(source: ReportSource, cfg: CalculationSettings, *, compound: bool) 
     return {"summary": summary, "curve": curve, "detail": detail, "periods": _periods(records, starting, compound), "drawdowns": episodes}
 
 
+def source_date_range(source: ReportSource) -> dict[str, str | None]:
+    dates = [event.timestamp.date() for event in source.events]
+    return {"start": min(dates).isoformat() if dates else None,
+            "end": max(dates).isoformat() if dates else None}
+
+
 def analyze_report(source: ReportSource, cfg: CalculationSettings) -> dict:
     simple = _section(source, cfg, compound=False)
     compound = _section(source, cfg, compound=True)
@@ -360,6 +366,7 @@ def analyze_report(source: ReportSource, cfg: CalculationSettings) -> dict:
             "point_value": float(source.point_value), "slippage": source.slippage,
             "source_initial_capital": float(source.initial_capital) if source.initial_capital is not None else None,
             "params": source.params, "strategy_params": source.strategy_params,
+            "date_range": source_date_range(source),
         },
         "settings": cfg.model_dump(mode="json"),
         "simple": simple, "compound": compound,

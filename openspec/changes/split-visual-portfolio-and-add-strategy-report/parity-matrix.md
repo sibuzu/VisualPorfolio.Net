@@ -57,3 +57,7 @@ The repository includes the paired `BDS_TXF.srp` / `BDS_TXF.sea` fixture. Its 21
 | Kelly (ChipSize 100,000) | 276,780.44 | -221,318.91 | 778,681.09 |
 
 These are Web fixture values, not desktop golden output. The risk-factor result is zero because this fixture does not supply ATR. C# weekly grouping follows the desktop system culture; the Web labels weeks using ISO weeks for a stable cross-platform display. The Web CSV and browser print layout replace the WinForms export and saved-report UI. Numerical comparison against actual C# desktop output remains unverified because the binary/runtime is unavailable locally.
+
+### Execution-cost timing correction
+
+Compound equity now marks open positions at market price, just like simple equity, without reserving an extra future exit cost. Actual entry and exit cash flows each charge their own execution cost. This intentionally supersedes the previous compound liquidation-price valuation: interim equity, drawdowns, and event profits reflect the new timing while a completed round trip retains its total cash profit for identical executed quantities. Regression tests cover long/short positions, absolute/percentage costs, scaled quantities, price-only marks, and a range beginning at exit. SR-CWBKRR with multiplier 1 now displays its first two profits as -2,000 and -92,142 (first equity 998,000; second approximately 905,858).

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from starlette.datastructures import UploadFile
 from starlette.concurrency import run_in_threadpool
 
-from .analysis import CalculationSettings, analyze_report
+from .analysis import CalculationSettings, analyze_report, source_date_range
 from .auth import require_user, router as auth_router
 from .buy_hold import analyze_buy_hold
 from .importer import MAX_UPLOAD_BYTES, ReportFormatError, parse_report
@@ -32,7 +32,10 @@ app.include_router(auth_router)
 
 def analyze_with_reference(source, settings: CalculationSettings) -> dict:
     result = analyze_report(source, settings)
-    result["buy_hold"] = analyze_buy_hold(source, settings.buy_hold, settings.date_start, settings.date_end)
+    enabled = settings.date_range_enabled is not False
+    result["buy_hold"] = analyze_buy_hold(source, settings.buy_hold,
+                                          settings.date_start if enabled else None,
+                                          settings.date_end if enabled else None)
     return result
 
 
@@ -109,7 +112,11 @@ async def post_performance(request: Request, response: Response, user_id: str = 
 
 @app.get("/api/performances/{item_id}")
 def performance(item_id: str, user_id: str = Depends(require_user)) -> dict:
-    item, _ = get_performance(user_id, item_id)
+    item, content = get_performance(user_id, item_id, include_content=True)
+    try:
+        item["source_range"] = source_date_range(parse_report(item["filename"], content or b""))
+    except ReportFormatError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"performance": item}
 
 

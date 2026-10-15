@@ -80,9 +80,29 @@ Strategy Report SHALL offer a Visual Portfolio styled Buy&Hold settings button a
 - **THEN** the strategy report SHALL remain available with a visible reference error and no fabricated reference curve
 
 ### Requirement: Desktop report tab labels and Visual Portfolio summary layout
-Strategy Report SHALL use the tabs 單口策略績效, 複合投資績效, 單口獲利曲線, 單口交易明細, 複合投資明細, 逐年獲利分佈, 複合資金曲線. Summary cards, labels, responsive columns, MDD table, Annual Profits and Month Profits tables SHALL match Visual Portfolio's presentation.
+Strategy Report SHALL use the tabs 單口績效, 單口曲線, 單口明細, 複合績效, 複合曲線, 複合明細, 逐年獲利. Summary cards, labels, responsive columns, MDD table, Annual Profits and Month Profits tables SHALL match Visual Portfolio's presentation.
 
 #### Scenario: Navigate and recalculate
 - **WHEN** users select a report tab and change capital settings
 - **THEN** that tab SHALL remain selected while its results update automatically
 - **AND** simple and compound tabs SHALL show their respective calculations
+
+### Requirement: Populate and remember date controls
+Strategy Report SHALL initialize unset date controls from the earliest and latest input event dates, retaining previously saved dates when present. The date controls SHALL display and accept `yyyy/mm/dd` regardless of browser locale and retain calendar selection; API/config dates SHALL remain ISO `yyyy-mm-dd`. The 指定 checkbox SHALL independently control whether those dates filter the strategy and reference calculations.
+
+#### Scenario: Open a report without saved dates
+- **WHEN** a report has no stored date settings
+- **THEN** the date fields SHALL display the full input data range with 指定 initially unchecked
+
+#### Scenario: Remember dates and checkbox ownership
+- **WHEN** the owner changes dates or unchecks 指定
+- **THEN** both dates and the checkbox state SHALL be remembered in config.json when reopening
+- **AND** non-owner changes SHALL affect only the current view and SHALL leave the saved settings unchanged
+
+### Requirement: Charge trade costs at execution
+Simple and compound performance SHALL charge entry costs on the entry execution and exit costs on the exit execution. Open-position valuation SHALL use market prices without reserving a future exit cost. Details, equity curves, period totals, and summaries SHALL derive from that same series.
+
+#### Scenario: Split entry and exit costs
+- **WHEN** the first two SR-CWBKRR trades are calculated with fixed quantity multiplier 1
+- **THEN** the displayed compound profits SHALL be -2000 and -92142
+- **AND** long and short entries, percentage costs, scaled quantities, and price-only marks SHALL follow the same execution-time rule
