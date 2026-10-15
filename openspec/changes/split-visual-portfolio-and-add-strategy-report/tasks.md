@@ -57,12 +57,12 @@
 
 ## 8. Saved performance management
 
-- [x] 8.1 Add owner-scoped persistent storage for the original report, name, importance, source metadata, and latest settings on a Strategy Report-only data volume.
+- [x] 8.1 Add owner-scoped persistent storage for original reports in root `data/reports/` and for names, importance, source metadata, and latest settings in a Strategy Report-only data volume.
 - [x] 8.2 Derive deterministic `SR-` plus six-letter IDs from file SHA-256, reuse the same user's existing record on duplicate upload, and reject abbreviated-ID collisions.
 - [x] 8.3 Add authenticated list, create, open, rename, importance, delete, and saved-report calculation APIs with ownership tests.
 - [x] 8.4 Replace the post-login landing view with Visual Portfolio style performance management and support reopening, renaming, marking important, deleting, and returning from the report workspace.
 - [x] 8.5 Verify the full management flow in a browser and container deployment, including persistence after container rebuild and responsive layout.
-- [x] 8.6 Update the user and deployment documentation for saved performances, their volume, and stable IDs.
+- [x] 8.6 Update the user and deployment documentation for saved performances, their report directories, metadata volume, and stable IDs.
 
 ## 9. Saved report directories, copies, and shared viewing
 
@@ -71,3 +71,4 @@
 - [x] 9.3 Let authenticated non-owners view and temporarily recalculate a performance while only its owner may persist settings or metadata.
 - [x] 9.4 Update the performance workspace to copy/download and automatically recalculate when settings change; verify the flow in the browser and Docker stack.
 - [x] 9.5 Match Visual Portfolio's report sidebar title, ID/action rows, and optional date range placement without extra workspace actions.
+- [x] 9.6 Bind root `data/reports/` into the Strategy Report backend, migrate existing Docker volume reports there, and verify saved files remain readable after rebuilding.

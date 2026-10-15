@@ -50,8 +50,8 @@ All saved-performance operations SHALL require login. Owner lists SHALL contain 
 - **THEN** Strategy Report SHALL reject the change
 
 ### Requirement: Keep saved data independent of Visual Portfolio
-Strategy Report SHALL persist original reports under `data/reports/SR-XXXXXX/` in its own data directory or Docker volume, with metadata in its own SQLite database. It SHALL migrate original report bytes previously stored as SQLite BLOBs into report directories without losing existing performances. It SHALL not modify Visual Portfolio's project or user databases when creating, editing, or deleting a performance.
+Strategy Report SHALL persist original reports under the repository's root `data/reports/SR-XXXXXX/`, bind mounted into its container, with metadata in its own SQLite database and named Docker volume. It SHALL migrate original report bytes previously stored as SQLite BLOBs into report directories without losing existing performances. It SHALL not modify Visual Portfolio's project or user databases when creating, editing, or deleting a performance.
 
 #### Scenario: Recreate Strategy Report containers
-- **WHEN** the application containers are rebuilt while the Strategy Report data volume is retained
+- **WHEN** the application containers are rebuilt while root `data/reports/` and the Strategy Report data volume are retained
 - **THEN** saved performances SHALL remain available to their owners

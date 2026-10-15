@@ -13,5 +13,6 @@ strategy-report/frontend/dist/
 strategy-report/data/
 data/db/*.db
 data/projects/
+data/reports/
 data-beta/projects/
 data-beta/db/*.db

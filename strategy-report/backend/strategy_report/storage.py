@@ -26,8 +26,17 @@ def _data_dir() -> Path:
     return folder
 
 
+def _reports_dir() -> Path:
+    configured = os.getenv("STRATEGY_REPORT_REPORTS_DIR")
+    if configured:
+        return Path(configured)
+    if os.getenv("STRATEGY_REPORT_DATA_DIR"):
+        return _data_dir() / "reports"
+    return Path(__file__).resolve().parents[3] / "data" / "reports"
+
+
 def _report_path(item_id: str, source_format: str) -> Path:
-    return _data_dir() / "reports" / item_id / f"source.{source_format}"
+    return _reports_dir() / item_id / f"source.{source_format}"
 
 
 def _write_report(item_id: str, source_format: str, content: bytes) -> None:

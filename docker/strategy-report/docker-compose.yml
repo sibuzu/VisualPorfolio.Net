@@ -7,8 +7,10 @@ services:
     environment:
       VISUAL_PORTFOLIO_AUTH_URL: http://visualportfolio-backend:8000
       STRATEGY_REPORT_DATA_DIR: /app/data
+      STRATEGY_REPORT_REPORTS_DIR: /app/data/reports
     volumes:
       - strategy-report-data:/app/data
+      - ../../data/reports:/app/data/reports
     restart: unless-stopped
     networks:
       - sibuzu-net
