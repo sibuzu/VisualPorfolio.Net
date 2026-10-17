@@ -286,6 +286,8 @@ def _periods(records: list[dict], starting: Decimal, compound: bool) -> dict[str
     output: dict[str, list[dict]] = {}
     keys = {
         "annual": lambda dt: f"{dt.year}",
+        "semiannual": lambda dt: f"{dt.year}/H{(dt.month - 1) // 6 + 1}",
+        "quarterly": lambda dt: f"{dt.year}/Q{(dt.month - 1) // 3 + 1}",
         "monthly": lambda dt: dt.strftime("%Y/%m"),
         "weekly": lambda dt: f"{dt.isocalendar().year}/W{dt.isocalendar().week:02d}",
         "daily": lambda dt: dt.strftime("%Y/%m/%d"),

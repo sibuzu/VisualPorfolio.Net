@@ -1,0 +1,18 @@
+# Use with docker-compose.yml. Source edits are served without rebuilding images.
+services:
+  strategy-report-backend:
+    command: ["uvicorn", "strategy_report.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/strategy_report"]
+    volumes:
+      - ../../strategy-report/backend/strategy_report:/app/strategy_report:ro
+
+  strategy-report-frontend:
+    build:
+      target: builder
+    command: ["npm", "run", "dev", "--", "--port", "80", "--strictPort"]
+    environment:
+      STRATEGY_REPORT_API_PROXY: http://strategy-report-backend:8000
+      STRATEGY_REPORT_DEV_HOST: ${STRATEGY_REPORT_DEV_HOST:-strategyreport.sibuzu.com}
+    volumes:
+      - ../../strategy-report/frontend/src:/app/src:ro
+      - ../../strategy-report/frontend/index.html:/app/index.html:ro
+      - ../../strategy-report/frontend/vite.config.js:/app/vite.config.js:ro

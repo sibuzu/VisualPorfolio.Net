@@ -124,6 +124,7 @@ def test_buy_hold_owner_persistence_copy_and_viewer_isolation(fake_visual_portfo
         response = client.post(f"/api/performances/{item_id}/report", json={"buy_hold": {"amount_wan": 100}})
         assert response.status_code == 200
         assert response.json()["buy_hold"]["final_capital"] == 1100000
+        assert [row["side"] for row in response.json()["buy_hold"]["detail"]] == ["B", "S"]
         saved = path.read_bytes()
         assert json.loads(saved)["buy_hold"]["amount_wan"] == "100"
         copy = client.post(f"/api/performances/{item_id}/copy", json={}).json()["performance"]

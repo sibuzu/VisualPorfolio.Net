@@ -50,8 +50,10 @@ function submit() {
         </button>
       </div>
       <div v-if="helpOpen" class="buy-hold-help">
-        <p>股票代碼如 2330、0050，配息再投資；期貨如 TX、TE、TF，依槓桿持有並轉倉。</p>
+        <p>股票代碼如 2330、0050，配息以收盤價再投資，除權會增加股數；期貨支援 TX、MTX、TMF、TE、TF，只在首次買進時依設定槓桿計算口數，換倉維持相同口數。模擬股數與口數可為小數。</p>
+        <p>期貨在舊、新合約都有行情的同日收盤時，模擬賣出舊約並買進新約；收盤價缺漏時使用結算價。不計交易費用。</p>
         <p>起始日自動使用指定開始日、報表開始日或第一個交易日，休市日順延至有行情的交易日。</p>
+        <p>首個有行情日以收盤價買進，每個交易日以收盤價計算淨值，最後一個有行情日以收盤價賣出。</p>
         <p>Buy&amp;Hold 使用本設定金額，不受策略資金管理影響。選擇「無」可取消參考。</p>
       </div>
       <label class="buy-hold-field"><span>金額(萬)</span><input v-model="form.amount_wan" type="text" inputmode="decimal" autocomplete="off" :disabled="form.product_type === '無'" /></label>
@@ -62,7 +64,7 @@ function submit() {
         </div>
       </div>
       <label class="buy-hold-field"><span>代碼</span><input v-model="form.code" type="text" autocomplete="off" :disabled="form.product_type === '無'" /></label>
-      <label v-if="form.product_type === '期貨'" class="buy-hold-field"><span>槓桿</span><input v-model="form.leverage" type="text" inputmode="decimal" autocomplete="off" /></label>
+      <label v-if="form.product_type === '期貨'" class="buy-hold-field"><span>初始槓桿</span><input v-model="form.leverage" type="text" inputmode="decimal" autocomplete="off" /></label>
       <p v-if="error" class="error-message buy-hold-error" role="alert">{{ error }}</p>
       <div class="buy-hold-actions"><button type="button" class="copy-project-btn" @click="emit('close')">取消</button><button type="submit" class="copy-project-btn file-btn">設定</button></div>
     </form>

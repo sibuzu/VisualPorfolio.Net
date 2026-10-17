@@ -7,6 +7,7 @@ import ReportDateInput from './ReportDateInput.vue'
 import { visibleSimpleCurveSeries } from './curveSelection.js'
 import { profitDrawdownSegments } from './profitPlot.js'
 import { fitCurveAxis, formatProfitTick, profitAxisLayout } from './profitAxis.js'
+import { buildPeriodPlotData, nextPeriodMetricSelection, periodDrawdownLabel, withoutUnavailableBuyHold } from './periodComparison.js'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const modeOptions = [
@@ -94,15 +95,16 @@ const busy = ref(false)
 const error = ref('')
 const activeTab = ref('simple-summary')
 const activePeriod = ref('annual')
+const periodSelected = ref(['compound'])
 const buyHoldOpen = ref(false)
 const reportHelpOpen = ref(false)
 const capitalHelpOpen = ref(false)
 const chartElement = ref(null)
-const sidebarWidth = ref(390)
+const sidebarWidth = ref(360)
 const resizingSidebar = ref(false)
 const detailTableElement = ref(null)
-const detailPages = ref({ simple: 1, compound: 1 })
-const detailScrollTops = { simple: 0, compound: 0 }
+const detailPages = ref({ simple: 1, compound: 1, buyhold: 1 })
+const detailScrollTops = { simple: 0, compound: 0, buyhold: 0 }
 const detailsPageSize = 100
 const curveSelection = ref({ profit: true, buyHold: false, drawdown: false, quantity: false })
 let chart = null
@@ -115,10 +117,14 @@ let calculateQueued = false
 const resultModeLabel = computed(() => modeOptions.find(row => row.value === report.value?.settings?.mode)?.label || '')
 const selectedModeLabel = computed(() => modeOptions.find(row => row.value === settings.value.mode)?.label || '')
 const visibleFields = computed(() => fields.filter(row => row.modes.includes(settings.value.mode)))
-const currentSection = computed(() => report.value?.[activeSection.value] || null)
-const currentSummary = computed(() => currentSection.value?.summary || {})
-const currentPeriods = computed(() => currentSection.value?.periods?.[activePeriod.value] || [])
-const currentDetails = computed(() => currentSection.value?.detail || [])
+const currentSection = computed(() => activeSection.value === 'buyhold'
+  ? report.value?.buy_hold || null : report.value?.[activeSection.value] || null)
+const currentSummary = computed(() => activeSection.value === 'buyhold'
+  ? report.value?.buy_hold?.summary || { initial_capital: report.value?.buy_hold?.initial_capital,
+      final_capital: report.value?.buy_hold?.final_capital }
+  : currentSection.value?.summary || {})
+const currentDetails = computed(() => activeSection.value === 'buyhold'
+  ? report.value?.buy_hold?.detail || [] : currentSection.value?.detail || [])
 const detailsPageCount = computed(() => Math.max(1, Math.ceil(currentDetails.value.length / detailsPageSize)))
 const detailsPage = computed({
   get: () => Math.min(detailPages.value[activeSection.value], detailsPageCount.value),
@@ -134,7 +140,8 @@ const detailPageNumbers = computed(() => {
 })
 const hasBuyHoldCurve = computed(() => Boolean(report.value?.buy_hold?.curve?.length))
 const simpleCurveVisible = computed(() => visibleSimpleCurveSeries(curveSelection.value, hasBuyHoldCurve.value))
-const isClassicSimplePlot = computed(() => activeSection.value === 'simple' && activeView.value === 'curve')
+const isFullHeightPlot = computed(() => activeView.value === 'periods' ||
+  (activeSection.value === 'simple' && activeView.value === 'curve'))
 const simpleCurveItems = computed(() => [
   { key: 'profit', label: '獲利' },
   ...(hasBuyHoldCurve.value ? [{ key: 'buyHold', label: 'BuyHold' }] : []),
@@ -173,18 +180,37 @@ const dynamicHelp = computed(() => {
     `MDD 風險控制上限為 ${formatNumber(maxRisk, 0)}；複利間隔：${cfg.dynamic_interval === 'monthly' ? '每月' : '每週'}。`
   ].join('\n')
 })
-const periodLabels = { annual: '年度', monthly: '月份', weekly: '週別', daily: '日期' }
-const tabs = [
+const periodLabels = { annual: '每年', semiannual: '每半年', quarterly: '每季', monthly: '每月' }
+const periodMetricOptions = computed(() => [
+  { key: 'simple', label: '單口績效' },
+  { key: 'compound', label: '複合績效' },
+  ...(report.value?.buy_hold ? [{ key: 'buyhold', label: 'BuyHold' }] : []),
+  { key: 'drawdown', label: periodSelected.value.includes('drawdown')
+    ? periodDrawdownLabel(periodSelected.value) : 'Drawdown' }
+])
+const periodPlotData = computed(() => buildPeriodPlotData(
+  report.value, activePeriod.value, periodSelected.value))
+
+function togglePeriodMetric(key) {
+  periodSelected.value = nextPeriodMetricSelection(periodSelected.value, key)
+}
+
+const baseTabs = [
   { value: 'simple-summary', label: '單口績效', section: 'simple', view: 'summary' },
   { value: 'simple-curve', label: '單口曲線', section: 'simple', view: 'curve' },
   { value: 'simple-details', label: '單口明細', section: 'simple', view: 'details' },
-  { value: 'simple-periods', label: '單口逐年', section: 'simple', view: 'periods' },
   { value: 'compound-summary', label: '複合績效', section: 'compound', view: 'summary' },
   { value: 'compound-curve', label: '複合曲線', section: 'compound', view: 'curve' },
   { value: 'compound-details', label: '複合明細', section: 'compound', view: 'details' },
-  { value: 'compound-periods', label: '複合逐年', section: 'compound', view: 'periods' }
+  { value: 'compound-periods', label: '逐年績效', section: 'compound', view: 'periods' }
 ]
-const selectedTab = computed(() => tabs.find(tab => tab.value === activeTab.value) || tabs[0])
+const tabs = computed(() => report.value?.buy_hold
+  ? [...baseTabs.flatMap(tab => tab.value === 'compound-summary'
+      ? [tab, { value: 'buyhold-summary', label: 'BH績效', section: 'buyhold', view: 'summary' }]
+      : [tab]),
+      { value: 'buyhold-details', label: 'BH明細', section: 'buyhold', view: 'buyhold' }]
+  : baseTabs)
+const selectedTab = computed(() => tabs.value.find(tab => tab.value === activeTab.value) || tabs.value[0])
 const activeSection = computed(() => selectedTab.value.section)
 const activeView = computed(() => selectedTab.value.view)
 const buyHoldName = computed(() => {
@@ -202,12 +228,24 @@ function formatNumber(value, digits = 2) {
   return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(Number(value || 0))
 }
 
+function formatMoney(value) {
+  const amount = Number(value || 0)
+  return `${amount < 0 ? '-' : ''}$${formatNumber(Math.abs(amount), 0)}`
+}
+
 function formatQuantity(value) {
   const quantity = Number(value || 0)
   const magnitude = Math.abs(quantity)
-  if (magnitude >= 10) return formatNumber(quantity, 1)
-  if (magnitude >= 1 || magnitude === 0) return formatNumber(quantity, 2)
-  return new Intl.NumberFormat('zh-TW', { maximumSignificantDigits: 2 }).format(quantity)
+  const digits = magnitude > 1000 ? 1 : magnitude > 100 ? 2 : magnitude > 10 ? 3 : 4
+  return formatNumber(quantity, digits)
+}
+
+function formatBuyHoldQuantity(value) {
+  return formatQuantity(value)
+}
+
+function isBuyHoldAdjustment(action) {
+  return /除權|除息|分割|換倉/.test(action || '')
 }
 
 function formatPercent(value) {
@@ -500,9 +538,12 @@ function clearReport() {
   reportHelpOpen.value = false
   capitalHelpOpen.value = false
   activeTab.value = 'simple-summary'
-  detailPages.value = { simple: 1, compound: 1 }
+  activePeriod.value = 'annual'
+  periodSelected.value = ['compound']
+  detailPages.value = { simple: 1, compound: 1, buyhold: 1 }
   detailScrollTops.simple = 0
   detailScrollTops.compound = 0
+  detailScrollTops.buyhold = 0
   curveSelection.value = { profit: true, buyHold: false, drawdown: false, quantity: false }
   reportRequestId += 1
   clearTimeout(recalculateTimer)
@@ -586,8 +627,8 @@ async function calculate() {
   }
 }
 
-function updateClassicPlotHeight() {
-  if (!isClassicSimplePlot.value || !chartElement.value) return
+function updateFullHeightPlot() {
+  if (!isFullHeightPlot.value || !chartElement.value) return
   const viewportHeight = window.innerHeight
   const chartTop = chartElement.value.getBoundingClientRect().top
   const available = chartTop >= 0 && chartTop < viewportHeight
@@ -627,26 +668,46 @@ function renderChart() {
       if (chartResizeFrame != null) return
       chartResizeFrame = requestAnimationFrame(() => {
         chartResizeFrame = null
-        if (isClassicSimplePlot.value) renderChart()
+        if (isFullHeightPlot.value) renderChart()
         else chart?.resize()
       })
     })
     resizeObserver.observe(chartElement.value)
   }
-  if (isClassicSimplePlot.value) updateClassicPlotHeight()
+  if (isFullHeightPlot.value) updateFullHeightPlot()
   else chartElement.value.style.removeProperty('height')
   if (activeView.value === 'periods') {
-    const rows = currentPeriods.value
+    const { rows, series } = periodPlotData.value
+    const values = [0, ...series.flatMap(item => rows.map(row => row[item.key]))]
+    const axis = fitCurveAxis({ type: 'value', min: 0 }, values)
+    const fontFamily = getComputedStyle(chartElement.value).fontFamily
+    const measureContext = document.createElement('canvas').getContext('2d')
+    measureContext.font = `12px ${fontFamily}`
+    const tickCount = Math.min(30, Math.round((axis.max - axis.min) / axis.interval))
+    const ticks = Array.from({ length: tickCount + 1 }, (_, index) => axis.min + index * axis.interval)
+    const gutter = profitAxisLayout(ticks, label => measureContext.measureText(label).width,
+      value => formatProfitTick(value, true)).gutter
+    const valueAxis = (position, splitLine) => ({
+      ...axis, position,
+      axisLine: { show: true, lineStyle: { color: '#111' } },
+      axisTick: { show: true },
+      axisLabel: { color: '#111', margin: 4, formatter: value => formatProfitTick(value, true) },
+      splitLine: { show: splitLine, lineStyle: { color: '#ddd', type: 'dashed' } }
+    })
     chart.setOption({
-      tooltip: { trigger: 'axis', valueFormatter: value => formatNumber(value) },
-      grid: { left: 70, right: 24, top: 28, bottom: 38 },
-      xAxis: { type: 'category', data: rows.map(row => row.period) },
-      yAxis: { type: 'value', axisLabel: { formatter: value => formatNumber(value, 0) } },
-      series: [{
-        name: selectedTab.value.label, type: 'bar',
-        itemStyle: { color: activeSection.value === 'simple' ? '#0b7183' : '#d77953' },
-        data: rows.map(row => row.profit)
-      }]
+      animationDuration: 250,
+      grid: { left: gutter, right: gutter, top: 8, bottom: 32, containLabel: false },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+        valueFormatter: value => value == null ? '—' : formatProfitTick(value) },
+      xAxis: { type: 'category', data: rows.map(row => row.period),
+        axisLabel: { hideOverlap: true, interval: 'auto' },
+        axisLine: { lineStyle: { color: '#111' } } },
+      yAxis: [valueAxis('left', true), valueAxis('right', false)],
+      series: series.map(item => ({
+        name: item.label, type: 'bar', barMaxWidth: 34,
+        itemStyle: { color: item.color },
+        data: rows.map(row => row[item.key] ?? null)
+      }))
     }, true)
     chart.resize()
     return
@@ -805,12 +866,17 @@ function renderChart() {
   chart.resize()
 }
 
-watch([activeTab, activePeriod, report], () => nextTick(renderChart))
+watch([activeTab, activePeriod, periodSelected, report], () => nextTick(renderChart))
+watch(report, value => {
+  if (activeTab.value.startsWith('buyhold-') && !value?.buy_hold) activeTab.value = 'simple-summary'
+  if (!value?.buy_hold && periodSelected.value.includes('buyhold'))
+    periodSelected.value = withoutUnavailableBuyHold(periodSelected.value)
+})
 watch(activeTab, () => {
   const section = activeSection.value
   const scrollTop = detailScrollTops[section]
   nextTick(() => {
-    if (activeView.value === 'details' && detailTableElement.value) {
+    if (['details', 'buyhold'].includes(activeView.value) && detailTableElement.value) {
       detailTableElement.value.scrollTop = scrollTop
     }
   })
@@ -844,16 +910,23 @@ function printReport() {
 }
 
 function downloadCsv(kind) {
-  if (!currentSection.value) return
-  const rows = kind === 'details' ? currentDetails.value : currentPeriods.value
+  if (!currentSection.value && kind !== 'buyhold') return
+  const rows = kind === 'periods' ? periodPlotData.value.rows : currentDetails.value
   if (!rows.length) return
-  const columns = kind === 'details'
-    ? [['__row_number__', '#'], ['timestamp', '時間'], ['symbol', '標的'], ['side', '買賣'], ['quantity', report.value?.settings?.mode === 'dynamic_compounding' && activeSection.value === 'compound' ? '倍率' : '口數'], ['price', '價格'], ['position', '部位'], ['profit', '損益'], ['equity', '累積淨值'], ['action', '訊號']]
-    : [['period', '期間'], ['profit', '損益'], ['cumulative', '累積'], ['return_pct', '報酬率 (%)']]
+  const buyHoldFutures = kind === 'buyhold' && report.value?.settings?.buy_hold?.product_type === '期貨'
+  const columns = kind === 'buyhold'
+    ? [['__row_number__', '#'], ['timestamp', '日期'], ['symbol', '標的'],
+      ...(buyHoldFutures ? [['contract', '合約']] : []), ['action', '動作'],
+      ['quantity', report.value?.settings?.buy_hold?.product_type === '股票' ? '股數' : '口數'],
+      ['price', '收盤價'], ...(buyHoldFutures ? [['price_basis', '價別']] : []),
+      ['position', '部位'], ['profit', '當日損益'], ['equity', '累積淨值']]
+    : kind === 'details'
+      ? [['__row_number__', '#'], ['timestamp', '時間'], ['symbol', '標的'], ['side', '買賣'], ['quantity', report.value?.settings?.mode === 'dynamic_compounding' && activeSection.value === 'compound' ? '倍率' : '口數'], ['price', '價格'], ['position', '部位'], ['profit', '損益'], ['equity', '累積淨值'], ['action', '訊號']]
+      : [['period', '期間'], ...periodPlotData.value.series.map(item => [item.key, `${item.label}($)`])]
   const lines = [
     `${csvCell('來源檔案')},${csvCell(source.value?.filename)}`,
     `${csvCell('策略')},${csvCell(source.value?.strategy)}`,
-    `${csvCell('資金管理模式')},${csvCell(activeSection.value === 'simple' ? '單純績效' : resultModeLabel.value)}`,
+    `${csvCell('資金管理模式')},${csvCell(activeSection.value === 'buyhold' ? 'BuyHold' : activeSection.value === 'simple' ? '單純績效' : resultModeLabel.value)}`,
     `${csvCell('區間')},${csvCell(`${report.value?.settings?.date_start || '全部'} ~ ${report.value?.settings?.date_end || '全部'}`)}`,
     '', columns.map(item => csvCell(item[1])).join(','),
     ...rows.map((row, index) => columns.map(([key]) => csvCell(key === '__row_number__' ? index + 1 : row[key])).join(','))
@@ -862,27 +935,27 @@ function downloadCsv(kind) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `${(source.value?.strategy || 'strategy').replaceAll(/[\\/:*?"<>|]/g, '_')}-${activeSection.value}-${kind === 'details' ? 'details' : activePeriod.value}.csv`
+  link.download = `${(source.value?.strategy || 'strategy').replaceAll(/[\\/:*?"<>|]/g, '_')}-${activeSection.value}-${kind === 'buyhold' ? 'daily-close' : kind === 'details' ? 'details' : activePeriod.value}.csv`
   link.click()
   URL.revokeObjectURL(url)
 }
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', handleRouteChange)
-  window.removeEventListener('resize', updateClassicPlotHeight)
+  window.removeEventListener('resize', updateFullHeightPlot)
   window.removeEventListener('mousemove', onSidebarMouseMove)
   window.removeEventListener('mouseup', stopSidebarResize)
-  window.visualViewport?.removeEventListener('resize', updateClassicPlotHeight)
+  window.visualViewport?.removeEventListener('resize', updateFullHeightPlot)
   if (chartResizeFrame != null) cancelAnimationFrame(chartResizeFrame)
   stopSidebarResize()
   clearReport()
 })
 onMounted(() => {
   window.addEventListener('popstate', handleRouteChange)
-  window.addEventListener('resize', updateClassicPlotHeight)
+  window.addEventListener('resize', updateFullHeightPlot)
   window.addEventListener('mousemove', onSidebarMouseMove)
   window.addEventListener('mouseup', stopSidebarResize)
-  window.visualViewport?.addEventListener('resize', updateClassicPlotHeight)
+  window.visualViewport?.addEventListener('resize', updateFullHeightPlot)
   refreshAuth()
 })
 </script>
@@ -977,7 +1050,10 @@ onMounted(() => {
           <p v-if="copyHint" class="hint" role="status">{{ copyHint }}</p>
 
           <section class="settings-panel">
-            <div class="panel-heading"><h2>績效資金管理</h2></div>
+            <div class="panel-heading settings-heading">
+              <h2>績效資金管理</h2>
+              <span v-if="busy" class="report-calculating" role="status">正在計算報表…</span>
+            </div>
             <div class="manager-range-row">
               <label class="range-check-label"><input v-model="dateRangeEnabled" type="checkbox" /><span>指定</span></label>
               <ReportDateInput v-model="settings.date_start" label="開始日期" :disabled="!dateRangeEnabled" />
@@ -1014,8 +1090,7 @@ onMounted(() => {
               <label v-if="settings.mode === 'target_leverage'" class="field"><span>槓桿資金</span><select v-model="settings.leverage_funds"><option value="cumulative">累加獲利</option><option value="fixed">固定資金</option></select></label>
               <template v-if="settings.mode !== 'backtest' && settings.mode !== 'dynamic_compounding'"><label class="field"><span>最大口數 <small>0 = 無上限</small></span><input v-model.number="settings.maximum_quantity" type="number" min="0" step="any" /></label><label class="check-field"><input v-model="settings.integer_quantity" type="checkbox" /><span>口數為整數</span></label></template>
             </div>
-            <p v-if="busy" class="field-help" role="status">正在計算報表…</p>
-            <p v-else-if="settingsDirty" class="field-help" role="status">設定已變更，將自動重新計算。</p>
+            <p v-if="!busy && settingsDirty" class="field-help" role="status">設定已變更，將自動重新計算。</p>
             <p v-if="error" class="error-message" role="alert">{{ error }}</p>
           </section>
         </aside>
@@ -1040,7 +1115,9 @@ onMounted(() => {
               <button type="button" class="print-button" @click="printReport">列印 / 儲存 PDF</button>
             </div>
             <p class="print-meta">{{ currentPerformance.name }} · {{ selectedTab.label }} · 資金管理：{{ resultModeLabel }} · 初始資金：{{ formatNumber(currentSummary.initial_capital) }} · Buy&amp;Hold：{{ buyHoldName }}</p>
-            <SummaryPanel v-if="activeView === 'summary'" :section="currentSection" :symbol="source.symbol" :compound="activeSection === 'compound'" />
+            <p v-if="activeSection === 'buyhold' && activeView === 'summary' && report.buy_hold.error" class="error-message" role="alert">{{ report.buy_hold.error }}</p>
+            <SummaryPanel v-if="activeView === 'summary' && currentSection?.summary" :section="currentSection" :symbol="activeSection === 'buyhold' ? report.settings.buy_hold?.code : source.symbol" :compound="activeSection !== 'simple'" />
+            <p v-else-if="activeView === 'summary'" class="no-data">沒有可用的每日收盤行情</p>
             <div v-else-if="activeView === 'curve'" class="chart-panel">
               <h3 v-if="activeSection !== 'simple'">{{ selectedTab.label }}</h3>
               <div v-if="activeSection === 'simple'" class="curve-series-controls" role="group" aria-label="曲線項目">
@@ -1050,14 +1127,37 @@ onMounted(() => {
                   :title="item.key === 'quantity' && curveSelection.quantity && !simpleCurveVisible.quantity ? '獲利或 BuyHold 與回撤同時顯示時，口數不繪製' : ''"
                   @click="curveSelection[item.key] = !curveSelection[item.key]">{{ item.label }}</button>
               </div>
-              <div ref="chartElement" class="chart" :class="{ 'classic-profit-chart': isClassicSimplePlot }" role="img" :aria-label="`${selectedTab.label}，顯示${activeSection === 'simple' ? simpleCurveItems.filter(item => simpleCurveVisible[item.key]).map(item => item.label).join('、') : '資金、回撤'}`"></div>
+              <div ref="chartElement" class="chart" :class="{ 'full-height-chart': isFullHeightPlot }" role="img" :aria-label="`${selectedTab.label}，顯示${activeSection === 'simple' ? simpleCurveItems.filter(item => simpleCurveVisible[item.key]).map(item => item.label).join('、') : '資金、回撤'}`"></div>
             </div>
 
-            <div v-else-if="activeView === 'periods'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">PERIOD REPORT</span><h3>{{ selectedTab.label }}</h3></div><button type="button" class="secondary-button" :disabled="!currentPeriods.length" @click="downloadCsv('periods')">下載 CSV ↓</button></div><div class="period-switch"><button v-for="(label, key) in periodLabels" :key="key" type="button" :class="{ active: activePeriod === key }" @click="activePeriod = key">{{ label }}</button></div><div ref="chartElement" class="chart" role="img" :aria-label="`${selectedTab.label}獲利分佈`"></div><div class="table-scroll"><table><thead><tr><th>期間</th><th class="numeric">損益</th><th class="numeric">累積</th><th v-if="activeSection === 'compound'" class="numeric">報酬率</th></tr></thead><tbody><tr v-for="row in currentPeriods" :key="row.period"><td>{{ row.period }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.cumulative) }}</td><td v-if="activeSection === 'compound'" class="numeric">{{ formatPercent(row.return_pct) }}</td></tr><tr v-if="!currentPeriods.length"><td :colspan="activeSection === 'compound' ? 4 : 3" class="no-data">此區間沒有資料</td></tr></tbody></table></div></div>
+            <div v-else-if="activeView === 'periods'" class="chart-panel period-chart-panel">
+              <div class="period-metric-switch" role="group" aria-label="績效比較項目">
+                <button v-for="item in periodMetricOptions" :key="item.key" type="button"
+                  :class="[item.key, { active: periodSelected.includes(item.key) }]"
+                  :aria-pressed="periodSelected.includes(item.key)"
+                  @click="togglePeriodMetric(item.key)">{{ item.label }}</button>
+              </div>
+              <div class="period-frequency-row">
+                <div class="period-switch" role="radiogroup" aria-label="績效期間">
+                  <button v-for="(label, key) in periodLabels" :key="key" type="button" role="radio"
+                    :class="{ active: activePeriod === key }" :aria-checked="activePeriod === key"
+                    @click="activePeriod = key">{{ label }}</button>
+                </div>
+                <button type="button" class="secondary-button" :disabled="!periodPlotData.rows.length" @click="downloadCsv('periods')">下載 CSV ↓</button>
+              </div>
+              <p v-if="!periodPlotData.rows.length" class="no-data">此區間沒有資料</p>
+              <div ref="chartElement" class="chart full-height-chart" role="img"
+                :aria-label="`${selectedTab.label}，${periodLabels[activePeriod]}，顯示${periodPlotData.series.map(item => item.label).join('、')}`"></div>
+            </div>
 
-            <div v-else-if="activeView === 'details'" class="panel table-panel">
+            <div v-else-if="activeView === 'details' || activeView === 'buyhold'" class="panel table-panel">
               <div class="section-heading detail-heading">
-                <div><span class="section-kicker">TRADE LOG</span><p>共 {{ formatNumber(currentDetails.length, 0) }} 筆 · 每頁 {{ detailsPageSize }} 筆</p></div>
+                <div>
+                  <span class="section-kicker">{{ activeView === 'buyhold' ? 'DAILY CLOSE' : 'TRADE LOG' }}</span>
+                  <h3 v-if="activeView === 'buyhold'">{{ report.buy_hold.name }} · 每日收盤淨值</h3>
+                  <p v-if="activeView === 'buyhold' && report.buy_hold.initial_capital != null">初始資金 {{ formatMoney(report.buy_hold.initial_capital) }} · {{ report.buy_hold.detail?.at(-1)?.action === '資金耗盡' ? '停止時淨值' : '最終淨值' }} {{ formatMoney(report.buy_hold.final_capital) }} · 截至 {{ report.buy_hold.end_date }}</p>
+                  <p>共 {{ formatNumber(currentDetails.length, 0) }} 筆 · 每頁 {{ detailsPageSize }} 筆</p>
+                </div>
                 <nav v-if="detailsPageCount > 1" class="detail-pagination" aria-label="明細分頁">
                   <button type="button" :disabled="detailsPage === 1" @click="goToDetailsPage(detailsPage - 1)">上一頁</button>
                   <template v-for="(page, index) in detailPageNumbers" :key="page">
@@ -1066,11 +1166,12 @@ onMounted(() => {
                   </template>
                   <button type="button" :disabled="detailsPage === detailsPageCount" @click="goToDetailsPage(detailsPage + 1)">下一頁</button>
                 </nav>
-                <button type="button" class="secondary-button" :disabled="!currentDetails.length" @click="downloadCsv('details')">下載 CSV ↓</button>
+                <button type="button" class="secondary-button" :disabled="!currentDetails.length" @click="downloadCsv(activeView === 'buyhold' ? 'buyhold' : 'details')">下載 CSV ↓</button>
               </div>
+              <p v-if="activeView === 'buyhold' && report.buy_hold.error" class="error-message" role="alert">{{ report.buy_hold.error }}</p>
               <div ref="detailTableElement" class="table-scroll detail-table" @scroll="rememberDetailScroll">
-                <table><thead><tr><th class="numeric detail-index">#</th><th>時間</th><th>標的</th><th>買賣</th><th class="numeric">{{ report.settings.mode === 'dynamic_compounding' && activeSection === 'compound' ? '倍率' : '口數' }}</th><th class="numeric">價格</th><th class="numeric">部位</th><th class="numeric">損益</th><th class="numeric">累積淨值</th><th>訊號</th></tr></thead>
-                  <tbody><tr v-for="(row, index) in pagedDetails" :key="row.index"><td class="numeric detail-index">{{ (detailsPage - 1) * detailsPageSize + index + 1 }}</td><td>{{ row.timestamp }}</td><td>{{ row.symbol }}</td><td><span class="side-pill" :class="row.side === 'B' ? 'buy' : row.side === 'S' ? 'sell' : ''">{{ row.side === 'B' ? '買進' : row.side === 'S' ? '賣出' : '—' }}</span></td><td class="numeric">{{ report.settings.mode === 'dynamic_compounding' && activeSection === 'compound' ? `${formatQuantity(row.multiplier)}X` : formatQuantity(row.quantity) }}</td><td class="numeric">{{ formatNumber(row.price, 4) }}</td><td class="numeric">{{ formatQuantity(row.position) }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit, 0) }}</td><td>{{ formatNumber(row.equity, 0) }}</td><td>{{ row.action || '—' }}</td></tr><tr v-if="!currentDetails.length"><td colspan="10" class="no-data">此區間沒有交易</td></tr></tbody>
+                <table><thead><tr><th class="numeric detail-index">#</th><th>{{ activeView === 'buyhold' ? '日期' : '時間' }}</th><th>標的</th><th>{{ activeView === 'buyhold' ? '動作' : '買賣' }}</th><th class="numeric">{{ activeView === 'buyhold' ? report.settings.buy_hold?.product_type === '股票' ? '股數' : '口數' : report.settings.mode === 'dynamic_compounding' && activeSection === 'compound' ? '倍率' : '口數' }}</th><th class="numeric">{{ activeView === 'buyhold' && report.settings.buy_hold?.product_type === '期貨' ? '收盤／結算價' : activeView === 'buyhold' ? '收盤價' : '價格' }}</th><th class="numeric">部位</th><th class="numeric">{{ activeView === 'buyhold' ? '當日損益' : '損益' }}</th><th class="numeric">累積淨值</th><th v-if="activeView !== 'buyhold'">訊號</th></tr></thead>
+                  <tbody><tr v-for="(row, index) in pagedDetails" :key="activeView === 'buyhold' ? index : row.index"><td class="numeric detail-index">{{ (detailsPage - 1) * detailsPageSize + index + 1 }}</td><td>{{ row.timestamp }}</td><td>{{ row.symbol }}<span v-if="activeView === 'buyhold' && row.contract"> {{ row.contract }}</span></td><td><span class="side-pill" :class="activeView === 'buyhold' && isBuyHoldAdjustment(row.action) ? 'adjustment' : row.side === 'B' ? 'buy' : row.side === 'S' ? 'sell' : row.side === 'M' ? 'mark' : ''">{{ activeView === 'buyhold' ? row.action : row.side === 'B' ? '買進' : row.side === 'S' ? '賣出' : '—' }}</span></td><td class="numeric">{{ activeView === 'buyhold' ? formatBuyHoldQuantity(row.quantity) : report.settings.mode === 'dynamic_compounding' && activeSection === 'compound' ? `${formatQuantity(row.multiplier)}X` : formatQuantity(row.quantity) }}</td><td class="numeric">{{ formatNumber(row.price, 4) }}<span v-if="activeView === 'buyhold' && row.price_basis === '結算'" class="price-basis"> 結算</span></td><td class="numeric">{{ activeView === 'buyhold' ? formatBuyHoldQuantity(row.position) : formatQuantity(row.position) }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit, 0) }}</td><td>{{ formatNumber(row.equity, 0) }}</td><td v-if="activeView !== 'buyhold'">{{ row.action || '—' }}</td></tr><tr v-if="!currentDetails.length"><td :colspan="activeView === 'buyhold' ? 9 : 10" class="no-data">{{ activeView === 'buyhold' ? '沒有可用的每日收盤行情' : '此區間沒有交易' }}</td></tr></tbody>
                 </table>
               </div>
             </div>

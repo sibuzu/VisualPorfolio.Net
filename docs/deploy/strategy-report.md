@@ -24,6 +24,25 @@ During local development, the backend stores the performance index (IDs, names, 
 
 ## Containers
 
+### Docker development mode
+
+Use the development override to mount backend code and frontend source into the containers. Build once when starting development:
+
+```bash
+env UID="$(id -u)" GID="$(id -g)" docker compose -f docker/strategy-report/docker-compose.yml -f docker/strategy-report/docker-compose.dev.yml up -d --build
+```
+
+After that, edits to `strategy-report/backend/strategy_report/` reload the API and edits to `strategy-report/frontend/src/`, `index.html`, or `vite.config.js` update through Vite without another Docker build. The site remains at `http://127.0.0.1:8088`. Vite also accepts `strategyreport.sibuzu.com` by default; set `STRATEGY_REPORT_DEV_HOST` if the development hostname differs. The override uses the same service names, storage, and port as the regular stack, so use one mode at a time. Dependency, Dockerfile, or Compose changes still require a rebuild.
+
+When the implementation is ready, switch back to the production images and verify them:
+
+```bash
+env UID="$(id -u)" GID="$(id -g)" docker compose -f docker/strategy-report/docker-compose.yml up -d --build
+./scripts/smoke-strategy-report.sh
+```
+
+### Production containers
+
 The existing Docker network `sibuzu-net` and `visualportfolio-backend` service must be running. If this is a new host, create the network once with `docker network create sibuzu-net` and start Visual Portfolio first. From the repository root:
 
 ```bash
@@ -79,7 +98,7 @@ The reference uses its own amount and leverage; strategy capital management neve
 
 `config.json` stores `buy_hold: null` for 無, or for example `{"product_type":"股票","code":"0050","amount_wan":"100","leverage":"5"}`. Existing configs default to 無. Owner edits persist; viewer edits remain temporary; copies inherit the saved reference settings. No extra report directories or database columns are needed.
 
-The report uses the desktop tab labels: 單口績效、單口曲線、單口明細、複合績效、複合曲線、複合明細、逐年獲利. Summary cards and tables follow Visual Portfolio. The question-mark control contains report help, source parameters, and print/PDF.
+The report tabs are 單口績效、單口曲線、單口明細、複合績效、複合曲線、複合明細、逐年績效, with BH績效 and BH明細 when Buy&Hold is configured. The period chart shows one or two of simple profit, compound profit, Buy&Hold profit, and drawdown by year, half-year, quarter, or month. Drawdown requires one of the three profit series and uses that series's period MDD as a positive amount. Summary cards and tables follow Visual Portfolio. The question-mark control contains report help, source parameters, and print/PDF.
 
 Date fields initially show the input's first and last event dates, even with 指定 unchecked. Existing saved dates take precedence. `date_range_enabled` stores the checkbox separately, so unchecking restores the full calculation without discarding the entered dates. Only owner calculations persist these values in `config.json`; viewers cannot change them. Older settings without the flag retain their previous date-filter behavior.
 

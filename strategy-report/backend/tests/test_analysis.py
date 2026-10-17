@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from strategy_report.analysis import CalculationSettings, _dynamic_compounding_records, analyze_report
+from strategy_report.analysis import CalculationSettings, _dynamic_compounding_records, _periods, analyze_report
 from strategy_report.model import ReportSource, TradeEvent
 
 
@@ -26,6 +26,20 @@ def test_simple_and_backtest_capital():
     assert report["compound"]["summary"]["final_capital"] == 80_002_000
     assert [row["quantity"] for row in report["compound"]["detail"]] == [2, 2]
     assert report["compound"]["periods"]["daily"][-1]["cumulative"] == 80_002_000
+
+
+def test_half_year_and_quarter_periods_keep_calendar_boundaries():
+    records = [
+        {"timestamp": datetime(2024, month, 2), "profit": Decimal(profit)}
+        for month, profit in [(1, 10), (3, -5), (7, 20), (10, -10)]
+    ]
+    periods = _periods(records, Decimal(100), True)
+    assert [(row["period"], row["profit"]) for row in periods["semiannual"]] == [
+        ("2024/H1", 5), ("2024/H2", 10)]
+    assert [(row["period"], row["profit"]) for row in periods["quarterly"]] == [
+        ("2024/Q1", 5), ("2024/Q3", 20), ("2024/Q4", -10)]
+    assert periods["semiannual"][0]["mdd"] == 5
+    assert periods["semiannual"][1]["mdd"] == 10
 
 
 def test_simple_curve_position_matches_csharp_three_event_peak():
