@@ -1,0 +1,51 @@
+services:
+  strategy-report-backend:
+    build:
+      context: ../..
+      dockerfile: docker/strategy-report/Dockerfile.backend
+    container_name: strategy-report-backend
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      VISUAL_PORTFOLIO_AUTH_URL: http://visualportfolio-backend:8000
+      STRATEGY_REPORT_DATA_DIR: /app/data
+      STRATEGY_REPORT_REPORTS_DIR: /app/data/reports
+      STRATEGY_REPORT_LEGACY_DB: /app/legacy-data/performances.db
+      FINMIND_TOKEN: ${FINMIND_TOKEN:-}
+    volumes:
+      - ../../data/db:/app/data/db
+      - ../../data/reports:/app/data/reports
+      - strategy-report-data:/app/legacy-data:ro
+    restart: unless-stopped
+    networks:
+      - sibuzu-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  strategy-report-frontend:
+    build:
+      context: ../..
+      dockerfile: docker/strategy-report/Dockerfile.frontend
+    container_name: strategy-report-frontend
+    depends_on:
+      strategy-report-backend:
+        condition: service_healthy
+    ports:
+      - "${STRATEGY_REPORT_BIND:-127.0.0.1:8088}:80"
+    restart: unless-stopped
+    networks:
+      - sibuzu-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  sibuzu-net:
+    external: true
+
+volumes:
+  strategy-report-data:

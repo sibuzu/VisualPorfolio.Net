@@ -1,0 +1,630 @@
+<策略回測>
+  <Setting>
+    <MddCount>5</MddCount>
+    <Compound>
+      <管理模式>槓桿倍數目標</管理模式>
+      <金額單位_intl>1</金額單位_intl>
+      <金額單位>1</金額單位>
+      <換倉調整口數>True</換倉調整口數>
+      <初始資金_intl>1000000</初始資金_intl>
+      <初始資金>1000000</初始資金>
+      <使用同一套淨值差序列>True</使用同一套淨值差序列>
+      <最大口數>0</最大口數>
+      <口數小數點>捨去</口數小數點>
+      <固定口數>1</固定口數>
+      <風險因子>0.05</風險因子>
+      <槓桿資金>累加獲利</槓桿資金>
+      <槓桿倍數>5</槓桿倍數>
+      <回測基準金額>無</回測基準金額>
+      <基準金額>10000</基準金額>
+      <初始口數>1</初始口數>
+      <最小口數>1</最小口數>
+      <_獲利基數>50</_獲利基數>
+      <獲利基數>50</獲利基數>
+      <_交易一口金額>500</_交易一口金額>
+      <交易一口金額>500</交易一口金額>
+      <固定風險比例>0.02</固定風險比例>
+      <初始資金風險比例>0.02</初始資金風險比例>
+      <已獲利風險比例>0.05</已獲利風險比例>
+      <_每次交易風險金額>100</_每次交易風險金額>
+      <每次交易風險金額>100</每次交易風險金額>
+      <保證金目標比例>0.1</保證金目標比例>
+      <_每口保證金>100000</_每口保證金>
+      <每口保證金>100000</每口保證金>
+      <下注比例>10</下注比例>
+      <ChipSize>0</ChipSize>
+      <最佳比例>0</最佳比例>
+      <動態複利初始比例>0.10</動態複利初始比例>
+      <動態複利加碼比例>0.15</動態複利加碼比例>
+      <動態複利加碼門檻>100000000</動態複利加碼門檻>
+      <動態複利回撤門檻Str>2000</動態複利回撤門檻Str>
+      <動態複利最大倍數>10</動態複利最大倍數>
+      <動態複利複利間隔>每週</動態複利複利間隔>
+    </Compound>
+  </Setting>
+  <參數>
+    <策略>BDSXv5</策略>
+    <近月代碼>TXF (台指期)</近月代碼>
+    <最小跳動點>1</最小跳動點>
+    <最小跳動金額>200</最小跳動金額>
+    <契約價值>0</契約價值>
+    <滑價>2</滑價>
+    <模擬TICK>0</模擬TICK>
+    <ChipSize>0</ChipSize>
+  </參數>
+  <策略參數>
+    <Strategy>
+      <Strategy>BDSXv5</Strategy>
+      <Symbol>TXF (台指期)</Symbol>
+      <契約價值>200</契約價值>
+      <最小跳動點>1</最小跳動點>
+      <貨幣>NTD</貨幣>
+      <開始日期>2016-01-01</開始日期>
+      <結束日期>2026-12-31</結束日期>
+      <交易成本>2</交易成本>
+      <策略名稱>BDSXv5</策略名稱>
+      <多進場比>5%</多進場比>
+      <空進場比>5%</空進場比>
+      <空進場與多同>True</空進場與多同>
+      <最少進場點>0</最少進場點>
+      <最多進場次數>5</最多進場次數>
+      <停損後加碼>False</停損後加碼>
+      <最多進場口數>1</最多進場口數>
+      <最多口數絕對值>False</最多口數絕對值>
+      <自動停止天數>0</自動停止天數>
+      <進場價格修正>True</進場價格修正>
+      <跳空處理>無</跳空處理>
+      <可當沖>True</可當沖>
+      <總停利>10000</總停利>
+      <停損比>1%</停損比>
+      <停止分鐘>0</停止分鐘>
+      <夜盤模式>與日盤相同</夜盤模式>
+      <夜停損計算>相對日收盤價</夜停損計算>
+      <夜盤停損>300</夜盤停損>
+      <夜盤停利>500</夜盤停利>
+      <加碼模式>無</加碼模式>
+      <有加碼>False</有加碼>
+      <星期加碼>False</星期加碼>
+      <價差加碼>False</價差加碼>
+      <下單基數2>1</下單基數2>
+      <下單基數>1</下單基數>
+      <星期一乘數>1</星期一乘數>
+      <星期二乘數>1</星期二乘數>
+      <星期三乘數>1</星期三乘數>
+      <星期四乘數>1</星期四乘數>
+      <星期五乘數>1</星期五乘數>
+      <價差模式>日價差30</價差模式>
+      <正價差點數>10</正價差點數>
+      <逆價差點數>20</逆價差點數>
+      <正價差作多乘數>0</正價差作多乘數>
+      <正價差作空乘數>2</正價差作空乘數>
+      <逆價差作多乘數>1.2</逆價差作多乘數>
+      <逆價差作空乘數>0</逆價差作空乘數>
+      <進場模式>每週</進場模式>
+      <每n分>60</每n分>
+      <畫線分鐘偏移>0</畫線分鐘偏移>
+      <結算前n日>15</結算前n日>
+      <漲跌n點>100</漲跌n點>
+      <BD線開盤時間>0</BD線開盤時間>
+      <BD線最後時間>1344</BD線最後時間>
+      <BD線週N劃線>1</BD線週N劃線>
+      <BD線月N劃線>1</BD線月N劃線>
+      <BD線濾網點>0</BD線濾網點>
+      <結算日動作>換倉</結算日動作>
+      <每日收盤動作>留倉</每日收盤動作>
+      <留倉最多口數>1000</留倉最多口數>
+      <平倉時間>1344</平倉時間>
+      <年假留倉>留倉</年假留倉>
+      <年假天數>7</年假天數>
+      <Version>v26.10.17.31855</Version>
+      <策略版本>v17.08.10</策略版本>
+      <策略商品>TXF (台指期)</策略商品>
+      <最小升降單位>1</最小升降單位>
+      <滑價xTick>2</滑價xTick>
+      <KBAR間隔ex>1/4</KBAR間隔ex>
+      <KBAR間隔>4</KBAR間隔>
+      <KBAR啟始值>1</KBAR啟始值>
+      <報價偏移>0</報價偏移>
+      <開始交易時間>845</開始交易時間>
+      <最後交易時間>1345</最後交易時間>
+      <開始日期>2016-01-01</開始日期>
+      <結束日期>2026-12-31</結束日期>
+      <隱藏複合界面>True</隱藏複合界面>
+      <ATR長度>100</ATR長度>
+      <部位管理>固定金額</部位管理>
+      <固定金額>10000</固定金額>
+      <金額乘數>1</金額乘數>
+      <最小口數>1</最小口數>
+      <啟動移停比>1%</啟動移停比>
+      <移停拉回比>2%</移停拉回比>
+      <移停增量比>0</移停增量比>
+      <直接停利比>10%</直接停利比>
+      <直停限價>False</直停限價>
+      <累計績效>2450400</累計績效>
+      <MaxDrawdown>-602400</MaxDrawdown>
+      <交易次數>472</交易次數>
+      <交易口數>236</交易口數>
+      <交易點數>4438931</交易點數>
+      <GrossProfit>8601800</GrossProfit>
+      <GrossLoss>-6151400</GrossLoss>
+      <ProfitFactor>1.3983483434665279448580810872</ProfitFactor>
+      <ProfitOverDrawdown>4.0677290836653386454183266932</ProfitOverDrawdown>
+      <ProfitOverCount>10383.050847457627118644067797</ProfitOverCount>
+      <回測商品>-</回測商品>
+    </Strategy>
+  </策略參數>
+  <策略交易>
+    <Trade index="1" symbol="TXF" bs="S" contract="1.0" price="7848.0" time_stamp="2016/01/07 09:45:00" tag="空" type="" atr="0" />
+    <Trade index="1" symbol="TXF" bs="B" contract="1.0" price="7801.0" time_stamp="2016/01/15 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="3" symbol="TXF" bs="B" contract="1.0" price="7833.0" time_stamp="2016/01/25 09:13:00" tag="多" type="" atr="0" />
+    <Trade index="3" symbol="TXF" bs="S" contract="1.0" price="7755.0" time_stamp="2016/01/26 10:05:00" tag="停損" type="" atr="0" />
+    <Trade index="3" symbol="TXF" bs="B" contract="1.0" price="7850.0" time_stamp="2016/01/27 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="3" symbol="TXF" bs="S" contract="1.0" price="7920.0" time_stamp="2016/02/15 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="6" symbol="TXF" bs="B" contract="1.0" price="8290.0" time_stamp="2016/02/18 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="6" symbol="TXF" bs="S" contract="1.0" price="8224.0" time_stamp="2016/02/24 12:09:00" tag="移停" type="" atr="0" />
+    <Trade index="5" symbol="TXF" bs="B" contract="1.0" price="8540.0" time_stamp="2016/03/02 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="5" symbol="TXF" bs="S" contract="1.0" price="8592.0" time_stamp="2016/03/15 12:53:00" tag="移停" type="" atr="0" />
+    <Trade index="10" symbol="TXF" bs="S" contract="1.0" price="8276.0" time_stamp="2016/05/03 09:25:00" tag="空" type="" atr="0" />
+    <Trade index="10" symbol="TXF" bs="B" contract="1.0" price="8130.0" time_stamp="2016/05/17 11:53:00" tag="移停" type="" atr="0" />
+    <Trade index="16" symbol="TXF" bs="B" contract="1.0" price="8379.0" time_stamp="2016/05/25 09:21:00" tag="多" type="" atr="0" />
+    <Trade index="16" symbol="TXF" bs="S" contract="1.0" price="8551.0" time_stamp="2016/06/13 09:25:00" tag="移停" type="" atr="0" />
+    <Trade index="22" symbol="TXF" bs="B" contract="1.0" price="8676.0" time_stamp="2016/07/04 10:01:00" tag="多" type="" atr="0" />
+    <Trade index="22" symbol="TXF" bs="S" contract="1.0" price="8584.0" time_stamp="2016/07/05 09:29:00" tag="停損" type="" atr="0" />
+    <Trade index="22" symbol="TXF" bs="B" contract="1.0" price="8683.0" time_stamp="2016/07/11 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="22" symbol="TXF" bs="S" contract="1.0" price="9004.0" time_stamp="2016/07/20 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="22" symbol="TXF" bs="B" contract="1.0" price="8889.0" time_stamp="2016/07/20 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="22" symbol="TXF" bs="S" contract="1.0" price="8834.0" time_stamp="2016/07/25 09:57:00" tag="移停" type="" atr="0" />
+    <Trade index="25" symbol="TXF" bs="B" contract="1.0" price="9149.0" time_stamp="2016/09/06 11:45:00" tag="多" type="" atr="0" />
+    <Trade index="25" symbol="TXF" bs="S" contract="1.0" price="8930.0" time_stamp="2016/09/10 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="27" symbol="TXF" bs="B" contract="1.0" price="9240.0" time_stamp="2016/09/22 08:49:00" tag="多" type="" atr="0" />
+    <Trade index="27" symbol="TXF" bs="S" contract="1.0" price="9139.0" time_stamp="2016/09/30 09:37:00" tag="停損" type="" atr="0" />
+    <Trade index="27" symbol="TXF" bs="B" contract="1.0" price="9240.0" time_stamp="2016/10/04 10:33:00" tag="多" type="" atr="0" />
+    <Trade index="27" symbol="TXF" bs="S" contract="1.0" price="9144.0" time_stamp="2016/10/17 08:49:00" tag="停損" type="" atr="0" />
+    <Trade index="27" symbol="TXF" bs="B" contract="1.0" price="9245.0" time_stamp="2016/10/19 09:05:00" tag="多" type="" atr="0" />
+    <Trade index="27" symbol="TXF" bs="S" contract="1.0" price="9280.0" time_stamp="2016/10/19 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="27" symbol="TXF" bs="B" contract="1.0" price="9248.0" time_stamp="2016/10/19 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="27" symbol="TXF" bs="S" contract="1.0" price="9193.0" time_stamp="2016/10/31 09:13:00" tag="移停" type="" atr="0" />
+    <Trade index="28" symbol="TXF" bs="B" contract="1.0" price="9367.0" time_stamp="2016/12/08 11:45:00" tag="多" type="" atr="0" />
+    <Trade index="28" symbol="TXF" bs="S" contract="1.0" price="9272.0" time_stamp="2016/12/19 09:41:00" tag="停損" type="" atr="0" />
+    <Trade index="28" symbol="TXF" bs="B" contract="1.0" price="9368.0" time_stamp="2017/01/06 11:33:00" tag="多" type="" atr="0" />
+    <Trade index="28" symbol="TXF" bs="S" contract="1.0" price="9340.0" time_stamp="2017/01/18 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="28" symbol="TXF" bs="B" contract="1.0" price="9319.0" time_stamp="2017/01/18 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="28" symbol="TXF" bs="S" contract="1.0" price="9800.0" time_stamp="2017/02/15 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="28" symbol="TXF" bs="B" contract="1.0" price="9794.0" time_stamp="2017/02/15 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="28" symbol="TXF" bs="S" contract="1.0" price="9649.0" time_stamp="2017/03/02 12:21:00" tag="移停" type="" atr="0" />
+    <Trade index="45" symbol="TXF" bs="B" contract="1.0" price="9863.0" time_stamp="2017/03/17 08:57:00" tag="多" type="" atr="0" />
+    <Trade index="45" symbol="TXF" bs="S" contract="1.0" price="9761.0" time_stamp="2017/04/14 09:01:00" tag="移停" type="" atr="0" />
+    <Trade index="54" symbol="TXF" bs="B" contract="1.0" price="10093.0" time_stamp="2017/05/25 10:17:00" tag="多" type="" atr="0" />
+    <Trade index="54" symbol="TXF" bs="S" contract="1.0" price="10040.0" time_stamp="2017/06/14 10:37:00" tag="移停" type="" atr="0" />
+    <Trade index="58" symbol="TXF" bs="B" contract="1.0" price="10334.0" time_stamp="2017/06/20 11:17:00" tag="多" type="" atr="0" />
+    <Trade index="58" symbol="TXF" bs="S" contract="1.0" price="10368.0" time_stamp="2017/06/21 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="58" symbol="TXF" bs="B" contract="1.0" price="10173.0" time_stamp="2017/06/21 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="58" symbol="TXF" bs="S" contract="1.0" price="10200.0" time_stamp="2017/06/30 09:13:00" tag="移停" type="" atr="0" />
+    <Trade index="65" symbol="TXF" bs="B" contract="1.0" price="10458.0" time_stamp="2017/07/17 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="65" symbol="TXF" bs="S" contract="1.0" price="10500.0" time_stamp="2017/07/19 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="65" symbol="TXF" bs="B" contract="1.0" price="10376.0" time_stamp="2017/07/19 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="65" symbol="TXF" bs="S" contract="1.0" price="10346.0" time_stamp="2017/08/10 10:45:00" tag="移停" type="" atr="0" />
+    <Trade index="67" symbol="TXF" bs="B" contract="1.0" price="10568.0" time_stamp="2017/08/31 08:49:00" tag="多" type="" atr="0" />
+    <Trade index="67" symbol="TXF" bs="S" contract="1.0" price="10510.0" time_stamp="2017/09/20 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="67" symbol="TXF" bs="B" contract="1.0" price="10514.0" time_stamp="2017/09/20 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="67" symbol="TXF" bs="S" contract="1.0" price="10461.0" time_stamp="2017/09/22 10:33:00" tag="停損" type="" atr="0" />
+    <Trade index="67" symbol="TXF" bs="B" contract="1.0" price="10578.0" time_stamp="2017/10/11 08:53:00" tag="多" type="" atr="0" />
+    <Trade index="67" symbol="TXF" bs="S" contract="1.0" price="10727.0" time_stamp="2017/10/18 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="67" symbol="TXF" bs="B" contract="1.0" price="10726.0" time_stamp="2017/10/18 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="67" symbol="TXF" bs="S" contract="1.0" price="10609.0" time_stamp="2017/11/15 11:53:00" tag="移停" type="" atr="0" />
+    <Trade index="74" symbol="TXF" bs="B" contract="1.0" price="10825.0" time_stamp="2017/11/22 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="74" symbol="TXF" bs="S" contract="1.0" price="10707.0" time_stamp="2017/11/28 09:41:00" tag="停損" type="" atr="0" />
+    <Trade index="74" symbol="TXF" bs="B" contract="1.0" price="10836.0" time_stamp="2018/01/04 13:33:00" tag="多" type="" atr="0" />
+    <Trade index="74" symbol="TXF" bs="S" contract="1.0" price="11020.0" time_stamp="2018/01/17 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="74" symbol="TXF" bs="B" contract="1.0" price="10980.0" time_stamp="2018/01/17 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="74" symbol="TXF" bs="S" contract="1.0" price="11035.0" time_stamp="2018/01/31 09:01:00" tag="移停" type="" atr="0" />
+    <Trade index="96" symbol="TXF" bs="S" contract="1.0" price="10643.0" time_stamp="2018/02/06 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="96" symbol="TXF" bs="B" contract="1.0" price="10600.0" time_stamp="2018/02/07 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="85" symbol="TXF" bs="S" contract="1.0" price="10154.0" time_stamp="2018/02/09 08:49:00" tag="空" type="" atr="0" />
+    <Trade index="85" symbol="TXF" bs="B" contract="1.0" price="10260.0" time_stamp="2018/02/09 11:01:00" tag="停損" type="" atr="0" />
+    <Trade index="98" symbol="TXF" bs="B" contract="1.0" price="10910.0" time_stamp="2018/02/27 09:01:00" tag="多" type="" atr="0" />
+    <Trade index="98" symbol="TXF" bs="S" contract="1.0" price="10791.0" time_stamp="2018/02/27 13:29:00" tag="停損" type="" atr="0" />
+    <Trade index="98" symbol="TXF" bs="B" contract="1.0" price="10965.0" time_stamp="2018/03/12 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="98" symbol="TXF" bs="S" contract="1.0" price="11044.0" time_stamp="2018/03/21 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="98" symbol="TXF" bs="B" contract="1.0" price="11013.0" time_stamp="2018/03/21 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="98" symbol="TXF" bs="S" contract="1.0" price="10730.0" time_stamp="2018/03/23 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="108" symbol="TXF" bs="B" contract="1.0" price="11124.0" time_stamp="2018/06/06 09:33:00" tag="多" type="" atr="0" />
+    <Trade index="108" symbol="TXF" bs="S" contract="1.0" price="11020.0" time_stamp="2018/06/14 13:09:00" tag="移停" type="" atr="0" />
+    <Trade index="107" symbol="TXF" bs="B" contract="1.0" price="10928.0" time_stamp="2018/07/27 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="107" symbol="TXF" bs="S" contract="1.0" price="10847.0" time_stamp="2018/08/13 09:57:00" tag="移停" type="" atr="0" />
+    <Trade index="111" symbol="TXF" bs="B" contract="1.0" price="11019.0" time_stamp="2018/08/29 09:57:00" tag="多" type="" atr="0" />
+    <Trade index="111" symbol="TXF" bs="S" contract="1.0" price="10906.0" time_stamp="2018/09/06 09:05:00" tag="停損" type="" atr="0" />
+    <Trade index="111" symbol="TXF" bs="B" contract="1.0" price="11010.0" time_stamp="2018/09/27 11:09:00" tag="多" type="" atr="0" />
+    <Trade index="111" symbol="TXF" bs="S" contract="1.0" price="10893.0" time_stamp="2018/10/02 09:49:00" tag="停損" type="" atr="0" />
+    <Trade index="125" symbol="TXF" bs="S" contract="1.0" price="10445.0" time_stamp="2018/10/08 08:49:00" tag="空" type="" atr="0" />
+    <Trade index="125" symbol="TXF" bs="B" contract="1.0" price="9842.0" time_stamp="2018/10/12 11:17:00" tag="移停" type="" atr="0" />
+    <Trade index="132" symbol="TXF" bs="B" contract="1.0" price="9984.0" time_stamp="2018/11/29 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="132" symbol="TXF" bs="S" contract="1.0" price="9874.0" time_stamp="2018/11/29 13:29:00" tag="停損" type="" atr="0" />
+    <Trade index="132" symbol="TXF" bs="B" contract="1.0" price="10012.0" time_stamp="2018/12/03 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="132" symbol="TXF" bs="S" contract="1.0" price="9900.0" time_stamp="2018/12/05 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="137" symbol="TXF" bs="S" contract="1.0" price="9480.0" time_stamp="2018/12/25 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="137" symbol="TXF" bs="B" contract="1.0" price="9589.0" time_stamp="2018/12/27 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="137" symbol="TXF" bs="S" contract="1.0" price="9478.0" time_stamp="2019/01/03 08:57:00" tag="空" type="" atr="0" />
+    <Trade index="137" symbol="TXF" bs="B" contract="1.0" price="9541.0" time_stamp="2019/01/07 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="141" symbol="TXF" bs="B" contract="1.0" price="10008.0" time_stamp="2019/01/28 09:37:00" tag="多" type="" atr="0" />
+    <Trade index="141" symbol="TXF" bs="S" contract="1.0" price="9907.0" time_stamp="2019/01/29 10:09:00" tag="停損" type="" atr="0" />
+    <Trade index="141" symbol="TXF" bs="B" contract="1.0" price="10010.0" time_stamp="2019/02/11 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="141" symbol="TXF" bs="S" contract="1.0" price="10256.0" time_stamp="2019/02/20 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="141" symbol="TXF" bs="B" contract="1.0" price="10241.0" time_stamp="2019/02/20 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="141" symbol="TXF" bs="S" contract="1.0" price="10177.0" time_stamp="2019/03/08 09:33:00" tag="移停" type="" atr="0" />
+    <Trade index="144" symbol="TXF" bs="B" contract="1.0" price="10490.0" time_stamp="2019/03/19 08:49:00" tag="多" type="" atr="0" />
+    <Trade index="144" symbol="TXF" bs="S" contract="1.0" price="10546.0" time_stamp="2019/03/20 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="144" symbol="TXF" bs="B" contract="1.0" price="10512.0" time_stamp="2019/03/20 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="144" symbol="TXF" bs="S" contract="1.0" price="10439.0" time_stamp="2019/03/25 09:09:00" tag="移停" type="" atr="0" />
+    <Trade index="147" symbol="TXF" bs="B" contract="1.0" price="10835.0" time_stamp="2019/04/09 11:33:00" tag="多" type="" atr="0" />
+    <Trade index="147" symbol="TXF" bs="S" contract="1.0" price="11004.0" time_stamp="2019/04/17 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="147" symbol="TXF" bs="B" contract="1.0" price="10989.0" time_stamp="2019/04/17 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="147" symbol="TXF" bs="S" contract="1.0" price="10870.0" time_stamp="2019/05/06 10:33:00" tag="移停" type="" atr="0" />
+    <Trade index="157" symbol="TXF" bs="S" contract="1.0" price="10425.0" time_stamp="2019/05/14 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="157" symbol="TXF" bs="B" contract="1.0" price="10534.0" time_stamp="2019/05/14 09:53:00" tag="停損" type="" atr="0" />
+    <Trade index="157" symbol="TXF" bs="S" contract="1.0" price="10422.0" time_stamp="2019/05/17 11:13:00" tag="空" type="" atr="0" />
+    <Trade index="157" symbol="TXF" bs="B" contract="1.0" price="10427.0" time_stamp="2019/05/31 09:41:00" tag="移停" type="" atr="0" />
+    <Trade index="160" symbol="TXF" bs="B" contract="1.0" price="10707.0" time_stamp="2019/07/01 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="160" symbol="TXF" bs="S" contract="1.0" price="10831.0" time_stamp="2019/07/17 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="160" symbol="TXF" bs="B" contract="1.0" price="10670.0" time_stamp="2019/07/17 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="160" symbol="TXF" bs="S" contract="1.0" price="10518.0" time_stamp="2019/08/02 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="169" symbol="TXF" bs="S" contract="1.0" price="10096.0" time_stamp="2019/08/06 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="169" symbol="TXF" bs="B" contract="1.0" price="10209.0" time_stamp="2019/08/06 09:25:00" tag="停損" type="" atr="0" />
+    <Trade index="152" symbol="TXF" bs="B" contract="1.0" price="10811.0" time_stamp="2019/09/09 08:49:00" tag="多" type="" atr="0" />
+    <Trade index="152" symbol="TXF" bs="S" contract="1.0" price="10960.0" time_stamp="2019/09/18 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="152" symbol="TXF" bs="B" contract="1.0" price="10898.0" time_stamp="2019/09/18 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="152" symbol="TXF" bs="S" contract="1.0" price="11145.0" time_stamp="2019/10/16 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="152" symbol="TXF" bs="B" contract="1.0" price="11135.0" time_stamp="2019/10/16 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="152" symbol="TXF" bs="S" contract="1.0" price="11437.0" time_stamp="2019/11/11 13:01:00" tag="移停" type="" atr="0" />
+    <Trade index="180" symbol="TXF" bs="B" contract="1.0" price="11765.0" time_stamp="2019/12/12 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="180" symbol="TXF" bs="S" contract="1.0" price="12118.0" time_stamp="2019/12/18 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="180" symbol="TXF" bs="B" contract="1.0" price="12087.0" time_stamp="2019/12/18 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="180" symbol="TXF" bs="S" contract="1.0" price="11919.0" time_stamp="2020/01/07 09:21:00" tag="移停" type="" atr="0" />
+    <Trade index="193" symbol="TXF" bs="S" contract="1.0" price="11506.0" time_stamp="2020/01/30 10:53:00" tag="空" type="" atr="0" />
+    <Trade index="193" symbol="TXF" bs="B" contract="1.0" price="11407.0" time_stamp="2020/02/04 09:17:00" tag="移停" type="" atr="0" />
+    <Trade index="194" symbol="TXF" bs="B" contract="1.0" price="11850.0" time_stamp="2020/02/14 11:05:00" tag="多" type="" atr="0" />
+    <Trade index="194" symbol="TXF" bs="S" contract="1.0" price="11710.0" time_stamp="2020/02/17 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="196" symbol="TXF" bs="S" contract="1.0" price="11011.0" time_stamp="2020/03/02 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="196" symbol="TXF" bs="B" contract="1.0" price="11128.0" time_stamp="2020/03/02 09:13:00" tag="停損" type="" atr="0" />
+    <Trade index="196" symbol="TXF" bs="S" contract="1.0" price="10975.0" time_stamp="2020/03/09 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="196" symbol="TXF" bs="B" contract="1.0" price="11086.0" time_stamp="2020/03/09 09:01:00" tag="停損" type="" atr="0" />
+    <Trade index="196" symbol="TXF" bs="S" contract="1.0" price="10974.0" time_stamp="2020/03/09 09:53:00" tag="空" type="" atr="0" />
+    <Trade index="196" symbol="TXF" bs="B" contract="1.0" price="11008.0" time_stamp="2020/03/11 09:05:00" tag="移停" type="" atr="0" />
+    <Trade index="194" symbol="TXF" bs="S" contract="1.0" price="10653.0" time_stamp="2020/03/12 09:05:00" tag="空" type="" atr="0" />
+    <Trade index="194" symbol="TXF" bs="B" contract="1.0" price="9587.0" time_stamp="2020/03/13 09:09:00" tag="直停" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="S" contract="1.0" price="9379.0" time_stamp="2020/03/17 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="B" contract="1.0" price="9489.0" time_stamp="2020/03/17 09:09:00" tag="停損" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="S" contract="1.0" price="9362.0" time_stamp="2020/03/17 10:13:00" tag="空" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="B" contract="1.0" price="9462.0" time_stamp="2020/03/17 10:41:00" tag="停損" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="S" contract="1.0" price="9351.0" time_stamp="2020/03/18 08:49:00" tag="空" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="B" contract="1.0" price="9456.0" time_stamp="2020/03/18 09:49:00" tag="停損" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="S" contract="1.0" price="9336.0" time_stamp="2020/03/18 12:21:00" tag="空" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="B" contract="1.0" price="9263.0" time_stamp="2020/03/18 13:29:00" tag="空出" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="S" contract="1.0" price="9015.0" time_stamp="2020/03/18 13:29:00" tag="空進" type="" atr="0" />
+    <Trade index="200" symbol="TXF" bs="B" contract="1.0" price="8489.0" time_stamp="2020/03/19 11:21:00" tag="移停" type="" atr="0" />
+    <Trade index="201" symbol="TXF" bs="B" contract="1.0" price="9075.0" time_stamp="2020/03/24 08:53:00" tag="多" type="" atr="0" />
+    <Trade index="201" symbol="TXF" bs="S" contract="1.0" price="9484.0" time_stamp="2020/03/26 09:09:00" tag="移停" type="" atr="0" />
+    <Trade index="202" symbol="TXF" bs="B" contract="1.0" price="9955.0" time_stamp="2020/04/07 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="202" symbol="TXF" bs="S" contract="1.0" price="10450.0" time_stamp="2020/04/15 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="202" symbol="TXF" bs="B" contract="1.0" price="10319.0" time_stamp="2020/04/15 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="202" symbol="TXF" bs="S" contract="1.0" price="10406.0" time_stamp="2020/04/21 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="206" symbol="TXF" bs="B" contract="1.0" price="10895.0" time_stamp="2020/04/30 09:57:00" tag="多" type="" atr="0" />
+    <Trade index="206" symbol="TXF" bs="S" contract="1.0" price="10540.0" time_stamp="2020/05/04 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="206" symbol="TXF" bs="B" contract="1.0" price="10910.0" time_stamp="2020/05/08 08:49:00" tag="多" type="" atr="0" />
+    <Trade index="206" symbol="TXF" bs="S" contract="1.0" price="10813.0" time_stamp="2020/05/12 11:37:00" tag="移停" type="" atr="0" />
+    <Trade index="205" symbol="TXF" bs="B" contract="1.0" price="11008.0" time_stamp="2020/05/26 09:37:00" tag="多" type="" atr="0" />
+    <Trade index="205" symbol="TXF" bs="S" contract="1.0" price="10890.0" time_stamp="2020/05/28 12:01:00" tag="停損" type="" atr="0" />
+    <Trade index="205" symbol="TXF" bs="B" contract="1.0" price="11019.0" time_stamp="2020/06/01 09:13:00" tag="多" type="" atr="0" />
+    <Trade index="205" symbol="TXF" bs="S" contract="1.0" price="11498.0" time_stamp="2020/06/11 13:05:00" tag="移停" type="" atr="0" />
+    <Trade index="213" symbol="TXF" bs="B" contract="1.0" price="11788.0" time_stamp="2020/07/03 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="213" symbol="TXF" bs="S" contract="1.0" price="12220.0" time_stamp="2020/07/15 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="213" symbol="TXF" bs="B" contract="1.0" price="12062.0" time_stamp="2020/07/15 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="213" symbol="TXF" bs="S" contract="1.0" price="12834.0" time_stamp="2020/07/28 08:45:00" tag="直停" type="" atr="0" />
+    <Trade index="219" symbol="TXF" bs="B" contract="1.0" price="12980.0" time_stamp="2020/09/16 09:49:00" tag="多" type="" atr="0" />
+    <Trade index="219" symbol="TXF" bs="S" contract="1.0" price="12970.0" time_stamp="2020/09/16 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="219" symbol="TXF" bs="B" contract="1.0" price="12900.0" time_stamp="2020/09/16 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="219" symbol="TXF" bs="S" contract="1.0" price="12773.0" time_stamp="2020/09/17 11:21:00" tag="停損" type="" atr="0" />
+    <Trade index="227" symbol="TXF" bs="S" contract="1.0" price="12175.0" time_stamp="2020/09/24 10:57:00" tag="空" type="" atr="0" />
+    <Trade index="227" symbol="TXF" bs="B" contract="1.0" price="12304.0" time_stamp="2020/09/25 09:29:00" tag="停損" type="" atr="0" />
+    <Trade index="227" symbol="TXF" bs="S" contract="1.0" price="12155.0" time_stamp="2020/09/25 11:53:00" tag="空" type="" atr="0" />
+    <Trade index="227" symbol="TXF" bs="B" contract="1.0" price="12292.0" time_stamp="2020/09/28 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="B" contract="1.0" price="12935.0" time_stamp="2020/10/12 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="S" contract="1.0" price="12792.0" time_stamp="2020/10/15 10:21:00" tag="停損" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="B" contract="1.0" price="12938.0" time_stamp="2020/10/21 09:45:00" tag="多" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="S" contract="1.0" price="12860.0" time_stamp="2020/10/21 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="B" contract="1.0" price="12815.0" time_stamp="2020/10/21 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="S" contract="1.0" price="12729.0" time_stamp="2020/10/22 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="B" contract="1.0" price="12898.0" time_stamp="2020/10/26 09:09:00" tag="多" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="S" contract="1.0" price="12756.0" time_stamp="2020/10/28 10:09:00" tag="停損" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="B" contract="1.0" price="12924.0" time_stamp="2020/11/05 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="S" contract="1.0" price="13756.0" time_stamp="2020/11/18 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="B" contract="1.0" price="13711.0" time_stamp="2020/11/18 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="228" symbol="TXF" bs="S" contract="1.0" price="14181.0" time_stamp="2020/12/07 08:45:00" tag="直停" type="" atr="0" />
+    <Trade index="236" symbol="TXF" bs="B" contract="1.0" price="14343.0" time_stamp="2020/12/25 09:25:00" tag="多" type="" atr="0" />
+    <Trade index="236" symbol="TXF" bs="S" contract="1.0" price="14816.0" time_stamp="2021/01/06 12:05:00" tag="移停" type="" atr="0" />
+    <Trade index="242" symbol="TXF" bs="B" contract="1.0" price="15376.0" time_stamp="2021/01/08 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="242" symbol="TXF" bs="S" contract="1.0" price="15650.0" time_stamp="2021/01/15 12:25:00" tag="移停" type="" atr="0" />
+    <Trade index="243" symbol="TXF" bs="B" contract="1.0" price="16150.0" time_stamp="2021/01/21 11:13:00" tag="多" type="" atr="0" />
+    <Trade index="243" symbol="TXF" bs="S" contract="1.0" price="15981.0" time_stamp="2021/01/22 11:25:00" tag="停損" type="" atr="0" />
+    <Trade index="245" symbol="TXF" bs="S" contract="1.0" price="15142.0" time_stamp="2021/01/29 13:29:00" tag="空" type="" atr="0" />
+    <Trade index="245" symbol="TXF" bs="B" contract="1.0" price="15295.0" time_stamp="2021/02/01 11:29:00" tag="停損" type="" atr="0" />
+    <Trade index="246" symbol="TXF" bs="B" contract="1.0" price="15914.0" time_stamp="2021/02/05 10:05:00" tag="多" type="" atr="0" />
+    <Trade index="246" symbol="TXF" bs="S" contract="1.0" price="16325.0" time_stamp="2021/02/17 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="246" symbol="TXF" bs="B" contract="1.0" price="16299.0" time_stamp="2021/02/17 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="246" symbol="TXF" bs="S" contract="1.0" price="16156.0" time_stamp="2021/02/19 10:45:00" tag="移停" type="" atr="0" />
+    <Trade index="247" symbol="TXF" bs="S" contract="1.0" price="15601.0" time_stamp="2021/03/05 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="247" symbol="TXF" bs="B" contract="1.0" price="15787.0" time_stamp="2021/03/05 09:49:00" tag="停損" type="" atr="0" />
+    <Trade index="248" symbol="TXF" bs="B" contract="1.0" price="16760.0" time_stamp="2021/04/06 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="248" symbol="TXF" bs="S" contract="1.0" price="16688.0" time_stamp="2021/04/14 10:57:00" tag="移停" type="" atr="0" />
+    <Trade index="251" symbol="TXF" bs="B" contract="1.0" price="17198.0" time_stamp="2021/04/19 09:41:00" tag="多" type="" atr="0" />
+    <Trade index="251" symbol="TXF" bs="S" contract="1.0" price="17231.0" time_stamp="2021/04/21 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="251" symbol="TXF" bs="B" contract="1.0" price="17147.0" time_stamp="2021/04/21 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="251" symbol="TXF" bs="S" contract="1.0" price="17336.0" time_stamp="2021/05/03 09:37:00" tag="移停" type="" atr="0" />
+    <Trade index="255" symbol="TXF" bs="S" contract="1.0" price="16612.0" time_stamp="2021/05/11 12:29:00" tag="空" type="" atr="0" />
+    <Trade index="255" symbol="TXF" bs="B" contract="1.0" price="15449.0" time_stamp="2021/05/12 11:29:00" tag="移停" type="" atr="0" />
+    <Trade index="257" symbol="TXF" bs="B" contract="1.0" price="16000.0" time_stamp="2021/05/18 10:45:00" tag="多" type="" atr="0" />
+    <Trade index="257" symbol="TXF" bs="S" contract="1.0" price="16137.0" time_stamp="2021/05/19 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="257" symbol="TXF" bs="B" contract="1.0" price="16055.0" time_stamp="2021/05/19 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="257" symbol="TXF" bs="S" contract="1.0" price="16905.0" time_stamp="2021/06/07 09:49:00" tag="移停" type="" atr="0" />
+    <Trade index="259" symbol="TXF" bs="B" contract="1.0" price="17644.0" time_stamp="2021/06/30 09:17:00" tag="多" type="" atr="0" />
+    <Trade index="259" symbol="TXF" bs="S" contract="1.0" price="17593.0" time_stamp="2021/07/09 09:45:00" tag="移停" type="" atr="0" />
+    <Trade index="260" symbol="TXF" bs="B" contract="1.0" price="17980.0" time_stamp="2021/07/13 08:49:00" tag="多" type="" atr="0" />
+    <Trade index="260" symbol="TXF" bs="S" contract="1.0" price="17776.0" time_stamp="2021/07/14 10:01:00" tag="停損" type="" atr="0" />
+    <Trade index="260" symbol="TXF" bs="B" contract="1.0" price="17981.0" time_stamp="2021/07/15 11:45:00" tag="多" type="" atr="0" />
+    <Trade index="260" symbol="TXF" bs="S" contract="1.0" price="17780.0" time_stamp="2021/07/16 09:17:00" tag="停損" type="" atr="0" />
+    <Trade index="264" symbol="TXF" bs="S" contract="1.0" price="16771.0" time_stamp="2021/08/16 10:13:00" tag="空" type="" atr="0" />
+    <Trade index="264" symbol="TXF" bs="B" contract="1.0" price="16740.0" time_stamp="2021/08/18 12:25:00" tag="移停" type="" atr="0" />
+    <Trade index="270" symbol="TXF" bs="B" contract="1.0" price="17249.0" time_stamp="2021/08/30 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="270" symbol="TXF" bs="S" contract="1.0" price="17241.0" time_stamp="2021/09/08 11:37:00" tag="移停" type="" atr="0" />
+    <Trade index="272" symbol="TXF" bs="S" contract="1.0" price="16499.0" time_stamp="2021/10/01 11:53:00" tag="空" type="" atr="0" />
+    <Trade index="272" symbol="TXF" bs="B" contract="1.0" price="16470.0" time_stamp="2021/10/06 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="275" symbol="TXF" bs="B" contract="1.0" price="17416.0" time_stamp="2021/11/08 13:41:00" tag="多" type="" atr="0" />
+    <Trade index="275" symbol="TXF" bs="S" contract="1.0" price="17722.0" time_stamp="2021/11/17 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="275" symbol="TXF" bs="B" contract="1.0" price="17744.0" time_stamp="2021/11/17 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="275" symbol="TXF" bs="S" contract="1.0" price="17530.0" time_stamp="2021/11/26 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="282" symbol="TXF" bs="B" contract="1.0" price="18064.0" time_stamp="2021/12/27 09:37:00" tag="多" type="" atr="0" />
+    <Trade index="282" symbol="TXF" bs="S" contract="1.0" price="18126.0" time_stamp="2022/01/07 10:09:00" tag="移停" type="" atr="0" />
+    <Trade index="289" symbol="TXF" bs="S" contract="1.0" price="17362.0" time_stamp="2022/03/07 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="289" symbol="TXF" bs="B" contract="1.0" price="17301.0" time_stamp="2022/03/10 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="297" symbol="TXF" bs="S" contract="1.0" price="16568.0" time_stamp="2022/04/25 09:41:00" tag="空" type="" atr="0" />
+    <Trade index="297" symbol="TXF" bs="B" contract="1.0" price="16555.0" time_stamp="2022/04/29 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="300" symbol="TXF" bs="S" contract="1.0" price="15809.0" time_stamp="2022/05/10 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="300" symbol="TXF" bs="B" contract="1.0" price="15986.0" time_stamp="2022/05/10 10:29:00" tag="停損" type="" atr="0" />
+    <Trade index="300" symbol="TXF" bs="S" contract="1.0" price="15801.0" time_stamp="2022/05/12 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="300" symbol="TXF" bs="B" contract="1.0" price="15996.0" time_stamp="2022/05/16 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="302" symbol="TXF" bs="B" contract="1.0" price="16703.0" time_stamp="2022/05/31 13:37:00" tag="多" type="" atr="0" />
+    <Trade index="302" symbol="TXF" bs="S" contract="1.0" price="16536.0" time_stamp="2022/06/02 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="305" symbol="TXF" bs="S" contract="1.0" price="15196.0" time_stamp="2022/06/17 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="305" symbol="TXF" bs="B" contract="1.0" price="15282.0" time_stamp="2022/06/21 11:05:00" tag="移停" type="" atr="0" />
+    <Trade index="303" symbol="TXF" bs="S" contract="1.0" price="14868.0" time_stamp="2022/06/23 10:25:00" tag="空" type="" atr="0" />
+    <Trade index="303" symbol="TXF" bs="B" contract="1.0" price="15074.0" time_stamp="2022/06/24 08:49:00" tag="停損" type="" atr="0" />
+    <Trade index="303" symbol="TXF" bs="S" contract="1.0" price="14857.0" time_stamp="2022/06/30 09:01:00" tag="空" type="" atr="0" />
+    <Trade index="303" symbol="TXF" bs="B" contract="1.0" price="14350.0" time_stamp="2022/07/05 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="309" symbol="TXF" bs="B" contract="1.0" price="14840.0" time_stamp="2022/07/22 09:45:00" tag="多" type="" atr="0" />
+    <Trade index="309" symbol="TXF" bs="S" contract="1.0" price="14682.0" time_stamp="2022/07/26 10:01:00" tag="停損" type="" atr="0" />
+    <Trade index="309" symbol="TXF" bs="B" contract="1.0" price="14922.0" time_stamp="2022/07/28 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="309" symbol="TXF" bs="S" contract="1.0" price="14767.0" time_stamp="2022/08/02 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="309" symbol="TXF" bs="B" contract="1.0" price="14927.0" time_stamp="2022/08/05 09:21:00" tag="多" type="" atr="0" />
+    <Trade index="309" symbol="TXF" bs="S" contract="1.0" price="15451.0" time_stamp="2022/08/17 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="309" symbol="TXF" bs="B" contract="1.0" price="15376.0" time_stamp="2022/08/17 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="309" symbol="TXF" bs="S" contract="1.0" price="15059.0" time_stamp="2022/08/23 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="315" symbol="TXF" bs="S" contract="1.0" price="14445.0" time_stamp="2022/09/07 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="315" symbol="TXF" bs="B" contract="1.0" price="14775.0" time_stamp="2022/09/12 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="315" symbol="TXF" bs="S" contract="1.0" price="14435.0" time_stamp="2022/09/19 10:41:00" tag="空" type="" atr="0" />
+    <Trade index="315" symbol="TXF" bs="B" contract="1.0" price="14401.0" time_stamp="2022/09/21 13:29:00" tag="空出" type="" atr="0" />
+    <Trade index="315" symbol="TXF" bs="S" contract="1.0" price="14416.0" time_stamp="2022/09/21 13:29:00" tag="空進" type="" atr="0" />
+    <Trade index="315" symbol="TXF" bs="B" contract="1.0" price="13530.0" time_stamp="2022/10/04 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="322" symbol="TXF" bs="B" contract="1.0" price="13932.0" time_stamp="2022/10/06 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="322" symbol="TXF" bs="S" contract="1.0" price="13781.0" time_stamp="2022/10/07 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="321" symbol="TXF" bs="S" contract="1.0" price="13202.0" time_stamp="2022/10/11 09:05:00" tag="空" type="" atr="0" />
+    <Trade index="321" symbol="TXF" bs="B" contract="1.0" price="13150.0" time_stamp="2022/10/14 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="325" symbol="TXF" bs="B" contract="1.0" price="13527.0" time_stamp="2022/11/09 09:49:00" tag="多" type="" atr="0" />
+    <Trade index="325" symbol="TXF" bs="S" contract="1.0" price="14499.0" time_stamp="2022/11/16 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="325" symbol="TXF" bs="B" contract="1.0" price="14501.0" time_stamp="2022/11/16 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="325" symbol="TXF" bs="S" contract="1.0" price="14377.0" time_stamp="2022/11/22 09:05:00" tag="移停" type="" atr="0" />
+    <Trade index="327" symbol="TXF" bs="B" contract="1.0" price="15030.0" time_stamp="2022/12/01 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="327" symbol="TXF" bs="S" contract="1.0" price="14860.0" time_stamp="2022/12/02 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="327" symbol="TXF" bs="B" contract="1.0" price="15038.0" time_stamp="2022/12/05 10:13:00" tag="多" type="" atr="0" />
+    <Trade index="327" symbol="TXF" bs="S" contract="1.0" price="14874.0" time_stamp="2022/12/06 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="330" symbol="TXF" bs="S" contract="1.0" price="14144.0" time_stamp="2022/12/20 12:17:00" tag="空" type="" atr="0" />
+    <Trade index="330" symbol="TXF" bs="B" contract="1.0" price="14220.0" time_stamp="2022/12/21 13:29:00" tag="空出" type="" atr="0" />
+    <Trade index="330" symbol="TXF" bs="S" contract="1.0" price="14164.0" time_stamp="2022/12/21 13:29:00" tag="空進" type="" atr="0" />
+    <Trade index="330" symbol="TXF" bs="B" contract="1.0" price="14311.0" time_stamp="2022/12/22 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="330" symbol="TXF" bs="S" contract="1.0" price="14079.0" time_stamp="2022/12/28 11:09:00" tag="空" type="" atr="0" />
+    <Trade index="330" symbol="TXF" bs="B" contract="1.0" price="14222.0" time_stamp="2023/01/03 12:33:00" tag="停損" type="" atr="0" />
+    <Trade index="333" symbol="TXF" bs="B" contract="1.0" price="15000.0" time_stamp="2023/01/13 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="333" symbol="TXF" bs="S" contract="1.0" price="14846.0" time_stamp="2023/01/13 11:09:00" tag="停損" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="B" contract="1.0" price="15558.0" time_stamp="2023/01/30 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="S" contract="1.0" price="15394.0" time_stamp="2023/01/30 09:21:00" tag="停損" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="B" contract="1.0" price="15549.0" time_stamp="2023/02/02 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="S" contract="1.0" price="15383.0" time_stamp="2023/02/07 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="B" contract="1.0" price="15551.0" time_stamp="2023/02/08 09:37:00" tag="多" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="S" contract="1.0" price="15391.0" time_stamp="2023/02/15 13:01:00" tag="停損" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="B" contract="1.0" price="15530.0" time_stamp="2023/02/16 10:29:00" tag="多" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="S" contract="1.0" price="15353.0" time_stamp="2023/02/22 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="B" contract="1.0" price="15535.0" time_stamp="2023/02/23 09:37:00" tag="多" type="" atr="0" />
+    <Trade index="334" symbol="TXF" bs="S" contract="1.0" price="15352.0" time_stamp="2023/03/01 08:49:00" tag="停損" type="" atr="0" />
+    <Trade index="339" symbol="TXF" bs="B" contract="1.0" price="16026.0" time_stamp="2023/05/18 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="339" symbol="TXF" bs="S" contract="1.0" price="17229.0" time_stamp="2023/06/21 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="339" symbol="TXF" bs="B" contract="1.0" price="16990.0" time_stamp="2023/06/21 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="339" symbol="TXF" bs="S" contract="1.0" price="16750.0" time_stamp="2023/06/27 09:17:00" tag="移停" type="" atr="0" />
+    <Trade index="350" symbol="TXF" bs="B" contract="1.0" price="17200.0" time_stamp="2023/07/13 09:29:00" tag="多" type="" atr="0" />
+    <Trade index="350" symbol="TXF" bs="S" contract="1.0" price="17101.0" time_stamp="2023/07/19 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="350" symbol="TXF" bs="B" contract="1.0" price="17069.0" time_stamp="2023/07/19 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="350" symbol="TXF" bs="S" contract="1.0" price="16860.0" time_stamp="2023/07/21 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="359" symbol="TXF" bs="S" contract="1.0" price="16529.0" time_stamp="2023/08/14 08:49:00" tag="空" type="" atr="0" />
+    <Trade index="359" symbol="TXF" bs="B" contract="1.0" price="16364.0" time_stamp="2023/08/16 13:29:00" tag="空出" type="" atr="0" />
+    <Trade index="359" symbol="TXF" bs="S" contract="1.0" price="16375.0" time_stamp="2023/08/16 13:29:00" tag="空進" type="" atr="0" />
+    <Trade index="359" symbol="TXF" bs="B" contract="1.0" price="16548.0" time_stamp="2023/08/23 12:29:00" tag="移停" type="" atr="0" />
+    <Trade index="358" symbol="TXF" bs="S" contract="1.0" price="16161.0" time_stamp="2023/10/24 09:45:00" tag="空" type="" atr="0" />
+    <Trade index="358" symbol="TXF" bs="B" contract="1.0" price="16325.0" time_stamp="2023/10/24 10:33:00" tag="停損" type="" atr="0" />
+    <Trade index="358" symbol="TXF" bs="S" contract="1.0" price="16144.0" time_stamp="2023/10/26 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="358" symbol="TXF" bs="B" contract="1.0" price="16326.0" time_stamp="2023/11/02 09:13:00" tag="移停" type="" atr="0" />
+    <Trade index="371" symbol="TXF" bs="B" contract="1.0" price="16969.0" time_stamp="2023/11/13 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="371" symbol="TXF" bs="S" contract="1.0" price="17122.0" time_stamp="2023/11/15 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="371" symbol="TXF" bs="B" contract="1.0" price="17167.0" time_stamp="2023/11/15 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="371" symbol="TXF" bs="S" contract="1.0" price="17636.0" time_stamp="2023/12/20 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="371" symbol="TXF" bs="B" contract="1.0" price="17671.0" time_stamp="2023/12/20 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="371" symbol="TXF" bs="S" contract="1.0" price="17442.0" time_stamp="2023/12/21 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="373" symbol="TXF" bs="B" contract="1.0" price="17901.0" time_stamp="2024/01/02 09:01:00" tag="多" type="" atr="0" />
+    <Trade index="373" symbol="TXF" bs="S" contract="1.0" price="17658.0" time_stamp="2024/01/03 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="373" symbol="TXF" bs="B" contract="1.0" price="18016.0" time_stamp="2024/01/25 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="373" symbol="TXF" bs="S" contract="1.0" price="18670.0" time_stamp="2024/02/21 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="373" symbol="TXF" bs="B" contract="1.0" price="18688.0" time_stamp="2024/02/21 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="373" symbol="TXF" bs="S" contract="1.0" price="19930.0" time_stamp="2024/03/08 08:45:00" tag="直停" type="" atr="0" />
+    <Trade index="387" symbol="TXF" bs="B" contract="1.0" price="20188.0" time_stamp="2024/03/21 10:41:00" tag="多" type="" atr="0" />
+    <Trade index="387" symbol="TXF" bs="S" contract="1.0" price="20278.0" time_stamp="2024/04/16 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="393" symbol="TXF" bs="S" contract="1.0" price="19421.0" time_stamp="2024/04/19 10:45:00" tag="空" type="" atr="0" />
+    <Trade index="393" symbol="TXF" bs="B" contract="1.0" price="19630.0" time_stamp="2024/04/19 12:29:00" tag="停損" type="" atr="0" />
+    <Trade index="394" symbol="TXF" bs="B" contract="1.0" price="20685.0" time_stamp="2024/05/06 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="394" symbol="TXF" bs="S" contract="1.0" price="21143.0" time_stamp="2024/05/15 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="394" symbol="TXF" bs="B" contract="1.0" price="21217.0" time_stamp="2024/05/15 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="394" symbol="TXF" bs="S" contract="1.0" price="21512.0" time_stamp="2024/05/30 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="397" symbol="TXF" bs="B" contract="1.0" price="22308.0" time_stamp="2024/06/13 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="397" symbol="TXF" bs="S" contract="1.0" price="23226.0" time_stamp="2024/06/19 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="397" symbol="TXF" bs="B" contract="1.0" price="23111.0" time_stamp="2024/06/19 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="397" symbol="TXF" bs="S" contract="1.0" price="22863.0" time_stamp="2024/06/24 09:09:00" tag="移停" type="" atr="0" />
+    <Trade index="401" symbol="TXF" bs="B" contract="1.0" price="23487.0" time_stamp="2024/07/04 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="401" symbol="TXF" bs="S" contract="1.0" price="23889.0" time_stamp="2024/07/12 09:01:00" tag="移停" type="" atr="0" />
+    <Trade index="405" symbol="TXF" bs="S" contract="1.0" price="22948.0" time_stamp="2024/07/19 10:01:00" tag="空" type="" atr="0" />
+    <Trade index="405" symbol="TXF" bs="B" contract="1.0" price="22642.0" time_stamp="2024/07/23 09:01:00" tag="移停" type="" atr="0" />
+    <Trade index="406" symbol="TXF" bs="S" contract="1.0" price="21704.0" time_stamp="2024/08/02 12:41:00" tag="空" type="" atr="0" />
+    <Trade index="406" symbol="TXF" bs="B" contract="1.0" price="20192.0" time_stamp="2024/08/05 10:21:00" tag="移停" type="" atr="0" />
+    <Trade index="408" symbol="TXF" bs="S" contract="1.0" price="19670.0" time_stamp="2024/08/05 12:49:00" tag="空" type="" atr="0" />
+    <Trade index="408" symbol="TXF" bs="B" contract="1.0" price="20395.0" time_stamp="2024/08/06 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="410" symbol="TXF" bs="S" contract="1.0" price="21246.0" time_stamp="2024/09/04 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="410" symbol="TXF" bs="B" contract="1.0" price="21364.0" time_stamp="2024/09/05 09:25:00" tag="移停" type="" atr="0" />
+    <Trade index="413" symbol="TXF" bs="B" contract="1.0" price="21800.0" time_stamp="2024/09/13 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="413" symbol="TXF" bs="S" contract="1.0" price="21571.0" time_stamp="2024/09/18 13:01:00" tag="停損" type="" atr="0" />
+    <Trade index="413" symbol="TXF" bs="B" contract="1.0" price="21892.0" time_stamp="2024/09/19 10:17:00" tag="多" type="" atr="0" />
+    <Trade index="413" symbol="TXF" bs="S" contract="1.0" price="22699.0" time_stamp="2024/09/30 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="417" symbol="TXF" bs="B" contract="1.0" price="23820.0" time_stamp="2024/10/18 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="417" symbol="TXF" bs="S" contract="1.0" price="23577.0" time_stamp="2024/10/18 12:41:00" tag="停損" type="" atr="0" />
+    <Trade index="420" symbol="TXF" bs="S" contract="1.0" price="22397.0" time_stamp="2024/11/01 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="420" symbol="TXF" bs="B" contract="1.0" price="22631.0" time_stamp="2024/11/01 10:21:00" tag="停損" type="" atr="0" />
+    <Trade index="420" symbol="TXF" bs="S" contract="1.0" price="22492.0" time_stamp="2024/11/27 12:09:00" tag="空" type="" atr="0" />
+    <Trade index="420" symbol="TXF" bs="B" contract="1.0" price="22530.0" time_stamp="2024/12/02 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="425" symbol="TXF" bs="B" contract="1.0" price="23965.0" time_stamp="2025/01/07 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="425" symbol="TXF" bs="S" contract="1.0" price="23549.0" time_stamp="2025/01/08 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="436" symbol="TXF" bs="S" contract="1.0" price="22242.0" time_stamp="2025/03/04 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="436" symbol="TXF" bs="B" contract="1.0" price="22485.0" time_stamp="2025/03/04 10:13:00" tag="停損" type="" atr="0" />
+    <Trade index="436" symbol="TXF" bs="S" contract="1.0" price="21868.0" time_stamp="2025/03/11 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="436" symbol="TXF" bs="B" contract="1.0" price="22101.0" time_stamp="2025/03/12 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="436" symbol="TXF" bs="S" contract="1.0" price="21922.0" time_stamp="2025/03/27 09:37:00" tag="空" type="" atr="0" />
+    <Trade index="436" symbol="TXF" bs="B" contract="1.0" price="21171.0" time_stamp="2025/04/01 10:17:00" tag="移停" type="" atr="0" />
+    <Trade index="441" symbol="TXF" bs="S" contract="1.0" price="18596.0" time_stamp="2025/04/08 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="441" symbol="TXF" bs="B" contract="1.0" price="18208.0" time_stamp="2025/04/09 09:13:00" tag="移停" type="" atr="0" />
+    <Trade index="443" symbol="TXF" bs="B" contract="1.0" price="20488.0" time_stamp="2025/05/02 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="443" symbol="TXF" bs="S" contract="1.0" price="20322.0" time_stamp="2025/05/05 09:49:00" tag="移停" type="" atr="0" />
+    <Trade index="444" symbol="TXF" bs="B" contract="1.0" price="21015.0" time_stamp="2025/05/12 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="444" symbol="TXF" bs="S" contract="1.0" price="21847.0" time_stamp="2025/05/21 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="444" symbol="TXF" bs="B" contract="1.0" price="21699.0" time_stamp="2025/05/21 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="444" symbol="TXF" bs="S" contract="1.0" price="21225.0" time_stamp="2025/05/27 09:57:00" tag="移停" type="" atr="0" />
+    <Trade index="446" symbol="TXF" bs="B" contract="1.0" price="21930.0" time_stamp="2025/06/10 09:21:00" tag="多" type="" atr="0" />
+    <Trade index="446" symbol="TXF" bs="S" contract="1.0" price="21898.0" time_stamp="2025/06/16 09:05:00" tag="移停" type="" atr="0" />
+    <Trade index="448" symbol="TXF" bs="B" contract="1.0" price="22138.0" time_stamp="2025/06/25 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="448" symbol="TXF" bs="S" contract="1.0" price="22258.0" time_stamp="2025/07/07 09:13:00" tag="移停" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="B" contract="1.0" price="23350.0" time_stamp="2025/07/18 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="S" contract="1.0" price="23076.0" time_stamp="2025/07/22 11:29:00" tag="停損" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="B" contract="1.0" price="23400.0" time_stamp="2025/07/24 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="S" contract="1.0" price="23105.0" time_stamp="2025/07/29 10:01:00" tag="停損" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="B" contract="1.0" price="23411.0" time_stamp="2025/07/30 12:29:00" tag="多" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="S" contract="1.0" price="23064.0" time_stamp="2025/08/01 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="B" contract="1.0" price="23431.0" time_stamp="2025/08/01 09:45:00" tag="多" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="S" contract="1.0" price="23108.0" time_stamp="2025/08/04 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="B" contract="1.0" price="23446.0" time_stamp="2025/08/05 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="454" symbol="TXF" bs="S" contract="1.0" price="23965.0" time_stamp="2025/08/20 09:25:00" tag="移停" type="" atr="0" />
+    <Trade index="457" symbol="TXF" bs="B" contract="1.0" price="24588.0" time_stamp="2025/09/08 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="457" symbol="TXF" bs="S" contract="1.0" price="25433.0" time_stamp="2025/09/17 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="457" symbol="TXF" bs="B" contract="1.0" price="25478.0" time_stamp="2025/09/17 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="457" symbol="TXF" bs="S" contract="1.0" price="25761.0" time_stamp="2025/09/26 09:13:00" tag="移停" type="" atr="0" />
+    <Trade index="464" symbol="TXF" bs="B" contract="1.0" price="26722.0" time_stamp="2025/10/03 12:49:00" tag="多" type="" atr="0" />
+    <Trade index="464" symbol="TXF" bs="S" contract="1.0" price="26450.0" time_stamp="2025/10/13 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="466" symbol="TXF" bs="B" contract="1.0" price="27926.0" time_stamp="2025/10/21 09:01:00" tag="多" type="" atr="0" />
+    <Trade index="466" symbol="TXF" bs="S" contract="1.0" price="27629.0" time_stamp="2025/10/22 08:49:00" tag="停損" type="" atr="0" />
+    <Trade index="466" symbol="TXF" bs="B" contract="1.0" price="28284.0" time_stamp="2025/10/27 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="466" symbol="TXF" bs="S" contract="1.0" price="27990.0" time_stamp="2025/10/28 12:45:00" tag="停損" type="" atr="0" />
+    <Trade index="466" symbol="TXF" bs="B" contract="1.0" price="28312.0" time_stamp="2025/10/29 09:05:00" tag="多" type="" atr="0" />
+    <Trade index="466" symbol="TXF" bs="S" contract="1.0" price="27710.0" time_stamp="2025/11/05 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="469" symbol="TXF" bs="S" contract="1.0" price="26940.0" time_stamp="2025/11/18 10:57:00" tag="空" type="" atr="0" />
+    <Trade index="469" symbol="TXF" bs="B" contract="1.0" price="26614.0" time_stamp="2025/11/19 13:29:00" tag="空出" type="" atr="0" />
+    <Trade index="469" symbol="TXF" bs="S" contract="1.0" price="26661.0" time_stamp="2025/11/19 13:29:00" tag="空進" type="" atr="0" />
+    <Trade index="469" symbol="TXF" bs="B" contract="1.0" price="27308.0" time_stamp="2025/11/20 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="470" symbol="TXF" bs="S" contract="1.0" price="26431.0" time_stamp="2025/11/21 12:33:00" tag="空" type="" atr="0" />
+    <Trade index="470" symbol="TXF" bs="B" contract="1.0" price="26705.0" time_stamp="2025/11/24 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="472" symbol="TXF" bs="B" contract="1.0" price="28054.0" time_stamp="2025/12/08 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="472" symbol="TXF" bs="S" contract="1.0" price="27834.0" time_stamp="2025/12/15 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="467" symbol="TXF" bs="B" contract="1.0" price="29047.0" time_stamp="2026/01/02 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="467" symbol="TXF" bs="S" contract="1.0" price="31245.0" time_stamp="2026/01/21 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="467" symbol="TXF" bs="B" contract="1.0" price="31484.0" time_stamp="2026/01/21 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="467" symbol="TXF" bs="S" contract="1.0" price="32203.0" time_stamp="2026/01/26 09:05:00" tag="直停" type="" atr="0" />
+    <Trade index="479" symbol="TXF" bs="B" contract="1.0" price="32501.0" time_stamp="2026/01/27 10:17:00" tag="多" type="" atr="0" />
+    <Trade index="479" symbol="TXF" bs="S" contract="1.0" price="32319.0" time_stamp="2026/01/30 09:29:00" tag="移停" type="" atr="0" />
+    <Trade index="480" symbol="TXF" bs="B" contract="1.0" price="33100.0" time_stamp="2026/02/10 09:13:00" tag="多" type="" atr="0" />
+    <Trade index="480" symbol="TXF" bs="S" contract="1.0" price="33840.0" time_stamp="2026/02/23 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="480" symbol="TXF" bs="B" contract="1.0" price="33890.0" time_stamp="2026/02/23 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="480" symbol="TXF" bs="S" contract="1.0" price="34744.0" time_stamp="2026/03/02 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="485" symbol="TXF" bs="S" contract="1.0" price="32976.0" time_stamp="2026/03/04 12:33:00" tag="空" type="" atr="0" />
+    <Trade index="485" symbol="TXF" bs="B" contract="1.0" price="33911.0" time_stamp="2026/03/05 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="485" symbol="TXF" bs="S" contract="1.0" price="31730.0" time_stamp="2026/03/09 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="485" symbol="TXF" bs="B" contract="1.0" price="31986.0" time_stamp="2026/03/09 13:25:00" tag="移停" type="" atr="0" />
+    <Trade index="486" symbol="TXF" bs="B" contract="1.0" price="33341.0" time_stamp="2026/03/11 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="486" symbol="TXF" bs="S" contract="1.0" price="33453.0" time_stamp="2026/03/12 10:37:00" tag="移停" type="" atr="0" />
+    <Trade index="487" symbol="TXF" bs="S" contract="1.0" price="32000.0" time_stamp="2026/03/31 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="487" symbol="TXF" bs="B" contract="1.0" price="32375.0" time_stamp="2026/03/31 09:33:00" tag="停損" type="" atr="0" />
+    <Trade index="487" symbol="TXF" bs="S" contract="1.0" price="31955.0" time_stamp="2026/03/31 11:45:00" tag="空" type="" atr="0" />
+    <Trade index="487" symbol="TXF" bs="B" contract="1.0" price="33049.0" time_stamp="2026/04/01 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="489" symbol="TXF" bs="B" contract="1.0" price="33676.0" time_stamp="2026/04/02 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="489" symbol="TXF" bs="S" contract="1.0" price="33236.0" time_stamp="2026/04/02 09:21:00" tag="停損" type="" atr="0" />
+    <Trade index="489" symbol="TXF" bs="B" contract="1.0" price="34651.0" time_stamp="2026/04/08 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="489" symbol="TXF" bs="S" contract="1.0" price="36642.0" time_stamp="2026/04/15 13:29:00" tag="多出" type="" atr="0" />
+    <Trade index="489" symbol="TXF" bs="B" contract="1.0" price="36980.0" time_stamp="2026/04/15 13:29:00" tag="多進" type="" atr="0" />
+    <Trade index="489" symbol="TXF" bs="S" contract="1.0" price="38686.0" time_stamp="2026/04/23 08:45:00" tag="直停" type="" atr="0" />
+    <Trade index="491" symbol="TXF" bs="B" contract="1.0" price="39205.0" time_stamp="2026/04/24 13:25:00" tag="多" type="" atr="0" />
+    <Trade index="491" symbol="TXF" bs="S" contract="1.0" price="39565.0" time_stamp="2026/04/29 08:49:00" tag="移停" type="" atr="0" />
+    <Trade index="492" symbol="TXF" bs="B" contract="1.0" price="42329.0" time_stamp="2026/05/07 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="492" symbol="TXF" bs="S" contract="1.0" price="41828.0" time_stamp="2026/05/08 10:17:00" tag="停損" type="" atr="0" />
+    <Trade index="492" symbol="TXF" bs="B" contract="1.0" price="42350.0" time_stamp="2026/05/15 08:49:00" tag="多" type="" atr="0" />
+    <Trade index="492" symbol="TXF" bs="S" contract="1.0" price="41800.0" time_stamp="2026/05/15 09:53:00" tag="停損" type="" atr="0" />
+    <Trade index="494" symbol="TXF" bs="S" contract="1.0" price="40051.0" time_stamp="2026/05/20 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="494" symbol="TXF" bs="B" contract="1.0" price="40077.0" time_stamp="2026/05/20 13:29:00" tag="空出" type="" atr="0" />
+    <Trade index="494" symbol="TXF" bs="S" contract="1.0" price="40115.0" time_stamp="2026/05/20 13:29:00" tag="空進" type="" atr="0" />
+    <Trade index="494" symbol="TXF" bs="B" contract="1.0" price="40967.0" time_stamp="2026/05/21 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="495" symbol="TXF" bs="B" contract="1.0" price="42277.0" time_stamp="2026/05/22 12:05:00" tag="多" type="" atr="0" />
+    <Trade index="495" symbol="TXF" bs="S" contract="1.0" price="44206.0" time_stamp="2026/05/28 11:33:00" tag="移停" type="" atr="0" />
+    <Trade index="496" symbol="TXF" bs="B" contract="1.0" price="45378.0" time_stamp="2026/05/29 12:37:00" tag="多" type="" atr="0" />
+    <Trade index="496" symbol="TXF" bs="S" contract="1.0" price="45379.0" time_stamp="2026/06/02 11:29:00" tag="移停" type="" atr="0" />
+    <Trade index="497" symbol="TXF" bs="S" contract="1.0" price="42344.0" time_stamp="2026/06/08 08:45:00" tag="空" type="" atr="0" />
+    <Trade index="497" symbol="TXF" bs="B" contract="1.0" price="42831.0" time_stamp="2026/06/08 09:01:00" tag="停損" type="" atr="0" />
+    <Trade index="498" symbol="TXF" bs="B" contract="1.0" price="44500.0" time_stamp="2026/06/09 11:21:00" tag="多" type="" atr="0" />
+    <Trade index="498" symbol="TXF" bs="S" contract="1.0" price="43839.0" time_stamp="2026/06/10 08:45:00" tag="停損" type="" atr="0" />
+    <Trade index="497" symbol="TXF" bs="S" contract="1.0" price="42313.0" time_stamp="2026/06/11 10:29:00" tag="空" type="" atr="0" />
+    <Trade index="497" symbol="TXF" bs="B" contract="1.0" price="42748.0" time_stamp="2026/06/11 11:05:00" tag="停損" type="" atr="0" />
+    <Trade index="498" symbol="TXF" bs="B" contract="1.0" price="44929.0" time_stamp="2026/06/12 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="498" symbol="TXF" bs="S" contract="1.0" price="44478.0" time_stamp="2026/06/12 09:09:00" tag="停損" type="" atr="0" />
+    <Trade index="498" symbol="TXF" bs="B" contract="1.0" price="45750.0" time_stamp="2026/06/15 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="498" symbol="TXF" bs="S" contract="1.0" price="45257.0" time_stamp="2026/06/17 08:53:00" tag="停損" type="" atr="0" />
+    <Trade index="498" symbol="TXF" bs="B" contract="1.0" price="46470.0" time_stamp="2026/06/18 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="498" symbol="TXF" bs="S" contract="1.0" price="47664.0" time_stamp="2026/06/23 12:57:00" tag="移停" type="" atr="0" />
+    <Trade index="500" symbol="TXF" bs="S" contract="1.0" price="45080.0" time_stamp="2026/06/26 10:45:00" tag="空" type="" atr="0" />
+    <Trade index="500" symbol="TXF" bs="B" contract="1.0" price="45263.0" time_stamp="2026/06/29 09:21:00" tag="移停" type="" atr="0" />
+    <Trade index="501" symbol="TXF" bs="B" contract="1.0" price="47516.0" time_stamp="2026/07/01 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="501" symbol="TXF" bs="S" contract="1.0" price="46940.0" time_stamp="2026/07/01 09:49:00" tag="停損" type="" atr="0" />
+    <Trade index="502" symbol="TXF" bs="S" contract="1.0" price="44814.0" time_stamp="2026/07/14 09:37:00" tag="空" type="" atr="0" />
+    <Trade index="502" symbol="TXF" bs="B" contract="1.0" price="44814.0" time_stamp="2026/07/14 13:21:00" tag="移停" type="" atr="0" />
+    <Trade index="503" symbol="TXF" bs="S" contract="1.0" price="44043.0" time_stamp="2026/07/17 09:45:00" tag="空" type="" atr="0" />
+    <Trade index="503" symbol="TXF" bs="B" contract="1.0" price="43535.0" time_stamp="2026/07/21 09:05:00" tag="移停" type="" atr="0" />
+    <Trade index="505" symbol="TXF" bs="S" contract="1.0" price="41463.0" time_stamp="2026/07/29 09:09:00" tag="空" type="" atr="0" />
+    <Trade index="505" symbol="TXF" bs="B" contract="1.0" price="40391.0" time_stamp="2026/07/29 13:13:00" tag="移停" type="" atr="0" />
+    <Trade index="506" symbol="TXF" bs="B" contract="1.0" price="45350.0" time_stamp="2026/08/12 08:45:00" tag="多" type="" atr="0" />
+    <Trade index="506" symbol="TXF" bs="S" contract="1.0" price="45520.0" time_stamp="2026/08/18 09:49:00" tag="移停" type="" atr="0" />
+    <Trade index="509" symbol="TXF" bs="B" contract="1.0" price="47379.0" time_stamp="2026/09/07 08:49:00" tag="多" type="" atr="0" />
+    <Trade index="509" symbol="TXF" bs="S" contract="1.0" price="46804.0" time_stamp="2026/09/10 08:49:00" tag="停損" type="" atr="0" />
+    <Trade index="509" symbol="TXF" bs="B" contract="1.0" price="47693.0" time_stamp="2026/09/21 09:05:00" tag="多" type="" atr="0" />
+    <Trade index="509" symbol="TXF" bs="S" contract="1.0" price="47850.0" time_stamp="2026/09/24 08:45:00" tag="移停" type="" atr="0" />
+    <Trade index="511" symbol="TXF" bs="B" contract="1.0" price="49924.0" time_stamp="2026/10/05 09:05:00" tag="多" type="" atr="0" />
+    <Trade index="511" symbol="TXF" bs="S" contract="1.0" price="49420.0" time_stamp="2026/10/08 13:29:00" tag="停損" type="" atr="0" />
+    <Trade index="514" symbol="TXF" bs="S" contract="1.0" price="46936.0" time_stamp="2026/10/15 13:33:00" tag="空" type="" atr="0" />
+    <Trade index="514" symbol="TXF" bs="B" contract="1.0" price="47462.0" time_stamp="2026/10/16 09:17:00" tag="停損" type="" atr="0" />
+  </策略交易>
+</策略回測>
