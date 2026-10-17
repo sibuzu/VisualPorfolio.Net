@@ -1,0 +1,528 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<策略回測>
+  <Setting>
+    <MddCount>5</MddCount>
+    <Compound>
+      <管理模式>槓桿倍數目標</管理模式>
+      <金額單位_intl>1</金額單位_intl>
+      <金額單位>1</金額單位>
+      <換倉調整口數>True</換倉調整口數>
+      <初始資金_intl>1000000</初始資金_intl>
+      <初始資金>1000000</初始資金>
+      <使用同一套淨值差序列>True</使用同一套淨值差序列>
+      <最大口數>0</最大口數>
+      <口數小數點>捨去</口數小數點>
+      <固定口數>1</固定口數>
+      <風險因子>0.05</風險因子>
+      <槓桿資金>累加獲利</槓桿資金>
+      <槓桿倍數>0.1</槓桿倍數>
+      <回測基準金額>無</回測基準金額>
+      <基準金額>10000</基準金額>
+      <初始口數>1</初始口數>
+      <最小口數>1</最小口數>
+      <_獲利基數>50</_獲利基數>
+      <獲利基數>50</獲利基數>
+      <_交易一口金額>400000</_交易一口金額>
+      <交易一口金額>400000</交易一口金額>
+      <固定風險比例>0.02</固定風險比例>
+      <初始資金風險比例>0.02</初始資金風險比例>
+      <已獲利風險比例>0.05</已獲利風險比例>
+      <_每次交易風險金額>10000</_每次交易風險金額>
+      <每次交易風險金額>10000</每次交易風險金額>
+      <保證金目標比例>0.1</保證金目標比例>
+      <_每口保證金>100000</_每口保證金>
+      <每口保證金>100000</每口保證金>
+      <下注比例>20</下注比例>
+      <ChipSize>100000</ChipSize>
+      <最佳比例>13.06</最佳比例>
+      <動態複利初始比例>0.10</動態複利初始比例>
+      <動態複利加碼比例>0.15</動態複利加碼比例>
+      <動態複利加碼門檻>100000000</動態複利加碼門檻>
+      <動態複利回撤門檻Str>2000</動態複利回撤門檻Str>
+      <動態複利最大倍數>10</動態複利最大倍數>
+      <動態複利複利間隔>每週</動態複利複利間隔>
+    </Compound>
+  </Setting>
+  <策略參數>
+    <StgABC>
+      <滑價Tick>1</滑價Tick>
+      <價平參考>期貨或ETF</價平參考>
+      <價平計算方式>Round</價平計算方式>
+      <開始日期>2016/01/01</開始日期>
+      <結束日期>2026/12/31</結束日期>
+      <權利金最低>0</權利金最低>
+      <權利金最高>0</權利金最高>
+      <部位管理>固定金額</部位管理>
+      <固定金額>10</固定金額>
+      <BR權利金最低>
+        <Act>false</Act>
+        <Parameter>權利金最低</Parameter>
+        <Value>0</Value>
+        <Start>1X</Start>
+        <Step>1X</Step>
+        <End>5X</End>
+      </BR權利金最低>
+      <BR權利金最高>
+        <Act>false</Act>
+        <Parameter>權利金最高</Parameter>
+        <Value>0</Value>
+        <Start>1X</Start>
+        <Step>1X</Step>
+        <End>5X</End>
+      </BR權利金最高>
+      <進場時間>新倉第n天</進場時間>
+      <進場時間N>1</進場時間N>
+      <開收盤進場>開盤進場</開收盤進場>
+      <權證動作>買call</權證動作>
+      <進場價格>價外P檔</進場價格>
+      <進場價格P>1</進場價格P>
+      <價格間格Q>10000</價格間格Q>
+      <價差條件>無</價差條件>
+      <價差>-20</價差>
+      <N日漲幅>不使用</N日漲幅>
+      <N日>1</N日>
+      <漲幅最大>0</漲幅最大>
+      <漲幅最小>-100</漲幅最小>
+      <N倍停利>0</N倍停利>
+      <每月權重>不使用</每月權重>
+      <一月>1</一月>
+      <二月>1</二月>
+      <三月>0.0</三月>
+      <四月>1</四月>
+      <五月>1</五月>
+      <六月>1.0</六月>
+      <七月>1</七月>
+      <八月>1</八月>
+      <九月>1.0</九月>
+      <十月>1</十月>
+      <十一月>1</十一月>
+      <十二月>1</十二月>
+      <BR進場時間N>
+        <Act>false</Act>
+        <Parameter>進場時間N</Parameter>
+        <Value>1</Value>
+        <Start>1</Start>
+        <Step>1</Step>
+        <End>5</End>
+      </BR進場時間N>
+      <BR進場價格P>
+        <Act>false</Act>
+        <Parameter>進場價格P</Parameter>
+        <Value>1</Value>
+        <Start>1</Start>
+        <Step>1</Step>
+        <End>5</End>
+      </BR進場價格P>
+      <BR價差>
+        <Act>false</Act>
+        <Parameter>價差</Parameter>
+        <Value>-20</Value>
+        <Start>-30</Start>
+        <Step>2</Step>
+        <End>0</End>
+      </BR價差>
+      <BRN日>
+        <Act>false</Act>
+        <Parameter>N日</Parameter>
+        <Value>1</Value>
+        <Start>1</Start>
+        <Step>1</Step>
+        <End>5</End>
+      </BRN日>
+      <BR漲幅最大>
+        <Act>false</Act>
+        <Parameter>漲幅最大</Parameter>
+        <Value>0</Value>
+        <Start>0</Start>
+        <Step>10</Step>
+        <End>30</End>
+      </BR漲幅最大>
+      <BR漲幅最小>
+        <Act>false</Act>
+        <Parameter>漲幅最小</Parameter>
+        <Value>-100</Value>
+        <Start>-30</Start>
+        <Step>10</Step>
+        <End>0</End>
+      </BR漲幅最小>
+      <BRN倍停利>
+        <Act>false</Act>
+        <Parameter>N倍停利</Parameter>
+        <Value>0</Value>
+        <Start>0</Start>
+        <Step>1</Step>
+        <End>5</End>
+      </BRN倍停利>
+      <BR一月>
+        <Act>false</Act>
+        <Parameter>一月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR一月>
+      <BR二月>
+        <Act>false</Act>
+        <Parameter>二月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR二月>
+      <BR三月>
+        <Act>true</Act>
+        <Parameter>三月</Parameter>
+        <Value>1.0</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR三月>
+      <BR四月>
+        <Act>false</Act>
+        <Parameter>四月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR四月>
+      <BR五月>
+        <Act>false</Act>
+        <Parameter>五月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR五月>
+      <BR六月>
+        <Act>true</Act>
+        <Parameter>六月</Parameter>
+        <Value>1.0</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR六月>
+      <BR七月>
+        <Act>false</Act>
+        <Parameter>七月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR七月>
+      <BR八月>
+        <Act>false</Act>
+        <Parameter>八月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR八月>
+      <BR九月>
+        <Act>true</Act>
+        <Parameter>九月</Parameter>
+        <Value>1.0</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR九月>
+      <BR十月>
+        <Act>false</Act>
+        <Parameter>十月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR十月>
+      <BR十一月>
+        <Act>false</Act>
+        <Parameter>十一月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR十一月>
+      <BR十二月>
+        <Act>false</Act>
+        <Parameter>十二月</Parameter>
+        <Value>1</Value>
+        <Start>0</Start>
+        <Step>0.5</Step>
+        <End>1</End>
+      </BR十二月>
+    </StgABC>
+  </策略參數>
+  <參數>
+    <策略>ABC</策略>
+    <近月代碼>TXF (台指期月選)</近月代碼>
+    <滑價>1</滑價>
+    <契約價值>50</契約價值>
+    <最小跳動點>1</最小跳動點>
+    <最小跳動金額>50</最小跳動金額>
+    <開始日期>2016/01/01</開始日期>
+    <結束日期>2026/12/31</結束日期>
+    <ChipSize>100000</ChipSize>
+  </參數>
+  <報價檔案 />
+  <策略交易>
+    <Trade index="1" bs="B" contract="12" price="165" time_stamp="2015/12/17 00:00:00" tag="201601C8300" />
+    <Trade index="1" bs="S" contract="12" price="0" time_stamp="2016/01/20 00:00:00" tag="201601C8300" />
+    <Trade index="2" bs="B" contract="20" price="99" time_stamp="2016/01/21 00:00:00" tag="201602C7800" />
+    <Trade index="2" bs="S" contract="20" price="412" time_stamp="2016/02/17 00:00:00" tag="201602C7800" />
+    <Trade index="3" bs="B" contract="22" price="90" time_stamp="2016/02/18 00:00:00" tag="201603C8400" />
+    <Trade index="3" bs="S" contract="22" price="291" time_stamp="2016/03/16 00:00:00" tag="201603C8400" />
+    <Trade index="4" bs="B" contract="29" price="68" time_stamp="2016/03/17 00:00:00" tag="201604C8900" />
+    <Trade index="4" bs="S" contract="29" price="0" time_stamp="2016/04/20 00:00:00" tag="201604C8900" />
+    <Trade index="5" bs="B" contract="21" price="95" time_stamp="2016/04/21 00:00:00" tag="201605C8600" />
+    <Trade index="5" bs="S" contract="21" price="0" time_stamp="2016/05/18 00:00:00" tag="201605C8600" />
+    <Trade index="6" bs="B" contract="20" price="96" time_stamp="2016/05/19 00:00:00" tag="201606C8200" />
+    <Trade index="6" bs="S" contract="20" price="402" time_stamp="2016/06/15 00:00:00" tag="201606C8200" />
+    <Trade index="7" bs="B" contract="16" price="125" time_stamp="2016/06/16 00:00:00" tag="201607C8500" />
+    <Trade index="7" bs="S" contract="16" price="503" time_stamp="2016/07/20 00:00:00" tag="201607C8500" />
+    <Trade index="8" bs="B" contract="19" price="101" time_stamp="2016/07/21 00:00:00" tag="201608C9000" />
+    <Trade index="8" bs="S" contract="19" price="121" time_stamp="2016/08/17 00:00:00" tag="201608C9000" />
+    <Trade index="9" bs="B" contract="19" price="102" time_stamp="2016/08/18 00:00:00" tag="201609C9100" />
+    <Trade index="9" bs="S" contract="19" price="121" time_stamp="2016/09/21 00:00:00" tag="201609C9100" />
+    <Trade index="10" bs="B" contract="21" price="95" time_stamp="2016/09/22 00:00:00" tag="201610C9300" />
+    <Trade index="10" bs="S" contract="21" price="0" time_stamp="2016/10/19 00:00:00" tag="201610C9300" />
+    <Trade index="11" bs="B" contract="27" price="72" time_stamp="2016/10/20 00:00:00" tag="201611C9400" />
+    <Trade index="11" bs="S" contract="27" price="0" time_stamp="2016/11/16 00:00:00" tag="201611C9400" />
+    <Trade index="12" bs="B" contract="14" price="134" time_stamp="2016/11/17 00:00:00" tag="201612C9000" />
+    <Trade index="12" bs="S" contract="14" price="232" time_stamp="2016/12/21 00:00:00" tag="201612C9000" />
+    <Trade index="13" bs="B" contract="26" price="75" time_stamp="2016/12/22 00:00:00" tag="201701C9300" />
+    <Trade index="13" bs="S" contract="26" price="40" time_stamp="2017/01/18 00:00:00" tag="201701C9300" />
+    <Trade index="14" bs="B" contract="26" price="76" time_stamp="2017/01/19 00:00:00" tag="201702C9400" />
+    <Trade index="14" bs="S" contract="26" price="399" time_stamp="2017/02/15 00:00:00" tag="201702C9400" />
+    <Trade index="15" bs="B" contract="25" price="80" time_stamp="2017/02/16 00:00:00" tag="201703C9900" />
+    <Trade index="15" bs="S" contract="25" price="0" time_stamp="2017/03/15 00:00:00" tag="201703C9900" />
+    <Trade index="16" bs="B" contract="27" price="72" time_stamp="2017/03/16 00:00:00" tag="201704C9900" />
+    <Trade index="16" bs="S" contract="27" price="0" time_stamp="2017/04/19 00:00:00" tag="201704C9900" />
+    <Trade index="17" bs="B" contract="23" price="84" time_stamp="2017/04/20 00:00:00" tag="201705C9700" />
+    <Trade index="17" bs="S" contract="23" price="300" time_stamp="2017/05/17 00:00:00" tag="201705C9700" />
+    <Trade index="18" bs="B" contract="25" price="78" time_stamp="2017/05/18 00:00:00" tag="201706C10000" />
+    <Trade index="18" bs="S" contract="25" price="369" time_stamp="2017/06/21 00:00:00" tag="201706C10000" />
+    <Trade index="19" bs="B" contract="36" price="55" time_stamp="2017/06/22 00:00:00" tag="201707C10300" />
+    <Trade index="19" bs="S" contract="36" price="200" time_stamp="2017/07/19 00:00:00" tag="201707C10300" />
+    <Trade index="20" bs="B" contract="28" price="70" time_stamp="2017/07/20 00:00:00" tag="201708C10500" />
+    <Trade index="20" bs="S" contract="28" price="0" time_stamp="2017/08/16 00:00:00" tag="201708C10500" />
+    <Trade index="21" bs="B" contract="27" price="74" time_stamp="2017/08/17 00:00:00" tag="201709C10400" />
+    <Trade index="21" bs="S" contract="27" price="110" time_stamp="2017/09/20 00:00:00" tag="201709C10400" />
+    <Trade index="22" bs="B" contract="27" price="73" time_stamp="2017/09/21 00:00:00" tag="201710C10600" />
+    <Trade index="22" bs="S" contract="27" price="128" time_stamp="2017/10/18 00:00:00" tag="201710C10600" />
+    <Trade index="23" bs="B" contract="22" price="87" time_stamp="2017/10/19 00:00:00" tag="201711C10800" />
+    <Trade index="23" bs="S" contract="22" price="0" time_stamp="2017/11/15 00:00:00" tag="201711C10800" />
+    <Trade index="24" bs="B" contract="30" price="65" time_stamp="2017/11/16 00:00:00" tag="201712C10700" />
+    <Trade index="24" bs="S" contract="30" price="0" time_stamp="2017/12/20 00:00:00" tag="201712C10700" />
+    <Trade index="25" bs="B" contract="30" price="65" time_stamp="2017/12/21 00:00:00" tag="201801C10600" />
+    <Trade index="25" bs="S" contract="30" price="420" time_stamp="2018/01/17 00:00:00" tag="201801C10600" />
+    <Trade index="26" bs="B" contract="33" price="60" time_stamp="2018/01/18 00:00:00" tag="201802C11200" />
+    <Trade index="26" bs="S" contract="33" price="0" time_stamp="2018/02/21 00:00:00" tag="201802C11200" />
+    <Trade index="27" bs="B" contract="11" price="181" time_stamp="2018/02/22 00:00:00" tag="201803C10700" />
+    <Trade index="27" bs="S" contract="11" price="345" time_stamp="2018/03/21 00:00:00" tag="201803C10700" />
+    <Trade index="28" bs="B" contract="14" price="136" time_stamp="2018/03/22 00:00:00" tag="201804C11100" />
+    <Trade index="28" bs="S" contract="14" price="0" time_stamp="2018/04/18 00:00:00" tag="201804C11100" />
+    <Trade index="29" bs="B" contract="24" price="82" time_stamp="2018/04/19 00:00:00" tag="201805C11000" />
+    <Trade index="29" bs="S" contract="24" price="0" time_stamp="2018/05/16 00:00:00" tag="201805C11000" />
+    <Trade index="30" bs="B" contract="18" price="111" time_stamp="2018/05/17 00:00:00" tag="201806C11000" />
+    <Trade index="30" bs="S" contract="18" price="0" time_stamp="2018/06/20 00:00:00" tag="201806C11000" />
+    <Trade index="31" bs="B" contract="16" price="124" time_stamp="2018/06/21 00:00:00" tag="201807C10800" />
+    <Trade index="31" bs="S" contract="16" price="44" time_stamp="2018/07/18 00:00:00" tag="201807C10800" />
+    <Trade index="32" bs="B" contract="27" price="74" time_stamp="2018/07/19 00:00:00" tag="201808C10900" />
+    <Trade index="32" bs="S" contract="27" price="0" time_stamp="2018/08/15 00:00:00" tag="201808C10900" />
+    <Trade index="33" bs="B" contract="15" price="133" time_stamp="2018/08/16 00:00:00" tag="201809C10700" />
+    <Trade index="33" bs="S" contract="15" price="172" time_stamp="2018/09/19 00:00:00" tag="201809C10700" />
+    <Trade index="34" bs="B" contract="22" price="88" time_stamp="2018/09/20 00:00:00" tag="201810C11000" />
+    <Trade index="34" bs="S" contract="22" price="0" time_stamp="2018/10/17 00:00:00" tag="201810C11000" />
+    <Trade index="35" bs="B" contract="9" price="205" time_stamp="2018/10/18 00:00:00" tag="201811C10000" />
+    <Trade index="35" bs="S" contract="9" price="0" time_stamp="2018/11/21 00:00:00" tag="201811C10000" />
+    <Trade index="36" bs="B" contract="16" price="124" time_stamp="2018/11/22 00:00:00" tag="201812C9900" />
+    <Trade index="36" bs="S" contract="16" price="0" time_stamp="2018/12/19 00:00:00" tag="201812C9900" />
+    <Trade index="37" bs="B" contract="12" price="165" time_stamp="2018/12/20 00:00:00" tag="201901C9700" />
+    <Trade index="37" bs="S" contract="12" price="84" time_stamp="2019/01/16 00:00:00" tag="201901C9700" />
+    <Trade index="38" bs="B" contract="17" price="115" time_stamp="2019/01/17 00:00:00" tag="201902C9900" />
+    <Trade index="38" bs="S" contract="17" price="356" time_stamp="2019/02/20 00:00:00" tag="201902C9900" />
+    <Trade index="39" bs="B" contract="27" price="72" time_stamp="2019/02/21 00:00:00" tag="201903C10400" />
+    <Trade index="39" bs="S" contract="27" price="145" time_stamp="2019/03/20 00:00:00" tag="201903C10400" />
+    <Trade index="40" bs="B" contract="22" price="89" time_stamp="2019/03/21 00:00:00" tag="201904C10600" />
+    <Trade index="40" bs="S" contract="22" price="405" time_stamp="2019/04/17 00:00:00" tag="201904C10600" />
+    <Trade index="41" bs="B" contract="21" price="93" time_stamp="2019/04/18 00:00:00" tag="201905C11100" />
+    <Trade index="41" bs="S" contract="21" price="0" time_stamp="2019/05/15 00:00:00" tag="201905C11100" />
+    <Trade index="42" bs="B" contract="13" price="150" time_stamp="2019/05/16 00:00:00" tag="201906C10600" />
+    <Trade index="42" bs="S" contract="13" price="170" time_stamp="2019/06/19 00:00:00" tag="201906C10600" />
+    <Trade index="43" bs="B" contract="23" price="85" time_stamp="2019/06/20 00:00:00" tag="201907C10700" />
+    <Trade index="43" bs="S" contract="23" price="131" time_stamp="2019/07/17 00:00:00" tag="201907C10700" />
+    <Trade index="44" bs="B" contract="18" price="110" time_stamp="2019/07/18 00:00:00" tag="201908C10700" />
+    <Trade index="44" bs="S" contract="18" price="0" time_stamp="2019/08/21 00:00:00" tag="201908C10700" />
+    <Trade index="45" bs="B" contract="18" price="107" time_stamp="2019/08/22 00:00:00" tag="201909C10600" />
+    <Trade index="45" bs="S" contract="18" price="360" time_stamp="2019/09/18 00:00:00" tag="201909C10600" />
+    <Trade index="46" bs="B" contract="22" price="87" time_stamp="2019/09/19 00:00:00" tag="201910C11000" />
+    <Trade index="46" bs="S" contract="22" price="146" time_stamp="2019/10/16 00:00:00" tag="201910C11000" />
+    <Trade index="47" bs="B" contract="15" price="126" time_stamp="2019/10/17 00:00:00" tag="201911C11200" />
+    <Trade index="47" bs="S" contract="15" price="408" time_stamp="2019/11/20 00:00:00" tag="201911C11200" />
+    <Trade index="48" bs="B" contract="16" price="120" time_stamp="2019/11/21 00:00:00" tag="201912C11600" />
+    <Trade index="48" bs="S" contract="16" price="519" time_stamp="2019/12/18 00:00:00" tag="201912C11600" />
+    <Trade index="49" bs="B" contract="16" price="125" time_stamp="2019/12/19 00:00:00" tag="202001C12200" />
+    <Trade index="49" bs="S" contract="16" price="0" time_stamp="2020/01/15 00:00:00" tag="202001C12200" />
+    <Trade index="50" bs="B" contract="14" price="140" time_stamp="2020/01/16 00:00:00" tag="202002C12100" />
+    <Trade index="50" bs="S" contract="14" price="0" time_stamp="2020/02/19 00:00:00" tag="202002C12100" />
+    <Trade index="51" bs="B" contract="15" price="133" time_stamp="2020/02/20 00:00:00" tag="202003C11900" />
+    <Trade index="51" bs="S" contract="15" price="0" time_stamp="2020/03/18 00:00:00" tag="202003C11900" />
+    <Trade index="52" bs="B" contract="4" price="500" time_stamp="2020/03/19 00:00:00" tag="202004C8900" />
+    <Trade index="52" bs="S" contract="4" price="1551" time_stamp="2020/04/15 00:00:00" tag="202004C8900" />
+    <Trade index="53" bs="B" contract="8" price="242" time_stamp="2020/04/16 00:00:00" tag="202005C10300" />
+    <Trade index="53" bs="S" contract="8" price="587" time_stamp="2020/05/20 00:00:00" tag="202005C10300" />
+    <Trade index="54" bs="B" contract="10" price="198" time_stamp="2020/05/21 00:00:00" tag="202006C11000" />
+    <Trade index="54" bs="S" contract="10" price="520" time_stamp="2020/06/17 00:00:00" tag="202006C11000" />
+    <Trade index="55" bs="B" contract="11" price="176" time_stamp="2020/06/18 00:00:00" tag="202007C11500" />
+    <Trade index="55" bs="S" contract="11" price="720" time_stamp="2020/07/15 00:00:00" tag="202007C11500" />
+    <Trade index="56" bs="B" contract="8" price="223" time_stamp="2020/07/16 00:00:00" tag="202008C12200" />
+    <Trade index="56" bs="S" contract="8" price="607" time_stamp="2020/08/19 00:00:00" tag="202008C12200" />
+    <Trade index="57" bs="B" contract="9" price="218" time_stamp="2020/08/20 00:00:00" tag="202009C12800" />
+    <Trade index="57" bs="S" contract="9" price="169" time_stamp="2020/09/16 00:00:00" tag="202009C12800" />
+    <Trade index="58" bs="B" contract="10" price="192" time_stamp="2020/09/17 00:00:00" tag="202010C13000" />
+    <Trade index="58" bs="S" contract="10" price="0" time_stamp="2020/10/21 00:00:00" tag="202010C13000" />
+    <Trade index="59" bs="B" contract="8" price="225" time_stamp="2020/10/22 00:00:00" tag="202011C12800" />
+    <Trade index="59" bs="S" contract="8" price="956" time_stamp="2020/11/18 00:00:00" tag="202011C12800" />
+    <Trade index="60" bs="B" contract="9" price="207" time_stamp="2020/11/19 00:00:00" tag="202012C13800" />
+    <Trade index="60" bs="S" contract="9" price="523" time_stamp="2020/12/16 00:00:00" tag="202012C13800" />
+    <Trade index="61" bs="B" contract="9" price="219" time_stamp="2020/12/17 00:00:00" tag="202101C14300" />
+    <Trade index="61" bs="S" contract="9" price="1466" time_stamp="2021/01/20 00:00:00" tag="202101C14300" />
+    <Trade index="62" bs="B" contract="6" price="292" time_stamp="2021/01/21 00:00:00" tag="202102C15900" />
+    <Trade index="62" bs="S" contract="6" price="426" time_stamp="2021/02/17 00:00:00" tag="202102C15900" />
+    <Trade index="63" bs="B" contract="6" price="290" time_stamp="2021/02/18 00:00:00" tag="202103C16500" />
+    <Trade index="63" bs="S" contract="6" price="0" time_stamp="2021/03/17 00:00:00" tag="202103C16500" />
+    <Trade index="64" bs="B" contract="8" price="242" time_stamp="2021/03/18 00:00:00" tag="202104C16400" />
+    <Trade index="64" bs="S" contract="8" price="832" time_stamp="2021/04/21 00:00:00" tag="202104C16400" />
+    <Trade index="65" bs="B" contract="9" price="220" time_stamp="2021/04/22 00:00:00" tag="202105C17400" />
+    <Trade index="65" bs="S" contract="9" price="0" time_stamp="2021/05/19 00:00:00" tag="202105C17400" />
+    <Trade index="66" bs="B" contract="4" price="416" time_stamp="2021/05/20 00:00:00" tag="202106C16200" />
+    <Trade index="66" bs="S" contract="4" price="1146" time_stamp="2021/06/16 00:00:00" tag="202106C16200" />
+    <Trade index="67" bs="B" contract="7" price="280" time_stamp="2021/06/17 00:00:00" tag="202107C17200" />
+    <Trade index="67" bs="S" contract="7" price="231" time_stamp="2021/07/21 00:00:00" tag="202107C17200" />
+    <Trade index="68" bs="B" contract="6" price="297" time_stamp="2021/07/22 00:00:00" tag="202108C17500" />
+    <Trade index="68" bs="S" contract="6" price="0" time_stamp="2021/08/18 00:00:00" tag="202108C17500" />
+    <Trade index="69" bs="B" contract="6" price="295" time_stamp="2021/08/19 00:00:00" tag="202109C16700" />
+    <Trade index="69" bs="S" contract="6" price="682" time_stamp="2021/09/15 00:00:00" tag="202109C16700" />
+    <Trade index="70" bs="B" contract="6" price="296" time_stamp="2021/09/16 00:00:00" tag="202110C17400" />
+    <Trade index="70" bs="S" contract="6" price="0" time_stamp="2021/10/20 00:00:00" tag="202110C17400" />
+    <Trade index="71" bs="B" contract="7" price="256" time_stamp="2021/10/21 00:00:00" tag="202111C17000" />
+    <Trade index="71" bs="S" contract="7" price="723" time_stamp="2021/11/17 00:00:00" tag="202111C17000" />
+    <Trade index="72" bs="B" contract="10" price="188" time_stamp="2021/11/18 00:00:00" tag="202112C17900" />
+    <Trade index="72" bs="S" contract="10" price="0" time_stamp="2021/12/15 00:00:00" tag="202112C17900" />
+    <Trade index="73" bs="B" contract="9" price="213" time_stamp="2021/12/16 00:00:00" tag="202201C17900" />
+    <Trade index="73" bs="S" contract="9" price="317" time_stamp="2022/01/19 00:00:00" tag="202201C17900" />
+    <Trade index="74" bs="B" contract="7" price="251" time_stamp="2022/01/20 00:00:00" tag="202202C18300" />
+    <Trade index="74" bs="S" contract="7" price="0" time_stamp="2022/02/16 00:00:00" tag="202202C18300" />
+    <Trade index="75" bs="B" contract="8" price="234" time_stamp="2022/02/17 00:00:00" tag="202203C18400" />
+    <Trade index="75" bs="S" contract="8" price="0" time_stamp="2022/03/16 00:00:00" tag="202203C18400" />
+    <Trade index="76" bs="B" contract="5" price="374" time_stamp="2022/03/17 00:00:00" tag="202204C17400" />
+    <Trade index="76" bs="S" contract="5" price="0" time_stamp="2022/04/20 00:00:00" tag="202204C17400" />
+    <Trade index="77" bs="B" contract="9" price="219" time_stamp="2022/04/21 00:00:00" tag="202205C17300" />
+    <Trade index="77" bs="S" contract="9" price="0" time_stamp="2022/05/18 00:00:00" tag="202205C17300" />
+    <Trade index="78" bs="B" contract="6" price="286" time_stamp="2022/05/19 00:00:00" tag="202206C16000" />
+    <Trade index="78" bs="S" contract="6" price="61" time_stamp="2022/06/15 00:00:00" tag="202206C16000" />
+    <Trade index="79" bs="B" contract="6" price="287" time_stamp="2022/06/16 00:00:00" tag="202207C15900" />
+    <Trade index="79" bs="S" contract="6" price="0" time_stamp="2022/07/20 00:00:00" tag="202207C15900" />
+    <Trade index="80" bs="B" contract="6" price="300" time_stamp="2022/07/21 00:00:00" tag="202208C14700" />
+    <Trade index="80" bs="S" contract="6" price="752" time_stamp="2022/08/17 00:00:00" tag="202208C14700" />
+    <Trade index="81" bs="B" contract="9" price="220" time_stamp="2022/08/18 00:00:00" tag="202209C15400" />
+    <Trade index="81" bs="S" contract="9" price="0" time_stamp="2022/09/21 00:00:00" tag="202209C15400" />
+    <Trade index="82" bs="B" contract="6" price="299" time_stamp="2022/09/22 00:00:00" tag="202210C14300" />
+    <Trade index="82" bs="S" contract="6" price="0" time_stamp="2022/10/19 00:00:00" tag="202210C14300" />
+    <Trade index="83" bs="B" contract="6" price="303" time_stamp="2022/10/20 00:00:00" tag="202211C12900" />
+    <Trade index="83" bs="S" contract="6" price="1599" time_stamp="2022/11/16 00:00:00" tag="202211C12900" />
+    <Trade index="84" bs="B" contract="6" price="306" time_stamp="2022/11/17 00:00:00" tag="202212C14600" />
+    <Trade index="84" bs="S" contract="6" price="0" time_stamp="2022/12/21 00:00:00" tag="202212C14600" />
+    <Trade index="85" bs="B" contract="8" price="241" time_stamp="2022/12/22 00:00:00" tag="202301C14400" />
+    <Trade index="85" bs="S" contract="8" price="1050" time_stamp="2023/01/30 00:00:00" tag="202301C14400" />
+    <Trade index="86" bs="B" contract="11" price="178" time_stamp="2023/01/31 00:00:00" tag="202302C15500" />
+    <Trade index="86" bs="S" contract="11" price="0" time_stamp="2023/02/15 00:00:00" tag="202302C15500" />
+    <Trade index="87" bs="B" contract="10" price="194" time_stamp="2023/02/16 00:00:00" tag="202303C15600" />
+    <Trade index="87" bs="S" contract="10" price="0" time_stamp="2023/03/15 00:00:00" tag="202303C15600" />
+    <Trade index="88" bs="B" contract="7" price="280" time_stamp="2023/03/16 00:00:00" tag="202304C15300" />
+    <Trade index="88" bs="S" contract="7" price="475" time_stamp="2023/04/19 00:00:00" tag="202304C15300" />
+    <Trade index="89" bs="B" contract="9" price="201" time_stamp="2023/04/20 00:00:00" tag="202305C15800" />
+    <Trade index="89" bs="S" contract="9" price="153" time_stamp="2023/05/17 00:00:00" tag="202305C15800" />
+    <Trade index="90" bs="B" contract="9" price="220" time_stamp="2023/05/18 00:00:00" tag="202306C16100" />
+    <Trade index="90" bs="S" contract="9" price="1130" time_stamp="2023/06/21 00:00:00" tag="202306C16100" />
+    <Trade index="91" bs="B" contract="11" price="181" time_stamp="2023/06/26 00:00:00" tag="202307C17000" />
+    <Trade index="91" bs="S" contract="11" price="103" time_stamp="2023/07/19 00:00:00" tag="202307C17000" />
+    <Trade index="92" bs="B" contract="8" price="231" time_stamp="2023/07/20 00:00:00" tag="202308C17100" />
+    <Trade index="92" bs="S" contract="8" price="0" time_stamp="2023/08/16 00:00:00" tag="202308C17100" />
+    <Trade index="93" bs="B" contract="8" price="239" time_stamp="2023/08/17 00:00:00" tag="202309C16400" />
+    <Trade index="93" bs="S" contract="8" price="137" time_stamp="2023/09/20 00:00:00" tag="202309C16400" />
+    <Trade index="94" bs="B" contract="11" price="172" time_stamp="2023/09/21 00:00:00" tag="202310C16600" />
+    <Trade index="94" bs="S" contract="11" price="0" time_stamp="2023/10/18 00:00:00" tag="202310C16600" />
+    <Trade index="95" bs="B" contract="9" price="217" time_stamp="2023/10/19 00:00:00" tag="202311C16500" />
+    <Trade index="95" bs="S" contract="9" price="623" time_stamp="2023/11/15 00:00:00" tag="202311C16500" />
+    <Trade index="96" bs="B" contract="9" price="203" time_stamp="2023/11/16 00:00:00" tag="202312C17300" />
+    <Trade index="96" bs="S" contract="9" price="336" time_stamp="2023/12/20 00:00:00" tag="202312C17300" />
+    <Trade index="97" bs="B" contract="9" price="208" time_stamp="2023/12/21 00:00:00" tag="202401C17500" />
+    <Trade index="97" bs="S" contract="9" price="0" time_stamp="2024/01/17 00:00:00" tag="202401C17500" />
+    <Trade index="98" bs="B" contract="8" price="245" time_stamp="2024/01/18 00:00:00" tag="202402C17300" />
+    <Trade index="98" bs="S" contract="8" price="1371" time_stamp="2024/02/21 00:00:00" tag="202402C17300" />
+    <Trade index="99" bs="B" contract="10" price="194" time_stamp="2024/02/22 00:00:00" tag="202403C19000" />
+    <Trade index="99" bs="S" contract="10" price="748" time_stamp="2024/03/20 00:00:00" tag="202403C19000" />
+    <Trade index="100" bs="B" contract="8" price="240" time_stamp="2024/03/21 00:00:00" tag="202404C20100" />
+    <Trade index="100" bs="S" contract="8" price="138" time_stamp="2024/04/17 00:00:00" tag="202404C20100" />
+    <Trade index="101" bs="B" contract="6" price="294" time_stamp="2024/04/18 00:00:00" tag="202405C20200" />
+    <Trade index="101" bs="S" contract="6" price="943" time_stamp="2024/05/15 00:00:00" tag="202405C20200" />
+    <Trade index="102" bs="B" contract="6" price="324" time_stamp="2024/05/16 00:00:00" tag="202406C21600" />
+    <Trade index="102" bs="S" contract="6" price="1626" time_stamp="2024/06/19 00:00:00" tag="202406C21600" />
+    <Trade index="103" bs="B" contract="5" price="363" time_stamp="2024/06/20 00:00:00" tag="202407C23300" />
+    <Trade index="103" bs="S" contract="5" price="380" time_stamp="2024/07/17 00:00:00" tag="202407C23300" />
+    <Trade index="104" bs="B" contract="3" price="615" time_stamp="2024/07/18 00:00:00" tag="202408C23400" />
+    <Trade index="104" bs="S" contract="3" price="0" time_stamp="2024/08/21 00:00:00" tag="202408C23400" />
+    <Trade index="105" bs="B" contract="4" price="499" time_stamp="2024/08/22 00:00:00" tag="202409C22300" />
+    <Trade index="105" bs="S" contract="4" price="0" time_stamp="2024/09/18 00:00:00" tag="202409C22300" />
+    <Trade index="106" bs="B" contract="4" price="470" time_stamp="2024/09/19 00:00:00" tag="202410C21900" />
+    <Trade index="106" bs="S" contract="4" price="1086" time_stamp="2024/10/16 00:00:00" tag="202410C21900" />
+    <Trade index="107" bs="B" contract="3" price="660" time_stamp="2024/10/17 00:00:00" tag="202411C23200" />
+    <Trade index="107" bs="S" contract="3" price="0" time_stamp="2024/11/20 00:00:00" tag="202411C23200" />
+    <Trade index="108" bs="B" contract="3" price="505" time_stamp="2024/11/21 00:00:00" tag="202412C22700" />
+    <Trade index="108" bs="S" contract="3" price="405" time_stamp="2024/12/18 00:00:00" tag="202412C22700" />
+    <Trade index="109" bs="B" contract="5" price="400" time_stamp="2024/12/19 00:00:00" tag="202501C22800" />
+    <Trade index="109" bs="S" contract="5" price="0" time_stamp="2025/01/15 00:00:00" tag="202501C22800" />
+    <Trade index="110" bs="B" contract="4" price="457" time_stamp="2025/01/16 00:00:00" tag="202502C23200" />
+    <Trade index="110" bs="S" contract="4" price="407" time_stamp="2025/02/19 00:00:00" tag="202502C23200" />
+    <Trade index="111" bs="B" contract="4" price="401" time_stamp="2025/02/20 00:00:00" tag="202503C23600" />
+    <Trade index="111" bs="S" contract="4" price="0" time_stamp="2025/03/19 00:00:00" tag="202503C23600" />
+    <Trade index="112" bs="B" contract="5" price="395" time_stamp="2025/03/20 00:00:00" tag="202504C22300" />
+    <Trade index="112" bs="S" contract="5" price="0" time_stamp="2025/04/16 00:00:00" tag="202504C22300" />
+    <Trade index="113" bs="B" contract="2" price="725" time_stamp="2025/04/17 00:00:00" tag="202505C19300" />
+    <Trade index="113" bs="S" contract="2" price="2548" time_stamp="2025/05/21 00:00:00" tag="202505C19300" />
+    <Trade index="114" bs="B" contract="4" price="490" time_stamp="2025/05/22 00:00:00" tag="202506C21600" />
+    <Trade index="114" bs="S" contract="4" price="707" time_stamp="2025/06/18 00:00:00" tag="202506C21600" />
+    <Trade index="115" bs="B" contract="4" price="479" time_stamp="2025/06/19 00:00:00" tag="202507C21900" />
+    <Trade index="115" bs="S" contract="4" price="1147" time_stamp="2025/07/16 00:00:00" tag="202507C21900" />
+    <Trade index="116" bs="B" contract="4" price="468" time_stamp="2025/07/17 00:00:00" tag="202508C23100" />
+    <Trade index="116" bs="S" contract="4" price="537" time_stamp="2025/08/20 00:00:00" tag="202508C23100" />
+    <Trade index="117" bs="B" contract="4" price="482" time_stamp="2025/08/21 00:00:00" tag="202509C23800" />
+    <Trade index="117" bs="S" contract="4" price="1633" time_stamp="2025/09/17 00:00:00" tag="202509C23800" />
+    <Trade index="118" bs="B" contract="4" price="450" time_stamp="2025/09/18 00:00:00" tag="202510C25700" />
+    <Trade index="118" bs="S" contract="4" price="1456" time_stamp="2025/10/15 00:00:00" tag="202510C25700" />
+    <Trade index="119" bs="B" contract="2" price="720" time_stamp="2025/10/16 00:00:00" tag="202511C27600" />
+    <Trade index="119" bs="S" contract="2" price="0" time_stamp="2025/11/19 00:00:00" tag="202511C27600" />
+    <Trade index="120" bs="B" contract="3" price="645" time_stamp="2025/11/20 00:00:00" tag="202512C27400" />
+    <Trade index="120" bs="S" contract="3" price="83" time_stamp="2025/12/17 00:00:00" tag="202512C27400" />
+    <Trade index="121" bs="B" contract="3" price="655" time_stamp="2025/12/18 00:00:00" tag="202601C27600" />
+    <Trade index="121" bs="S" contract="3" price="3645" time_stamp="2026/01/21 00:00:00" tag="202601C27600" />
+    <Trade index="122" bs="B" contract="2" price="710" time_stamp="2026/01/22 00:00:00" tag="202602C32000" />
+    <Trade index="122" bs="S" contract="2" price="1839" time_stamp="2026/02/23 00:00:00" tag="202602C32000" />
+    <Trade index="123" bs="B" contract="2" price="800" time_stamp="2026/02/24 00:00:00" tag="202603C34200" />
+    <Trade index="123" bs="S" contract="2" price="64" time_stamp="2026/03/18 00:00:00" tag="202603C34200" />
+    <Trade index="124" bs="B" contract="1" price="1140" time_stamp="2026/03/19 00:00:00" tag="202604C34000" />
+    <Trade index="124" bs="S" contract="1" price="2642" time_stamp="2026/04/15 00:00:00" tag="202604C34000" />
+    <Trade index="125" bs="B" contract="1" price="1130" time_stamp="2026/04/16 00:00:00" tag="202605C37400" />
+    <Trade index="125" bs="S" contract="1" price="2680" time_stamp="2026/05/20 00:00:00" tag="202605C37400" />
+    <Trade index="126" bs="B" contract="1" price="1370" time_stamp="2026/05/21 00:00:00" tag="202606C41100" />
+    <Trade index="126" bs="S" contract="1" price="4570" time_stamp="2026/06/17 00:00:00" tag="202606C41100" />
+    <Trade index="127" bs="B" contract="1" price="1750" time_stamp="2026/06/18 00:00:00" tag="202607C46600" />
+    <Trade index="127" bs="S" contract="1" price="0" time_stamp="2026/07/15 00:00:00" tag="202607C46600" />
+    <Trade index="128" bs="B" contract="1" price="1930" time_stamp="2026/07/16 00:00:00" tag="202608C45600" />
+    <Trade index="128" bs="S" contract="1" price="0" time_stamp="2026/08/19 00:00:00" tag="202608C45600" />
+    <Trade index="129" bs="B" contract="1" price="1330" time_stamp="2026/08/20 00:00:00" tag="202609C45100" />
+    <Trade index="129" bs="S" contract="1" price="659" time_stamp="2026/09/16 00:00:00" tag="202609C45100" />
+    <Trade index="130" bs="B" contract="1" price="1260" time_stamp="2026/09/17 00:00:00" tag="202610C46600" />
+    <Trade index="130" bs="S" contract="1" price="628" time_stamp="2026/10/16 00:00:00" tag="202610C46600" />
+  </策略交易>
+</策略回測>

@@ -8,15 +8,11 @@ The repository SHALL keep Visual Portfolio application source under `visual-port
 - **THEN** that application SHALL build and test without requiring the other application's runtime data directory
 
 ### Requirement: Preserve Visual Portfolio behavior through relocation
-The relocation SHALL preserve Visual Portfolio's public frontend routes, API behavior, production and beta container identities, and existing persisted data locations.
+The relocation SHALL preserve Visual Portfolio's public frontend routes, API behavior, production container identities, and existing persisted data locations.
 
 #### Scenario: Existing production data
 - **WHEN** the relocated Visual Portfolio production stack starts with the existing root `data/` directory
 - **THEN** it SHALL read and write the same project and database files as before the relocation
-
-#### Scenario: Existing beta data
-- **WHEN** the relocated beta stack starts with root `data-beta/`
-- **THEN** it SHALL remain isolated from root `data/`
 
 #### Scenario: Existing API behavior
 - **WHEN** the current Visual Portfolio API tests and frontend build run after relocation

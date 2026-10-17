@@ -66,6 +66,21 @@ def test_non_finite_source_slippage_is_rejected():
         parse_report("bad.srp", payload)
 
 
+@pytest.mark.parametrize("trade_cost,expected_profit", [("2", 200), ("0.1%", 959)])
+def test_sea_trade_cost_matches_point_or_percent_slippage(trade_cost: str, expected_profit: int):
+    payload = _sea(
+        '[strategy]\nname="Demo"\n[params]\n"MinPointUnit"="1"\n'
+        f'"MinPointPrice"="200"\n"TradeCost"="{trade_cost}"\n',
+        '{"timestamp":"2024-01-02T09:00:00","type":"trade","data":{"instrument_id":"TXF","price":100,"quantity":1}}\n'
+        '{"timestamp":"2024-01-03T09:00:00","type":"trade","data":{"instrument_id":"TXF","price":105,"quantity":-1}}\n',
+    )
+    source = parse_report("demo.sea", payload)
+    report = analyze_report(source, CalculationSettings(mode="backtest"))
+    assert source.slippage == trade_cost
+    assert report["simple"]["summary"]["trade_cost"] == trade_cost
+    assert report["simple"]["summary"]["net_profit"] == expected_profit
+
+
 def test_rejects_traversal_member():
     payload = _sea('[strategy]\nname="Demo"\n', '', extra={"../escape.txt": "x"})
     with pytest.raises(ReportFormatError, match="unsafe path"):

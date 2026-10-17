@@ -106,3 +106,16 @@ Simple and compound performance SHALL charge entry costs on the entry execution 
 - **WHEN** the first two SR-CWBKRR trades are calculated with fixed quantity multiplier 1
 - **THEN** the displayed compound profits SHALL be -2000 and -92142
 - **AND** long and short entries, percentage costs, scaled quantities, and price-only marks SHALL follow the same execution-time rule
+
+### Requirement: Prepare positions before date-range calculation
+When date filtering is enabled, the service SHALL prepare the selected trades before calculating simple and compound results. A position carried into the range SHALL be excluded through its closing execution, unless a valid price-only mark establishes a cost-free synthetic opening or a reversal establishes a new position. Position boundaries SHALL be tracked independently by strategy and symbol. Managed modes SHALL restart from configured capital; backtest mode SHALL retain the pre-range equity baseline. The end date SHALL include the entire day without adding a closing trade or reserving exit costs.
+
+#### Scenario: Start after a carried long closes
+- **WHEN** SR-CWBKRR is filtered to 2025-01-01 through 2026-10-24
+- **THEN** both detail views SHALL start with the 2025-01-02 13:30 buy at 1893.75
+- **AND** the 2025-01-02 09:00 closing sell SHALL be excluded from all selected report calculations
+
+#### Scenario: End while a position remains open
+- **WHEN** the selected end date precedes the closing execution
+- **THEN** the position SHALL remain open and be valued using its last available in-range price
+- **AND** no exit trade or exit cost SHALL be added

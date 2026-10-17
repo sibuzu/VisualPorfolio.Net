@@ -65,7 +65,7 @@ Remove the Strategy Report hostname rule from the tunnel, then stop only the new
 docker compose -f docker/strategy-report/docker-compose.yml down
 ```
 
-Visual Portfolio containers and their `data/` and `data-beta/` directories remain in place.
+Visual Portfolio production containers and their root `data/` directory remain in place.
 
 To revert to a Strategy Report backend from before per-report JSON settings, stop the stack and restore a matching pre-upgrade database and report-directory backup. `reporsts.db.before-config-json` (or the older `performances.db.before-config-json` backup) preserves the database at the settings migration boundary; it does not include later edits.
 

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, datetime
-from decimal import Decimal, ROUND_FLOOR, ROUND_HALF_EVEN
+from dataclasses import replace
+from datetime import date, datetime, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, ROUND_HALF_UP
 from math import sqrt
 from typing import Literal
 
@@ -13,7 +14,7 @@ from .buy_hold import BuyHoldSettings
 
 
 Mode = Literal[
-    "backtest", "fixed_quantity", "risk_factor", "target_leverage", "profit_step",
+    "backtest", "dynamic_compounding", "fixed_quantity", "risk_factor", "target_leverage", "profit_step",
     "fixed_amount", "fixed_risk", "profit_risk", "target_margin", "kelly",
 ]
 
@@ -23,6 +24,14 @@ class CalculationSettings(BaseModel):
 
     mode: Mode = "fixed_quantity"
     initial_capital: Decimal = Field(default=Decimal(1_000_000), gt=0)
+    backtest_initial_capital: Decimal | None = Field(default=None, gt=0)
+    dynamic_initial_ratio: Decimal = Field(default=Decimal("0.10"), ge=0)
+    dynamic_add_ratio: Decimal = Field(default=Decimal("0.15"), ge=0)
+    dynamic_profit_threshold: Decimal = Field(default=Decimal(100_000_000), ge=0)
+    dynamic_drawdown_threshold: str = "2000"
+    dynamic_max_multiple: Decimal = Field(default=Decimal(10), ge=0)
+    dynamic_interval: Literal["weekly", "monthly"] = "weekly"
+    dynamic_lot_rounding: Literal["floor", "ceil", "round", "retain"] = "retain"
     fixed_quantity: Decimal = Field(default=Decimal(1), ge=0)
     risk_factor: Decimal = Field(default=Decimal("0.002"), ge=0)
     leverage: Decimal = Field(default=Decimal("0.2"), ge=0, le=100)
@@ -52,6 +61,13 @@ class CalculationSettings(BaseModel):
             raise ValueError("date_start must be on or before date_end")
         if self.mode == "kelly" and self.chip_size <= 0:
             raise ValueError("chip_size must be positive for Kelly stake")
+        raw = self.dynamic_drawdown_threshold.strip().removesuffix("%").strip()
+        try:
+            threshold = Decimal(raw)
+        except InvalidOperation as exc:
+            raise ValueError("dynamic_drawdown_threshold must be a number in 萬 or a percent") from exc
+        if not threshold.is_finite() or threshold < 0:
+            raise ValueError("dynamic_drawdown_threshold must be nonnegative")
         return self
 
 
@@ -105,8 +121,11 @@ def _factor(cfg: CalculationSettings, source: ReportSource, capital: Decimal, ev
     return max(value, Decimal(0))
 
 
-def _run_events(source: ReportSource, cfg: CalculationSettings, *, compound: bool) -> tuple[list[dict], Decimal]:
-    initial = (source.initial_capital or Decimal(100_000)) if cfg.mode == "backtest" else cfg.initial_capital
+def _run_events(source: ReportSource, cfg: CalculationSettings, *, compound: bool,
+                initial_override: Decimal | None = None) -> tuple[list[dict], Decimal]:
+    initial = initial_override if initial_override is not None else (
+        (cfg.backtest_initial_capital or source.initial_capital or Decimal(100_000))
+        if cfg.mode == "backtest" else cfg.initial_capital)
     cash = Decimal(0)
     positions: dict[str, Decimal] = defaultdict(Decimal)
     last_prices: dict[str, Decimal] = {}
@@ -123,6 +142,8 @@ def _run_events(source: ReportSource, cfg: CalculationSettings, *, compound: boo
         if compound:
             if cfg.mode == "backtest":
                 multiplier = Decimal(1)
+            elif event.kind == "x":
+                multiplier = steps[-1]["multiplier"] if steps else Decimal(1)
             elif previous_position != 0:
                 multiplier = open_row["multiplier"]
             elif event.side in {"B", "S"}:
@@ -175,6 +196,7 @@ def _run_events(source: ReportSource, cfg: CalculationSettings, *, compound: boo
         steps.append({
             "event": event, "quantity": quantity, "signed_quantity": signed,
             "position": positions[event.symbol],
+            "open_position": max((abs(position) for position in positions.values()), default=Decimal(0)),
             "strategy_position": open_trade.get(key, {}).get("position", Decimal(0)),
             "multiplier": multiplier,
             "profit": profit, "net": net, "equity": initial + net if compound else net,
@@ -182,18 +204,43 @@ def _run_events(source: ReportSource, cfg: CalculationSettings, *, compound: boo
     return steps, initial
 
 
-def _range_steps(steps: list[dict], cfg: CalculationSettings, initial: Decimal, compound: bool) -> tuple[list[dict], Decimal]:
+def _range_source(source: ReportSource, cfg: CalculationSettings) -> ReportSource:
+    """Prepare trades before calculating, following C# GetListTradeRecord.
+
+    Track each strategy/symbol separately so overlapping positions do not reset
+    one another. A carried position starts at a price mark, its reversal, or the
+    next entry after it has closed. Never manufacture an exit at the end date.
+    """
     first = (cfg.date_start or date.min) if cfg.date_range_enabled is not False else date.min
     last = (cfg.date_end or date.max) if cfg.date_range_enabled is not False else date.max
-    previous = initial if compound else Decimal(0)
-    selected: list[dict] = []
-    for step in steps:
-        day = step["event"].timestamp.date()
+    positions: dict[tuple[int, str], Decimal] = defaultdict(Decimal)
+    waiting: dict[tuple[int, str], Decimal] = {}
+    selected: list[TradeEvent] = []
+    for event in source.events:
+        day = event.timestamp.date()
+        if day > last:
+            break
+        key = (event.strategy_index, event.symbol)
+        positions[key] += event.signed_quantity
+        position = positions[key]
         if day < first:
-            previous = step["equity"]
-        elif day <= last:
-            selected.append(step)
-    return selected, previous
+            waiting[key] = position
+            continue
+        carried = waiting.get(key, Decimal(0))
+        if carried:
+            if position == 0:
+                waiting.pop(key, None)
+            elif event.side not in {"B", "S"} and event.price != 0 and position * carried > 0:
+                selected.append(replace(event, side="B" if position > 0 else "S",
+                                        quantity=abs(position), kind="x"))
+                selected.append(event)
+                waiting.pop(key, None)
+            elif position * carried < 0:
+                selected.append(replace(event, quantity=abs(position)))
+                waiting.pop(key, None)
+            continue
+        selected.append(event)
+    return replace(source, events=tuple(selected))
 
 
 def _ratio(values: list[Decimal], downside: bool, timestamps: list[datetime]) -> float:
@@ -212,8 +259,10 @@ def _ratio(values: list[Decimal], downside: bool, timestamps: list[datetime]) ->
 
 def _profit_records(steps: list[dict], compound: bool) -> list[dict]:
     records: list[dict] = []
-    for step in steps:
+    recent_positions = [Decimal(0)] * 3
+    for index, step in enumerate(steps):
         event = step["event"]
+        recent_positions[index % len(recent_positions)] = step["open_position"]
         is_trade = event.side in {"B", "S"} and event.kind != "x"
         if compound and (event.price == 0 or (event.kind == "x" and step["profit"] == 0)):
             continue
@@ -226,6 +275,7 @@ def _profit_records(steps: list[dict], compound: bool) -> list[dict]:
             "timestamp": event.timestamp,
             "profit": step["profit"],
             "equity": step["equity"],
+            "open_position": max(recent_positions),
             "ref_price": event.price,
             "skip": not is_trade,
         })
@@ -250,26 +300,118 @@ def _periods(records: list[dict], starting: Decimal, compound: bool) -> dict[str
         for period, period_records in groups.items():
             profit = sum((record["profit"] for record in period_records), Decimal(0))
             rate = profit / running * 100 if compound and running != 0 else Decimal(0)
-            peak, equity, mdd = running, running, Decimal(0)
+            peak, equity, mdd, mdd_pct = running, running, Decimal(0), Decimal(0)
             for record in period_records:
                 equity += record["profit"]
                 peak = max(peak, equity)
-                mdd = max(mdd, peak - equity)
+                drawdown = peak - equity
+                if drawdown > mdd:
+                    mdd = drawdown
+                    mdd_pct = drawdown / peak * 100 if peak > 0 else Decimal(0)
             running += profit
-            rows.append({"period": period, "profit": float(profit), "cumulative": float(running), "return_pct": float(rate), "mdd": float(mdd)})
+            rows.append({"period": period, "profit": float(profit), "cumulative": float(running),
+                         "return_pct": float(rate), "mdd": float(mdd), "mdd_pct": float(mdd_pct)})
         output[name] = rows
     return output
 
 
+def _dynamic_compounding_records(simple_records: list[dict], source: ReportSource,
+                                 cfg: CalculationSettings) -> tuple[list[dict], list[dict]]:
+    """Scale C# simple-profit records with one multiplier per week or month."""
+    initial = cfg.initial_capital
+    drawdown = strategy_mdd = Decimal(0)
+    for row in simple_records:
+        drawdown = min(Decimal(0), drawdown + row["profit"])
+        strategy_mdd = max(strategy_mdd, -drawdown)
+    base_capital = initial * cfg.dynamic_initial_ratio
+    if base_capital <= 0:
+        base_capital = initial
+    base_mdd = strategy_mdd if strategy_mdd > 0 else base_capital
+    max_risk = base_capital * cfg.dynamic_max_multiple
+    threshold_text = cfg.dynamic_drawdown_threshold.strip()
+    threshold_percent = threshold_text.endswith("%")
+    threshold_value = Decimal(threshold_text.removesuffix("%").strip())
+    if threshold_percent and threshold_value > 1:
+        threshold_value /= 100
+
+    equity = logic_peak = recovery_peak = initial
+    adding = waiting_recovery = entered_add = False
+    current_period: date | None = None
+    multiplier = Decimal(1)
+    records: list[dict] = []
+    detail: list[dict] = []
+
+    def advance() -> None:
+        nonlocal adding, waiting_recovery, entered_add, recovery_peak
+        threshold = logic_peak * threshold_value if threshold_percent else threshold_value * 10_000
+        if adding:
+            if logic_peak - equity > threshold:
+                adding = False
+                waiting_recovery = True
+                recovery_peak = logic_peak
+        elif waiting_recovery:
+            if equity > recovery_peak:
+                adding = True
+                waiting_recovery = False
+        elif not entered_add and equity - initial > cfg.dynamic_profit_threshold:
+            adding = True
+            entered_add = True
+
+    for index, row in enumerate(simple_records, start=1):
+        timestamp = row["timestamp"]
+        day = timestamp.date()
+        period = day.replace(day=1) if cfg.dynamic_interval == "monthly" else day - timedelta(days=day.weekday())
+        if period != current_period:
+            if current_period is not None:
+                advance()
+            current_period = period
+            ratio = cfg.dynamic_add_ratio if adding else cfg.dynamic_initial_ratio
+            risk = equity * ratio
+            if max_risk > 0:
+                risk = min(risk, max_risk)
+            multiplier = max(Decimal(0), risk / base_mdd) if base_mdd > 0 else Decimal(1)
+            rounding = {
+                "floor": ROUND_FLOOR, "ceil": ROUND_CEILING, "round": ROUND_HALF_UP,
+            }.get(cfg.dynamic_lot_rounding)
+            if rounding:
+                multiplier = multiplier.to_integral_value(rounding=rounding)
+        profit = row["profit"] * multiplier
+        equity += profit
+        logic_peak = max(logic_peak, equity)
+        records.append({**row, "profit": profit, "equity": equity, "multiplier": multiplier})
+        detail.append({
+            "index": index, "strategy": 0,
+            "timestamp": timestamp.isoformat(sep=" "), "symbol": source.symbol,
+            "side": "N", "quantity": float(multiplier), "price": float(row["ref_price"]),
+            "position": float(multiplier), "profit": float(profit), "equity": float(equity),
+            "multiplier": float(multiplier),
+            "action": "動態複利(ByMonth)" if cfg.dynamic_interval == "monthly" else "動態複利(ByWeek)",
+        })
+    return records, detail
+
+
 def _section(source: ReportSource, cfg: CalculationSettings, *, compound: bool) -> dict:
-    all_steps, initial = _run_events(source, cfg, compound=compound)
-    steps, starting = _range_steps(all_steps, cfg, initial, compound)
-    records = _profit_records(steps, compound)
+    detail: list[dict] = []
+    if compound and cfg.mode == "dynamic_compounding":
+        simple_steps, _ = _run_events(_range_source(source, cfg), cfg, compound=False)
+        records, detail = _dynamic_compounding_records(_profit_records(simple_steps, False), source, cfg)
+        steps: list[dict] = []
+        initial = cfg.initial_capital
+    else:
+        initial_override = None
+        if compound and cfg.mode == "backtest" and cfg.date_start and cfg.date_range_enabled is not False:
+            earlier = replace(source, events=tuple(event for event in source.events
+                                                   if event.timestamp.date() < cfg.date_start))
+            earlier_steps, initial = _run_events(earlier, cfg, compound=True)
+            initial_override = earlier_steps[-1]["equity"] if earlier_steps else initial
+        steps, initial = _run_events(_range_source(source, cfg), cfg, compound=compound,
+                                    initial_override=initial_override)
+        records = _profit_records(steps, compound)
+    starting = initial if compound else Decimal(0)
     peak = starting
     maximum_drawdown = Decimal(0)
     maximum_drawdown_pct = Decimal(0)
     curve: list[dict] = []
-    detail: list[dict] = []
     drawdown_episodes: list[dict] = []
     peak_time: datetime | None = None
     open_episode: dict | None = None
@@ -296,6 +438,7 @@ def _section(source: ReportSource, cfg: CalculationSettings, *, compound: bool) 
         curve.append({
             "timestamp": timestamp.isoformat(sep=" "), "equity": float(equity),
             "profit": float(record["profit"]), "drawdown": float(drawdown), "drawdown_pct": float(drawdown_pct),
+            "open_position": float(record.get("open_position", 0)),
         })
     previous_detail_net = starting - initial if compound else starting
     for step in steps:

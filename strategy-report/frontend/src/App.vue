@@ -1,12 +1,17 @@
 <script setup>
 import * as echarts from 'echarts'
 import BuyHoldDialog from './BuyHoldDialog.vue'
+import HelpIcon from './HelpIcon.vue'
 import SummaryPanel from './SummaryPanel.vue'
 import ReportDateInput from './ReportDateInput.vue'
+import { visibleSimpleCurveSeries } from './curveSelection.js'
+import { profitDrawdownSegments } from './profitPlot.js'
+import { fitCurveAxis, formatProfitTick, profitAxisLayout } from './profitAxis.js'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const modeOptions = [
   { value: 'backtest', label: '回測時已計算' },
+  { value: 'dynamic_compounding', label: '動態複利' },
   { value: 'fixed_quantity', label: '固定口數' },
   { value: 'risk_factor', label: '風險因子' },
   { value: 'target_leverage', label: '槓桿倍數目標' },
@@ -18,7 +23,23 @@ const modeOptions = [
   { value: 'kelly', label: '凱利投注' }
 ]
 
+const modeHelp = {
+  fixed_quantity: '每筆來源口數乘以固定口數；設定為 1 時使用原始口數。',
+  risk_factor: '口數倍率 = 目前資金 × 風險因子 ÷（該筆 ATR × 每點價值），取最接近的整數。',
+  target_leverage: '口數倍率 = 指定資金 × 槓桿倍數 ÷ 原始部位金額；指定資金可選固定本金或累加獲利。',
+  profit_step: '口數倍率 = 初始口數 + 累計獲利 ÷ 獲利基數，且不低於最小口數。',
+  fixed_amount: '口數倍率 = 目前資金 ÷ 交易一口金額。',
+  fixed_risk: '口數倍率 = 目前資金 × 固定風險比例 ÷ 每次交易風險金額，向下取整。',
+  profit_risk: '尚未獲利時，依目前資金與初始資金風險比例計算；獲利後，依初始資金與已獲利部分各自的風險比例計算。',
+  target_margin: '口數倍率 = 目前資金 × 保證金目標比例 ÷ 每口保證金。',
+  kelly: '口數倍率 = 目前資金 × 下注比例 ÷ 100 ÷ ChipSize。'
+}
+
 const fields = [
+  { key: 'dynamic_initial_ratio', label: '初始比例', modes: ['dynamic_compounding'], step: 'any' },
+  { key: 'dynamic_add_ratio', label: '加碼比例', modes: ['dynamic_compounding'], step: 'any' },
+  { key: 'dynamic_profit_threshold', label: '獲利達加碼', modes: ['dynamic_compounding'], step: 'any' },
+  { key: 'dynamic_max_multiple', label: '最大倍數', modes: ['dynamic_compounding'], step: 'any' },
   { key: 'fixed_quantity', label: '固定口數', modes: ['fixed_quantity'], step: 'any' },
   { key: 'risk_factor', label: '風險因子', modes: ['risk_factor'], step: 'any' },
   { key: 'leverage', label: '槓桿倍數', modes: ['target_leverage'], step: 'any' },
@@ -37,7 +58,10 @@ const fields = [
 ]
 
 const settings = ref({
-  mode: 'fixed_quantity', initial_capital: 1000000, fixed_quantity: 1,
+  mode: 'fixed_quantity', initial_capital: 1000000, backtest_initial_capital: null, fixed_quantity: 1,
+  dynamic_initial_ratio: 0.10, dynamic_add_ratio: 0.15, dynamic_profit_threshold: 100000000,
+  dynamic_drawdown_threshold: '2000', dynamic_max_multiple: 10, dynamic_interval: 'weekly',
+  dynamic_lot_rounding: 'retain',
   risk_factor: 0.002, leverage: 0.2, leverage_funds: 'cumulative',
   initial_quantity: 50, minimum_quantity: 0, profit_base: 100000,
   amount_per_quantity: 400000, fixed_risk_ratio: 0.02,
@@ -72,29 +96,93 @@ const activeTab = ref('simple-summary')
 const activePeriod = ref('annual')
 const buyHoldOpen = ref(false)
 const reportHelpOpen = ref(false)
+const capitalHelpOpen = ref(false)
 const chartElement = ref(null)
+const sidebarWidth = ref(390)
+const resizingSidebar = ref(false)
+const detailTableElement = ref(null)
+const detailPages = ref({ simple: 1, compound: 1 })
+const detailScrollTops = { simple: 0, compound: 0 }
+const detailsPageSize = 100
+const curveSelection = ref({ profit: true, buyHold: false, drawdown: false, quantity: false })
 let chart = null
 let resizeObserver = null
+let chartResizeFrame = null
 let reportRequestId = 0
 let recalculateTimer = null
 let calculateQueued = false
 
 const resultModeLabel = computed(() => modeOptions.find(row => row.value === report.value?.settings?.mode)?.label || '')
+const selectedModeLabel = computed(() => modeOptions.find(row => row.value === settings.value.mode)?.label || '')
 const visibleFields = computed(() => fields.filter(row => row.modes.includes(settings.value.mode)))
 const currentSection = computed(() => report.value?.[activeSection.value] || null)
 const currentSummary = computed(() => currentSection.value?.summary || {})
 const currentPeriods = computed(() => currentSection.value?.periods?.[activePeriod.value] || [])
 const currentDetails = computed(() => currentSection.value?.detail || [])
+const detailsPageCount = computed(() => Math.max(1, Math.ceil(currentDetails.value.length / detailsPageSize)))
+const detailsPage = computed({
+  get: () => Math.min(detailPages.value[activeSection.value], detailsPageCount.value),
+  set: page => { detailPages.value[activeSection.value] = page }
+})
+const pagedDetails = computed(() => currentDetails.value.slice(
+  (detailsPage.value - 1) * detailsPageSize, detailsPage.value * detailsPageSize))
+const detailPageNumbers = computed(() => {
+  const count = detailsPageCount.value
+  if (count <= 7) return Array.from({ length: count }, (_, index) => index + 1)
+  return [...new Set([1, count, ...Array.from({ length: 5 }, (_, index) => detailsPage.value + index - 2)
+    .filter(page => page > 1 && page < count)])].sort((a, b) => a - b)
+})
+const hasBuyHoldCurve = computed(() => Boolean(report.value?.buy_hold?.curve?.length))
+const simpleCurveVisible = computed(() => visibleSimpleCurveSeries(curveSelection.value, hasBuyHoldCurve.value))
+const isClassicSimplePlot = computed(() => activeSection.value === 'simple' && activeView.value === 'curve')
+const simpleCurveItems = computed(() => [
+  { key: 'profit', label: '獲利' },
+  ...(hasBuyHoldCurve.value ? [{ key: 'buyHold', label: 'BuyHold' }] : []),
+  { key: 'drawdown', label: '回撤' },
+  { key: 'quantity', label: '口數' }
+])
 const source = computed(() => report.value?.source || null)
+const backtestCapital = computed({
+  get: () => settings.value.backtest_initial_capital ?? source.value?.source_initial_capital ?? 100000,
+  set: value => {
+    settings.value.backtest_initial_capital = value
+    settings.value.initial_capital = value
+  }
+})
+const backtestHelp = computed(() => {
+  const sourceCapital = source.value?.source_initial_capital
+  const override = settings.value.backtest_initial_capital
+  let detail = sourceCapital == null
+    ? '來源未提供初始資金'
+    : `來源有提供初始資金=${sourceCapital}`
+  if (override != null || sourceCapital == null) {
+    detail += `，已設定初始資金=${override ?? 100000}`
+  }
+  return `直接使用來源報表的交易口數與初始資金；${detail}。可手動設定初始資金，變動初始資金會變動年化報酬。`
+})
+const dynamicHelp = computed(() => {
+  const cfg = settings.value
+  const initialRisk = Number(cfg.initial_capital) * Number(cfg.dynamic_initial_ratio)
+  const maxRisk = initialRisk * Number(cfg.dynamic_max_multiple)
+  const drawdown = String(cfg.dynamic_drawdown_threshold).trim()
+  const drawdownLabel = drawdown.endsWith('%') ? drawdown : `${formatNumber(Number(drawdown) * 10000, 0)}`
+  return [
+    `一開始用 ${formatPercent(Number(cfg.dynamic_initial_ratio) * 100)}，初始 MDD 風險控制為 ${formatNumber(initialRisk, 0)}。`,
+    `累積獲利超過 ${formatNumber(cfg.dynamic_profit_threshold, 0)}，下一期切到 ${formatPercent(Number(cfg.dynamic_add_ratio) * 100)}。`,
+    `從高點回撤超過 ${drawdownLabel}，下一期切回初始比例；淨值再創新高後切回加碼比例。`,
+    `MDD 風險控制上限為 ${formatNumber(maxRisk, 0)}；複利間隔：${cfg.dynamic_interval === 'monthly' ? '每月' : '每週'}。`
+  ].join('\n')
+})
 const periodLabels = { annual: '年度', monthly: '月份', weekly: '週別', daily: '日期' }
 const tabs = [
   { value: 'simple-summary', label: '單口績效', section: 'simple', view: 'summary' },
   { value: 'simple-curve', label: '單口曲線', section: 'simple', view: 'curve' },
   { value: 'simple-details', label: '單口明細', section: 'simple', view: 'details' },
+  { value: 'simple-periods', label: '單口逐年', section: 'simple', view: 'periods' },
   { value: 'compound-summary', label: '複合績效', section: 'compound', view: 'summary' },
   { value: 'compound-curve', label: '複合曲線', section: 'compound', view: 'curve' },
   { value: 'compound-details', label: '複合明細', section: 'compound', view: 'details' },
-  { value: 'periods', label: '逐年獲利', section: 'compound', view: 'periods' }
+  { value: 'compound-periods', label: '複合逐年', section: 'compound', view: 'periods' }
 ]
 const selectedTab = computed(() => tabs.find(tab => tab.value === activeTab.value) || tabs[0])
 const activeSection = computed(() => selectedTab.value.section)
@@ -192,6 +280,7 @@ async function openPerformance(itemId, pushRoute = true) {
     currentPerformance.value = data.performance
     settings.value = {
       ...settings.value, ...data.performance.settings,
+      backtest_initial_capital: data.performance.settings.backtest_initial_capital ?? null,
       date_start: data.performance.settings.date_start || data.performance.source_range?.start || '',
       date_end: data.performance.settings.date_end || data.performance.source_range?.end || '',
       buy_hold: data.performance.settings.buy_hold || null
@@ -409,7 +498,12 @@ function toggleAuthMode() {
 function clearReport() {
   buyHoldOpen.value = false
   reportHelpOpen.value = false
+  capitalHelpOpen.value = false
   activeTab.value = 'simple-summary'
+  detailPages.value = { simple: 1, compound: 1 }
+  detailScrollTops.simple = 0
+  detailScrollTops.compound = 0
+  curveSelection.value = { profit: true, buyHold: false, drawdown: false, quantity: false }
   reportRequestId += 1
   clearTimeout(recalculateTimer)
   recalculateTimer = null
@@ -492,6 +586,34 @@ async function calculate() {
   }
 }
 
+function updateClassicPlotHeight() {
+  if (!isClassicSimplePlot.value || !chartElement.value) return
+  const viewportHeight = window.innerHeight
+  const chartTop = chartElement.value.getBoundingClientRect().top
+  const available = chartTop >= 0 && chartTop < viewportHeight
+    ? viewportHeight - chartTop - 8 : viewportHeight - 16
+  chartElement.value.style.height = `${Math.max(240, Math.floor(available))}px`
+  chart?.resize()
+}
+
+function onSidebarMouseMove(event) {
+  if (!resizingSidebar.value) return
+  sidebarWidth.value = Math.max(360, Math.min(640, event.clientX - 14))
+}
+
+function stopSidebarResize() {
+  resizingSidebar.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+function startSidebarResize() {
+  if (window.innerWidth <= 900) return
+  resizingSidebar.value = true
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
 function renderChart() {
   if (!['curve', 'periods'].includes(activeView.value) || !chartElement.value || !currentSection.value) return
   if (chart && chart.getDom() !== chartElement.value) {
@@ -501,23 +623,30 @@ function renderChart() {
   }
   if (!chart) {
     chart = echarts.init(chartElement.value)
-    resizeObserver = new ResizeObserver(() => chart?.resize())
+    resizeObserver = new ResizeObserver(() => {
+      if (chartResizeFrame != null) return
+      chartResizeFrame = requestAnimationFrame(() => {
+        chartResizeFrame = null
+        if (isClassicSimplePlot.value) renderChart()
+        else chart?.resize()
+      })
+    })
     resizeObserver.observe(chartElement.value)
   }
+  if (isClassicSimplePlot.value) updateClassicPlotHeight()
+  else chartElement.value.style.removeProperty('height')
   if (activeView.value === 'periods') {
-    const simple = report.value.simple.periods[activePeriod.value] || []
-    const compound = report.value.compound.periods[activePeriod.value] || []
-    const periods = [...new Set([...simple, ...compound].map(row => row.period))].sort()
+    const rows = currentPeriods.value
     chart.setOption({
       tooltip: { trigger: 'axis', valueFormatter: value => formatNumber(value) },
-      legend: { bottom: 4 }, grid: { left: 70, right: 24, top: 28, bottom: 60 },
-      xAxis: { type: 'category', data: periods },
+      grid: { left: 70, right: 24, top: 28, bottom: 38 },
+      xAxis: { type: 'category', data: rows.map(row => row.period) },
       yAxis: { type: 'value', axisLabel: { formatter: value => formatNumber(value, 0) } },
-      dataZoom: [{ type: 'inside' }, { type: 'slider', height: 14, bottom: 32 }],
-      series: [
-        { name: '單口績效', type: 'bar', itemStyle: { color: '#0b7183' }, data: periods.map(period => simple.find(row => row.period === period)?.profit ?? 0) },
-        { name: '複合績效', type: 'bar', itemStyle: { color: '#d77953' }, data: periods.map(period => compound.find(row => row.period === period)?.profit ?? 0) }
-      ]
+      series: [{
+        name: selectedTab.value.label, type: 'bar',
+        itemStyle: { color: activeSection.value === 'simple' ? '#0b7183' : '#d77953' },
+        data: rows.map(row => row.profit)
+      }]
     }, true)
     chart.resize()
     return
@@ -525,21 +654,148 @@ function renderChart() {
   const curve = currentSection.value.curve || []
   const reference = report.value.buy_hold
   const hasReference = Boolean(reference?.curve?.length)
-  const showZoom = Math.max(curve.length, reference?.curve?.length || 0) > 30
   const hasDrawdown = curve.some(row => row.drawdown > 0)
   const timestamp = value => new Date(value.length === 10 ? `${value}T00:00:00` : value.replace(' ', 'T')).getTime()
   const equityName = activeSection.value === 'simple' ? '獲利' : '資金'
+  if (activeSection.value === 'simple') {
+    const visible = simpleCurveVisible.value
+    const hasPrimary = visible.profit || visible.buyHold
+    const leftKind = hasPrimary ? 'profit' : visible.drawdown ? 'drawdown' : 'quantity'
+    const hasRightAxis = (leftKind === 'profit' && (visible.drawdown || visible.quantity)) ||
+      (leftKind === 'drawdown' && visible.quantity)
+    const maxQuantity = curve.reduce((maximum, row) => Math.max(maximum, Number(row.open_position) || 0), 1)
+    const integerQuantity = curve.every(row => Number.isInteger(Number(row.open_position) || 0))
+    const valueAxis = (name, min, splitLine) => ({
+      type: 'value', name, ...(min == null ? { scale: true } : { min }),
+      axisLabel: { formatter: value => formatNumber(value, 0) },
+      splitLine: { show: splitLine, lineStyle: { color: '#e6ecec' } }
+    })
+    const quantityAxis = right => ({
+      type: 'value', name: '口數', min: 0, ...(right ? { max: maxQuantity * 4 } : {}),
+      ...(integerQuantity ? { minInterval: 1 } : {}),
+      axisLabel: { formatter: value => formatQuantity(value) },
+      splitLine: { show: !right, lineStyle: { color: '#e6ecec' } }
+    })
+    const axes = [leftKind === 'quantity' ? quantityAxis(false) : valueAxis(
+      leftKind === 'profit' ? '' : '回撤', leftKind === 'profit' ? null : 0, true)]
+    if (hasRightAxis) axes.push(visible.quantity ? quantityAxis(true) : valueAxis('回撤', 0, false))
+    const secondaryAxis = kind => leftKind === kind ? 0 : 1
+    const series = []
+    if (visible.profit) series.push({
+      name: '獲利', type: 'line', yAxisIndex: 0,
+      data: curve.map(row => [timestamp(row.timestamp), row.equity]),
+      showSymbol: false, lineStyle: { width: 2.5, color: '#0b7183' },
+      itemStyle: { color: '#0b7183' }, areaStyle: { color: 'rgba(11,113,131,.10)' }
+    })
+    if (visible.buyHold) series.push({
+      name: 'BuyHold', type: 'line', yAxisIndex: 0,
+      data: reference.curve.map(row => [timestamp(row.timestamp), row.profit]),
+      showSymbol: false, lineStyle: { width: 2, color: '#7c3aed' }, itemStyle: { color: '#7c3aed' }
+    })
+    if (visible.drawdown) series.push({
+      name: '回撤', type: 'line', yAxisIndex: secondaryAxis('drawdown'),
+      data: curve.map(row => [timestamp(row.timestamp), row.drawdown]),
+      showSymbol: false, lineStyle: { width: 1.5, color: '#d77953' }, itemStyle: { color: '#d77953' }
+    })
+    if (visible.quantity) series.push({
+      name: '口數', type: 'line', yAxisIndex: secondaryAxis('quantity'),
+      data: curve.map(row => [timestamp(row.timestamp), row.open_position]),
+      showSymbol: false, lineStyle: { width: 1.5, color: '#657587' }, itemStyle: { color: '#657587' }
+    })
+    const axisKinds = [leftKind, ...(hasRightAxis ? [visible.quantity ? 'quantity' : 'drawdown'] : [])]
+    axes.forEach((axis, index) => {
+      const values = series.filter(item => (item.yAxisIndex || 0) === index)
+        .flatMap(item => item.data.map(([, value]) => value))
+      axes[index] = fitCurveAxis(axis, values, axisKinds[index] === 'quantity' && integerQuantity)
+    })
+    if (!hasRightAxis) axes.push({ ...axes[0], position: 'right', splitLine: { show: false } })
+
+    const fontFamily = getComputedStyle(chartElement.value).fontFamily
+    const measureCanvas = document.createElement('canvas')
+    const measureContext = measureCanvas.getContext('2d')
+    measureContext.font = `12px ${fontFamily}`
+    const axisFormatter = kind => kind === 'quantity' ? formatQuantity : value => formatProfitTick(value, true)
+    const ticksFor = axis => {
+      const count = Math.min(30, Math.round((axis.max - axis.min) / axis.interval))
+      return Array.from({ length: count + 1 }, (_, index) => axis.min + index * axis.interval)
+    }
+    const labelWidth = (axis, kind) => profitAxisLayout(ticksFor(axis),
+      label => measureContext.measureText(label).width, axisFormatter(kind)).gutter
+    const leftGutter = labelWidth(axes[0], leftKind)
+    const rightGutter = hasRightAxis ? labelWidth(axes[1], axisKinds[1]) : leftGutter
+    const classicAxis = (axis, position, kind) => ({
+      ...axis, position, name: '',
+      axisLine: { show: true, lineStyle: { color: '#111', width: 1 } },
+      axisTick: { show: true, lineStyle: { color: '#111' } },
+      axisLabel: { color: '#111', fontSize: 12, fontFamily, margin: 4, formatter: axisFormatter(kind) },
+      splitLine: position === 'left'
+        ? { show: true, lineStyle: { color: '#aaa', type: 'dashed', width: 1 } }
+        : { show: false }
+    })
+    const toDate = value => {
+      const date = new Date(value)
+      return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`
+    }
+    const firstTime = curve.length ? timestamp(curve[0].timestamp) : 0
+    const lastTime = curve.length ? timestamp(curve[curve.length - 1].timestamp) : 1
+    const mddLines = visible.profit ? profitDrawdownSegments(curve, currentSection.value.drawdowns || [])
+      .map((segment, index) => ({
+        name: `MDD ${index + 1}`, type: 'line', showSymbol: false, silent: true,
+        tooltip: { show: false }, animation: false, z: 5,
+        data: segment.map(([date, value]) => [timestamp(date), value]),
+        lineStyle: { color: '#e00000', width: 1.5 }
+      })) : []
+    const styledSeries = series.map(item => {
+      const color = item.name === '獲利' || series.length === 1 ? '#111'
+        : item.name === 'BuyHold' ? '#7c3aed' : item.name === '回撤' ? '#d77953' : '#657587'
+      return { ...item, areaStyle: undefined, lineStyle: { color, width: series.length === 1 ? 0.75 : 1.25 },
+        itemStyle: { color }, z: 4 }
+    })
+    chart.setOption({
+      animationDuration: 350,
+      backgroundColor: '#fff',
+      grid: { left: leftGutter, right: rightGutter, top: 10, bottom: 28, containLabel: false,
+        show: true, backgroundColor: '#fff', borderColor: '#111', borderWidth: 1 },
+      tooltip: {
+        trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: '#777', type: 'dotted' } },
+        formatter: items => {
+          const points = items.filter(item => item.seriesName !== '基準線' && !item.seriesName.startsWith('MDD '))
+          if (!points.length) return ''
+          const date = new Date(points[0].data[0])
+          const dateText = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
+          return `${dateText}<br>${points.map(item => `${item.marker}${item.seriesName}：${item.seriesName === '口數' ? formatQuantity(item.data[1]) : formatProfitTick(item.data[1])}`).join('<br>')}`
+        }
+      },
+      xAxis: {
+        type: 'time', boundaryGap: false,
+        axisLine: { show: true, lineStyle: { color: '#111' } },
+        axisTick: { show: true, lineStyle: { color: '#111' } },
+        axisLabel: { color: '#111', fontSize: 12, hideOverlap: true, formatter: toDate },
+        splitLine: { show: true, lineStyle: { color: '#aaa', type: 'dashed' } },
+        minorSplitLine: { show: true, lineStyle: { color: '#ddd', type: 'dotted' } }
+      },
+      yAxis: [classicAxis(axes[0], 'left', leftKind),
+        classicAxis(axes[1], 'right', hasRightAxis ? axisKinds[1] : leftKind)],
+      series: [
+        { name: '基準線', type: 'line', silent: true, showSymbol: false, tooltip: { show: false },
+          data: [[firstTime, 0], [lastTime, 0]], lineStyle: { color: '#243bff', width: 1 }, z: 2 },
+        ...styledSeries,
+        ...mddLines
+      ]
+    }, true)
+    chart.resize()
+    return
+  }
   chart.setOption({
     animationDuration: 350,
-    grid: { left: 66, right: hasDrawdown ? 70 : 24, top: 28, bottom: showZoom ? 60 : 38 },
+    grid: { left: 66, right: hasDrawdown ? 70 : 24, top: 52, bottom: 40, containLabel: true },
     tooltip: { trigger: 'axis', valueFormatter: value => formatNumber(value, 2) },
-    legend: { bottom: 4, data: [equityName, '回撤', ...(hasReference ? [reference.name] : [])] },
+    legend: { top: 2, data: [equityName, '回撤', ...(hasReference ? [reference.name] : [])] },
     xAxis: { type: 'time', boundaryGap: false, axisLabel: { hideOverlap: true } },
     yAxis: [
       { type: 'value', scale: true, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { lineStyle: { color: '#e6ecec' } } },
       { type: 'value', name: '回撤', min: 0, show: hasDrawdown, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { show: false } }
     ],
-    dataZoom: [{ type: 'inside' }, ...(showZoom ? [{ type: 'slider', height: 14, bottom: 32, borderColor: 'transparent' }] : [])],
     series: [
       { name: equityName, type: 'line', data: curve.map(row => [timestamp(row.timestamp), row.equity]), showSymbol: false, smooth: false, lineStyle: { width: 2.5, color: '#0b7183' }, itemStyle: { color: '#0b7183' }, areaStyle: { color: 'rgba(11,113,131,.10)' } },
       { name: '回撤', type: 'line', yAxisIndex: 1, data: curve.map(row => [timestamp(row.timestamp), row.drawdown]), showSymbol: false, lineStyle: { width: 1.5, color: '#d77953' }, itemStyle: { color: '#d77953' } },
@@ -550,6 +806,24 @@ function renderChart() {
 }
 
 watch([activeTab, activePeriod, report], () => nextTick(renderChart))
+watch(activeTab, () => {
+  const section = activeSection.value
+  const scrollTop = detailScrollTops[section]
+  nextTick(() => {
+    if (activeView.value === 'details' && detailTableElement.value) {
+      detailTableElement.value.scrollTop = scrollTop
+    }
+  })
+})
+watch(curveSelection, () => nextTick(renderChart), { deep: true })
+function goToDetailsPage(page) {
+  detailsPage.value = Math.min(Math.max(page, 1), detailsPageCount.value)
+  detailScrollTops[activeSection.value] = 0
+  nextTick(() => { if (detailTableElement.value) detailTableElement.value.scrollTop = 0 })
+}
+function rememberDetailScroll(event) {
+  detailScrollTops[activeSection.value] = event.target.scrollTop
+}
 function scheduleRecalculation() {
   if (!report.value || !currentPerformance.value) return
   settingsDirty.value = true
@@ -574,7 +848,7 @@ function downloadCsv(kind) {
   const rows = kind === 'details' ? currentDetails.value : currentPeriods.value
   if (!rows.length) return
   const columns = kind === 'details'
-    ? [['timestamp', '時間'], ['symbol', '標的'], ['side', '買賣'], ['quantity', '口數'], ['price', '價格'], ['position', '部位'], ['profit', '損益'], ['equity', '累積淨值'], ['action', '訊號']]
+    ? [['__row_number__', '#'], ['timestamp', '時間'], ['symbol', '標的'], ['side', '買賣'], ['quantity', report.value?.settings?.mode === 'dynamic_compounding' && activeSection.value === 'compound' ? '倍率' : '口數'], ['price', '價格'], ['position', '部位'], ['profit', '損益'], ['equity', '累積淨值'], ['action', '訊號']]
     : [['period', '期間'], ['profit', '損益'], ['cumulative', '累積'], ['return_pct', '報酬率 (%)']]
   const lines = [
     `${csvCell('來源檔案')},${csvCell(source.value?.filename)}`,
@@ -582,7 +856,7 @@ function downloadCsv(kind) {
     `${csvCell('資金管理模式')},${csvCell(activeSection.value === 'simple' ? '單純績效' : resultModeLabel.value)}`,
     `${csvCell('區間')},${csvCell(`${report.value?.settings?.date_start || '全部'} ~ ${report.value?.settings?.date_end || '全部'}`)}`,
     '', columns.map(item => csvCell(item[1])).join(','),
-    ...rows.map(row => columns.map(([key]) => csvCell(row[key])).join(','))
+    ...rows.map((row, index) => columns.map(([key]) => csvCell(key === '__row_number__' ? index + 1 : row[key])).join(','))
   ]
   const blob = new Blob(['\ufeff', lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
@@ -595,10 +869,20 @@ function downloadCsv(kind) {
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', handleRouteChange)
+  window.removeEventListener('resize', updateClassicPlotHeight)
+  window.removeEventListener('mousemove', onSidebarMouseMove)
+  window.removeEventListener('mouseup', stopSidebarResize)
+  window.visualViewport?.removeEventListener('resize', updateClassicPlotHeight)
+  if (chartResizeFrame != null) cancelAnimationFrame(chartResizeFrame)
+  stopSidebarResize()
   clearReport()
 })
 onMounted(() => {
   window.addEventListener('popstate', handleRouteChange)
+  window.addEventListener('resize', updateClassicPlotHeight)
+  window.addEventListener('mousemove', onSidebarMouseMove)
+  window.addEventListener('mouseup', stopSidebarResize)
+  window.visualViewport?.addEventListener('resize', updateClassicPlotHeight)
   refreshAuth()
 })
 </script>
@@ -664,7 +948,7 @@ onMounted(() => {
   <div v-else class="app-shell">
     <main>
       <div class="workspace">
-        <aside class="panel sidebar">
+        <aside class="panel sidebar" :style="{ width: sidebarWidth + 'px' }">
           <div class="title-row">
             <h1 class="project-title">{{ currentPerformance.name }}</h1>
             <a class="back-link" href="/" @click.prevent="goHome()">回主頁</a>
@@ -683,11 +967,11 @@ onMounted(() => {
             <span class="id-line-spacer"></span>
             <button type="button" class="copy-project-btn" @click="copyPerformance(currentPerformance)">
               <svg viewBox="0 0 512 512" aria-hidden="true"><path d="M464 0H144c-26.51 0-48 21.49-48 48v48H48c-26.51 0-48 21.49-48 48v320c0 26.51 21.49 48 48 48h320c26.51 0 48-21.49 48-48v-48h48c26.51 0 48-21.49 48-48V48c0-26.51-21.49-48-48-48zM362 464H54a6 6 0 0 1-6-6V150a6 6 0 0 1 6-6h42v224c0 26.51 21.49 48 48 48h224v42a6 6 0 0 1-6 6zm96-96H150a6 6 0 0 1-6-6V54a6 6 0 0 1 6-6h308a6 6 0 0 1 6 6v308a6 6 0 0 1-6 6z"/></svg>
-              <span>複製績效</span>
+              <span>複製</span>
             </button>
             <button type="button" class="copy-project-btn" @click="downloadPerformance(currentPerformance)">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.293,13.707a1,1,0,1,1,1.414-1.414L11,14.586V3a1,1,0,0,1,2,0V14.586l2.293-2.293a1,1,0,0,1,1.414,1.414l-4,4a1,1,0,0,1-.325.216.986.986,0,0,1-.764,0,1,1,0,0,1-.325-.216ZM22,12a1,1,0,0,0-1,1v7H3V13a1,1,0,0,0-2,0v8a1,1,0,0,0,1,1H22a1,1,0,0,0,1-1V13A1,1,0,0,0,22,12Z"/></svg>
-              <span>下載績效</span>
+              <span>下載</span>
             </button>
           </div>
           <p v-if="copyHint" class="hint" role="status">{{ copyHint }}</p>
@@ -705,20 +989,38 @@ onMounted(() => {
               <span class="muted">{{ buyHoldName }}</span>
             </div>
             <p v-if="report?.buy_hold?.error" class="error-message" role="alert">{{ report.buy_hold.error }}</p>
-            <h3 class="capital-title">資金管理</h3>
+            <div class="capital-heading">
+              <h3 class="capital-title">資金管理</h3>
+              <button type="button" class="help-icon-button capital-help-button" aria-label="資金管理說明" title="資金管理說明" aria-controls="capital-help" :aria-expanded="capitalHelpOpen" @click="capitalHelpOpen = !capitalHelpOpen"><HelpIcon /></button>
+            </div>
+            <div v-show="capitalHelpOpen" id="capital-help" class="capital-help">
+              <strong>{{ selectedModeLabel }}</strong>
+              <p>{{ settings.mode === 'backtest' ? backtestHelp : settings.mode === 'dynamic_compounding' ? dynamicHelp : modeHelp[settings.mode] }}</p>
+              <p v-if="settings.mode !== 'backtest' && settings.mode !== 'dynamic_compounding'">口數倍率會乘以來源交易口數。最大口數設為 0 表示無上限；勾選「口數為整數」時，倍率向下取整。</p>
+            </div>
             <div class="form-stack">
               <label class="field"><span>管理模式</span><select v-model="settings.mode"><option v-for="option in modeOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
-              <p v-if="settings.mode === 'backtest'" class="mode-hint">直接使用報表口數與報表初始資金；若報表未提供初始資金，採用 100,000。</p>
-              <label v-else class="field"><span>初始資金</span><input v-model.number="settings.initial_capital" type="number" min="0.01" step="any" /></label>
+              <template v-if="settings.mode === 'backtest'">
+                <label class="field"><span>初始資金</span><input v-model.number="backtestCapital" class="capital-input" type="number" min="0.01" step="any" /></label>
+                <button v-if="settings.backtest_initial_capital != null" type="button" class="capital-reset-button" @click="settings.backtest_initial_capital = null">恢復來源／預設初始資金</button>
+              </template>
+              <label v-else class="field"><span>初始資金</span><input v-model.number="settings.initial_capital" class="capital-input" type="number" min="0.01" step="any" /></label>
               <label v-for="field in visibleFields" :key="field.key" class="field"><span>{{ field.label }}</span><input v-model.number="settings[field.key]" type="number" min="0" :step="field.step" /></label>
+              <template v-if="settings.mode === 'dynamic_compounding'">
+                <label class="field"><span>回撤金額(萬,%)</span><input v-model.trim="settings.dynamic_drawdown_threshold" type="text" placeholder="2000 或 5%" /></label>
+                <label class="field"><span>複利間隔</span><select v-model="settings.dynamic_interval"><option value="weekly">每週</option><option value="monthly">每月</option></select></label>
+                <label class="field"><span>口數小數點</span><select v-model="settings.dynamic_lot_rounding"><option value="floor">捨去</option><option value="ceil">進位</option><option value="round">四捨五入</option><option value="retain">保留</option></select></label>
+              </template>
               <label v-if="settings.mode === 'target_leverage'" class="field"><span>槓桿資金</span><select v-model="settings.leverage_funds"><option value="cumulative">累加獲利</option><option value="fixed">固定資金</option></select></label>
-              <template v-if="settings.mode !== 'backtest'"><label class="field"><span>最大口數 <small>0 = 無上限</small></span><input v-model.number="settings.maximum_quantity" type="number" min="0" step="any" /></label><label class="check-field"><input v-model="settings.integer_quantity" type="checkbox" /><span>口數為整數</span></label></template>
+              <template v-if="settings.mode !== 'backtest' && settings.mode !== 'dynamic_compounding'"><label class="field"><span>最大口數 <small>0 = 無上限</small></span><input v-model.number="settings.maximum_quantity" type="number" min="0" step="any" /></label><label class="check-field"><input v-model="settings.integer_quantity" type="checkbox" /><span>口數為整數</span></label></template>
             </div>
             <p v-if="busy" class="field-help" role="status">正在計算報表…</p>
             <p v-else-if="settingsDirty" class="field-help" role="status">設定已變更，將自動重新計算。</p>
             <p v-if="error" class="error-message" role="alert">{{ error }}</p>
           </section>
         </aside>
+
+        <div class="splitter" role="separator" aria-label="調整左側寬度" aria-orientation="vertical" @mousedown="startSidebarResize"></div>
 
         <section class="panel results">
           <div v-if="!report" class="empty-state">
@@ -729,7 +1031,7 @@ onMounted(() => {
 
           <template v-else>
             <nav class="tab-bar" aria-label="報表內容"><button v-for="tab in tabs" :key="tab.value" type="button" :class="{ active: activeTab === tab.value }" :aria-pressed="activeTab === tab.value" @click="activeTab = tab.value">{{ tab.label }}</button></nav>
-            <button type="button" class="report-help-button" aria-label="報表說明" title="報表說明" :aria-expanded="reportHelpOpen" @click="reportHelpOpen = !reportHelpOpen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" /></svg></button>
+            <button type="button" class="help-icon-button report-help-button" aria-label="報表說明" title="報表說明" :aria-expanded="reportHelpOpen" @click="reportHelpOpen = !reportHelpOpen"><HelpIcon /></button>
             <div v-if="reportHelpOpen" class="report-help">
               <p>{{ source.strategy }} · {{ source.filename }} · {{ source.format.toUpperCase() }}</p>
               <p>單口績效顯示原始策略損益；複合績效套用左側資金管理設定（{{ resultModeLabel }}）。Buy&amp;Hold 使用自己的金額，單口曲線顯示其損益，複合曲線顯示其資金淨值。</p>
@@ -738,15 +1040,40 @@ onMounted(() => {
               <button type="button" class="print-button" @click="printReport">列印 / 儲存 PDF</button>
             </div>
             <p class="print-meta">{{ currentPerformance.name }} · {{ selectedTab.label }} · 資金管理：{{ resultModeLabel }} · 初始資金：{{ formatNumber(currentSummary.initial_capital) }} · Buy&amp;Hold：{{ buyHoldName }}</p>
-            <SummaryPanel v-if="activeView === 'summary'" :section="currentSection" :symbol="source.symbol" />
+            <SummaryPanel v-if="activeView === 'summary'" :section="currentSection" :symbol="source.symbol" :compound="activeSection === 'compound'" />
             <div v-else-if="activeView === 'curve'" class="chart-panel">
-              <h3>{{ selectedTab.label }}</h3>
-              <div ref="chartElement" class="chart" role="img" :aria-label="`${selectedTab.label}，Buy&Hold：${report.buy_hold?.name || '無'}`"></div>
+              <h3 v-if="activeSection !== 'simple'">{{ selectedTab.label }}</h3>
+              <div v-if="activeSection === 'simple'" class="curve-series-controls" role="group" aria-label="曲線項目">
+                <button v-for="item in simpleCurveItems" :key="item.key" type="button"
+                  :class="[item.key, { active: curveSelection[item.key], suppressed: curveSelection[item.key] && !simpleCurveVisible[item.key] }]"
+                  :aria-pressed="curveSelection[item.key]"
+                  :title="item.key === 'quantity' && curveSelection.quantity && !simpleCurveVisible.quantity ? '獲利或 BuyHold 與回撤同時顯示時，口數不繪製' : ''"
+                  @click="curveSelection[item.key] = !curveSelection[item.key]">{{ item.label }}</button>
+              </div>
+              <div ref="chartElement" class="chart" :class="{ 'classic-profit-chart': isClassicSimplePlot }" role="img" :aria-label="`${selectedTab.label}，顯示${activeSection === 'simple' ? simpleCurveItems.filter(item => simpleCurveVisible[item.key]).map(item => item.label).join('、') : '資金、回撤'}`"></div>
             </div>
 
-            <div v-else-if="activeView === 'periods'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">PERIOD REPORT</span><h3>逐年獲利</h3></div><button type="button" class="secondary-button" :disabled="!currentPeriods.length" @click="downloadCsv('periods')">下載 CSV ↓</button></div><div class="period-switch"><button v-for="(label, key) in periodLabels" :key="key" type="button" :class="{ active: activePeriod === key }" @click="activePeriod = key">{{ label }}</button></div><div ref="chartElement" class="chart" role="img" aria-label="單口策略與複合投資獲利分佈"></div><div class="table-scroll"><table><thead><tr><th>期間</th><th class="numeric">損益</th><th class="numeric">累積</th><th v-if="activeSection === 'compound'" class="numeric">報酬率</th></tr></thead><tbody><tr v-for="row in currentPeriods" :key="row.period"><td>{{ row.period }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.cumulative) }}</td><td v-if="activeSection === 'compound'" class="numeric">{{ formatPercent(row.return_pct) }}</td></tr><tr v-if="!currentPeriods.length"><td colspan="4" class="no-data">此區間沒有資料</td></tr></tbody></table></div></div>
+            <div v-else-if="activeView === 'periods'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">PERIOD REPORT</span><h3>{{ selectedTab.label }}</h3></div><button type="button" class="secondary-button" :disabled="!currentPeriods.length" @click="downloadCsv('periods')">下載 CSV ↓</button></div><div class="period-switch"><button v-for="(label, key) in periodLabels" :key="key" type="button" :class="{ active: activePeriod === key }" @click="activePeriod = key">{{ label }}</button></div><div ref="chartElement" class="chart" role="img" :aria-label="`${selectedTab.label}獲利分佈`"></div><div class="table-scroll"><table><thead><tr><th>期間</th><th class="numeric">損益</th><th class="numeric">累積</th><th v-if="activeSection === 'compound'" class="numeric">報酬率</th></tr></thead><tbody><tr v-for="row in currentPeriods" :key="row.period"><td>{{ row.period }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit) }}</td><td class="numeric">{{ formatNumber(row.cumulative) }}</td><td v-if="activeSection === 'compound'" class="numeric">{{ formatPercent(row.return_pct) }}</td></tr><tr v-if="!currentPeriods.length"><td :colspan="activeSection === 'compound' ? 4 : 3" class="no-data">此區間沒有資料</td></tr></tbody></table></div></div>
 
-            <div v-else-if="activeView === 'details'" class="panel table-panel"><div class="section-heading"><div><span class="section-kicker">TRADE LOG</span><p>共 {{ formatNumber(currentDetails.length, 0) }} 筆</p></div><button type="button" class="secondary-button" :disabled="!currentDetails.length" @click="downloadCsv('details')">下載 CSV ↓</button></div><div class="table-scroll detail-table"><table><thead><tr><th>時間</th><th>標的</th><th>買賣</th><th class="numeric">口數</th><th class="numeric">價格</th><th class="numeric">部位</th><th class="numeric">損益</th><th class="numeric">累積淨值</th><th>訊號</th></tr></thead><tbody><tr v-for="row in currentDetails" :key="row.index"><td>{{ row.timestamp }}</td><td>{{ row.symbol }}</td><td><span class="side-pill" :class="row.side === 'B' ? 'buy' : 'sell'">{{ row.side === 'B' ? '買進' : '賣出' }}</span></td><td class="numeric">{{ formatQuantity(row.quantity) }}</td><td class="numeric">{{ formatNumber(row.price, 4) }}</td><td class="numeric">{{ formatQuantity(row.position) }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit, 0) }}</td><td class="numeric">{{ formatNumber(row.equity, 0) }}</td><td>{{ row.action || '—' }}</td></tr><tr v-if="!currentDetails.length"><td colspan="9" class="no-data">此區間沒有交易</td></tr></tbody></table></div></div>
+            <div v-else-if="activeView === 'details'" class="panel table-panel">
+              <div class="section-heading detail-heading">
+                <div><span class="section-kicker">TRADE LOG</span><p>共 {{ formatNumber(currentDetails.length, 0) }} 筆 · 每頁 {{ detailsPageSize }} 筆</p></div>
+                <nav v-if="detailsPageCount > 1" class="detail-pagination" aria-label="明細分頁">
+                  <button type="button" :disabled="detailsPage === 1" @click="goToDetailsPage(detailsPage - 1)">上一頁</button>
+                  <template v-for="(page, index) in detailPageNumbers" :key="page">
+                    <span v-if="index > 0 && page > detailPageNumbers[index - 1] + 1" aria-hidden="true">…</span>
+                    <button type="button" :class="{ active: detailsPage === page }" :aria-current="detailsPage === page ? 'page' : undefined" @click="goToDetailsPage(page)">{{ page }}</button>
+                  </template>
+                  <button type="button" :disabled="detailsPage === detailsPageCount" @click="goToDetailsPage(detailsPage + 1)">下一頁</button>
+                </nav>
+                <button type="button" class="secondary-button" :disabled="!currentDetails.length" @click="downloadCsv('details')">下載 CSV ↓</button>
+              </div>
+              <div ref="detailTableElement" class="table-scroll detail-table" @scroll="rememberDetailScroll">
+                <table><thead><tr><th class="numeric detail-index">#</th><th>時間</th><th>標的</th><th>買賣</th><th class="numeric">{{ report.settings.mode === 'dynamic_compounding' && activeSection === 'compound' ? '倍率' : '口數' }}</th><th class="numeric">價格</th><th class="numeric">部位</th><th class="numeric">損益</th><th class="numeric">累積淨值</th><th>訊號</th></tr></thead>
+                  <tbody><tr v-for="(row, index) in pagedDetails" :key="row.index"><td class="numeric detail-index">{{ (detailsPage - 1) * detailsPageSize + index + 1 }}</td><td>{{ row.timestamp }}</td><td>{{ row.symbol }}</td><td><span class="side-pill" :class="row.side === 'B' ? 'buy' : row.side === 'S' ? 'sell' : ''">{{ row.side === 'B' ? '買進' : row.side === 'S' ? '賣出' : '—' }}</span></td><td class="numeric">{{ report.settings.mode === 'dynamic_compounding' && activeSection === 'compound' ? `${formatQuantity(row.multiplier)}X` : formatQuantity(row.quantity) }}</td><td class="numeric">{{ formatNumber(row.price, 4) }}</td><td class="numeric">{{ formatQuantity(row.position) }}</td><td class="numeric" :class="{ negative: row.profit < 0 }">{{ formatNumber(row.profit, 0) }}</td><td>{{ formatNumber(row.equity, 0) }}</td><td>{{ row.action || '—' }}</td></tr><tr v-if="!currentDetails.length"><td colspan="10" class="no-data">此區間沒有交易</td></tr></tbody>
+                </table>
+              </div>
+            </div>
 
 
           </template>

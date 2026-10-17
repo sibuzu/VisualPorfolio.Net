@@ -4,7 +4,7 @@ This repository contains two independent Web applications:
 
 | Application | Source | Docker stack | Persistent data |
 | --- | --- | --- | --- |
-| Visual Portfolio | [`visual-portfolio/`](visual-portfolio/) | `docker/visual-portfolio/` and `docker/visual-portfolio-beta/` | Root `data/` and `data-beta/` |
+| Visual Portfolio | [`visual-portfolio/`](visual-portfolio/) | `docker/visual-portfolio/` | Root `data/` |
 | Strategy Report | [`strategy-report/`](strategy-report/) | `docker/strategy-report/` | `data/reports/<ID>/` for source/configuration; `data/db/reporsts.db` for the performance index |
 
 Visual Portfolio's source was moved under `visual-portfolio/` without changing its application features. Its local commands are in [`visual-portfolio/README.md`](visual-portfolio/README.md).

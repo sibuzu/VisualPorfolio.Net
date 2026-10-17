@@ -1,6 +1,6 @@
 ## Context
 
-Visual Portfolio currently uses root `backend/` (FastAPI) and `frontend/` (Vue/Vite); production and beta Compose files build both from the repository root and bind root `data/` or `data-beta/`. This app only needs a directory move. The C# application under `/home/jack/git/hft/src/Utilities/StrategyReport/` is the functional source for the new Web app: it contains separate simple/compound detail and summary views, annual/month/week/day tables, charts, and ten capital management modes. `/home/jack/git/sea_spec/examples/srp/` contains paired `.srp` and SEA project examples useful for parity checks.
+Visual Portfolio currently uses root `backend/` (FastAPI) and `frontend/` (Vue/Vite); production Compose files build both from the repository root and bind root `data/`. This app only needs a directory move. The C# application under `/home/jack/git/hft/src/Utilities/StrategyReport/` is the functional source for the new Web app: it contains separate simple/compound detail and summary views, annual/month/week/day tables, charts, and ten capital management modes. `/home/jack/git/sea_spec/examples/srp/` contains paired `.srp` and SEA project examples useful for parity checks.
 
 The requested public hostname is `strategyreport.sibuzu.com`. Its live DNS and tunnel configuration are outside this repository; the repository can supply container and ingress definitions and deployment checks.
 
@@ -8,7 +8,7 @@ The requested public hostname is `strategyreport.sibuzu.com`. Its live DNS and t
 
 **Goals:**
 
-- Move the existing Visual Portfolio app under `visual-portfolio/` with only path/build configuration changes, preserving its implementation, URLs, API semantics, database files, and production/beta container identities.
+- Move the existing Visual Portfolio app under `visual-portfolio/` with only path/build configuration changes, preserving its implementation, URLs, API semantics, database files, and production container identities.
 - Deliver a separate Strategy Report site for `.srp` and `.sea` with the C# application's report concepts, adapted to a responsive browser layout.
 - Establish a normalized, metadata preserving import model and deterministic report calculations with fixture comparisons to C# results.
 - Make production deployment and rollback possible without moving Visual Portfolio's runtime data.
@@ -25,7 +25,7 @@ The requested public hostname is `strategyreport.sibuzu.com`. Its live DNS and t
 
 ### Repository and imports
 
-Use `visual-portfolio/backend/` and `visual-portfolio/frontend/` for the moved app, and `strategy-report/backend/` and `strategy-report/frontend/` for the new app. Keep root `docker/`, `data/`, `data-beta/`, `ref_result/`, `docs/`, and `openspec/`. Each app gets its own dependency manifests and test commands. Update Visual Portfolio Dockerfiles, `.gitignore`, scripts, fixture paths, and developer documentation only where the move changes paths. Retain the current `backend.*` Python import path inside the Visual Portfolio container and tests by using `visual-portfolio/` as its application root; do not alter its parser, report calculations, API, or database schema.
+Use `visual-portfolio/backend/` and `visual-portfolio/frontend/` for the moved app, and `strategy-report/backend/` and `strategy-report/frontend/` for the new app. Keep root `docker/`, `data/`, `ref_result/`, `docs/`, and `openspec/`. Each app gets its own dependency manifests and test commands. Update Visual Portfolio Dockerfiles, `.gitignore`, scripts, fixture paths, and developer documentation only where the move changes paths. Retain the current `backend.*` Python import path inside the Visual Portfolio container and tests by using `visual-portfolio/` as its application root; do not alter its parser, report calculations, API, or database schema.
 
 Alternative considered: move every root directory under `visual-portfolio/`. This would also move persistent data and deployment documents and increase production migration risk without improving code separation.
 
@@ -55,13 +55,13 @@ The C# defaults and report fields are the parity baseline, but compare numerical
 
 ### Routing and deploy
 
-Put Strategy Report Dockerfiles and Compose under `docker/strategy-report/`, using the existing `sibuzu-net` network and distinct container names. The frontend nginx serves the SPA and proxies `/api/` to the Strategy Report backend, so the public site uses one origin: `https://strategyreport.sibuzu.com/`. Provide an ingress example mapping that hostname to the frontend container and a smoke test for home, API health, and an example import. Existing Visual Portfolio production and beta ingress remain unchanged.
+Put Strategy Report Dockerfiles and Compose under `docker/strategy-report/`, using the existing `sibuzu-net` network and distinct container names. The frontend nginx serves the SPA and proxies `/api/` to the Strategy Report backend, so the public site uses one origin: `https://strategyreport.sibuzu.com/`. Provide an ingress example mapping that hostname to the frontend container and a smoke test for home, API health, and an example import. Existing Visual Portfolio production ingress remain unchanged.
 
 Alternative considered: expose a second public API hostname. A same-origin proxy simplifies browser configuration and CORS with no required public API hostname.
 
 ## Risks / Trade-offs
 
-- [Path migration breaks Visual Portfolio builds/tests] → Migrate imports and Compose contexts together; run existing backend tests, frontend build, and production/beta Compose config checks before adding new features.
+- [Path migration breaks Visual Portfolio builds/tests] → Migrate imports and Compose contexts together; run existing backend tests, frontend build, and production Compose config checks before adding new features.
 - [Strategy Report's new parser differs from C# results] → Compare paired `.srp`/`.sea` fixtures and C# golden outputs; do not change Visual Portfolio's parser to make them match.
 - [C# capital calculations have hidden edge cases] → Inventory every mode and parameter, then compare trade detail, equity, MDD, and period totals with C# golden outputs for flat, losing, overlapping, and date filtered trades.
 - [Untrusted SEA ZIP consumes excessive resources or escapes paths] → Inspect archive entries without extraction, enforce compressed/uncompressed size and entry count limits, and reject malformed or unsafe members.
@@ -72,10 +72,10 @@ Alternative considered: expose a second public API hostname. A same-origin proxy
 
 ## Migration Plan
 
-1. Record baseline test/build and current Compose output. Move Visual Portfolio source with `git mv`, update paths and docs, and verify production and beta containers still mount their existing data roots.
+1. Record baseline test/build and current Compose output. Move Visual Portfolio source with `git mv`, update paths and docs, and verify production containers still mount their existing data roots.
 2. Implement Strategy Report's own `.srp`/`.sea` importer and API, then its UI in vertical slices: import/metadata, simple report, capital management and compound report, tables/charts/exports. Validate each slice with C# and paired format fixture parity.
 3. Add Strategy Report Compose, nginx proxy, health and smoke checks. Deploy new containers independently. Configure tunnel/DNS route to the new frontend and verify HTTPS and upload behavior.
-4. Rollback: remove the new hostname route and stop only Strategy Report containers. If the Visual Portfolio source path migration causes a regression, redeploy the prior Visual Portfolio images/commit against the unchanged `data/` and `data-beta/` mounts.
+4. Rollback: remove the new hostname route and stop only Strategy Report containers. If the Visual Portfolio source path migration causes a regression, redeploy the prior Visual Portfolio images/commit against the unchanged `data/` mount.
 
 ## Open Questions
 

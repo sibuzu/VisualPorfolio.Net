@@ -1,6 +1,0 @@
-ingress:
-  - hostname: visualporforlio-beta.sibuzu.com
-    service: http://visualportfolio-beta-frontend:80
-  - hostname: api-visualporforlio-beta.sibuzu.com
-    service: http://visualportfolio-beta-backend:8000
-  - service: http_status:404

@@ -73,7 +73,8 @@ def _point_value(params: dict[str, str]) -> Decimal:
 
 
 def _slippage_text(params: dict[str, str]) -> str:
-    text = params.get("滑價") or params.get("Slippage") or params.get("交易成本") or "0"
+    text = (params.get("滑價") or params.get("Slippage") or params.get("交易成本")
+            or params.get("TradeCost") or "0")
     raw = text.strip().replace("％", "%")
     value = _decimal(raw[:-1] if raw.endswith("%") else raw, field="slippage")
     if value < 0:

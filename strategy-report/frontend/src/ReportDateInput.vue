@@ -48,10 +48,10 @@ function selectDate(event) {
 </template>
 
 <style scoped>
-.report-date-input { display: inline-flex; position: relative; width: 128px; min-width: 0; }
-.report-date-input > input[type='text'] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 4px 25px 4px 6px; font-size: 13px; color: var(--text); background: white; }
+.report-date-input { display: inline-flex; position: relative; width: 96px; min-width: 0; }
+.report-date-input > input[type='text'] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 4px 22px 4px 4px; font-size: 12px; color: var(--text); background: white; }
 .report-date-input.disabled { opacity: .5; }
-.report-date-input button { position: absolute; right: 3px; top: 0; bottom: 0; display: inline-flex; align-items: center; justify-content: center; width: 20px; padding: 0; border: 0; background: transparent; color: var(--text); }
-.report-date-input svg { width: 16px; height: 16px; fill: currentColor; }
+.report-date-input button { position: absolute; right: 2px; top: 0; bottom: 0; display: inline-flex; align-items: center; justify-content: center; width: 18px; padding: 0; border: 0; background: transparent; color: var(--text); }
+.report-date-input svg { width: 14px; height: 14px; fill: currentColor; }
 .native-date-picker { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 </style>

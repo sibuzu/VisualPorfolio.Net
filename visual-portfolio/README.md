@@ -15,4 +15,4 @@ npm ci
 npm run dev
 ```
 
-The production and beta Compose entry points remain `docker/visual-portfolio/` and `docker/visual-portfolio-beta/`. Their persistent data directories remain at root `data/` and `data-beta/`. The root `visual-portfolio/index.html` is an older tracked development file; the Vite app uses `visual-portfolio/frontend/index.html`.
+The production Compose entry point is `docker/visual-portfolio/`, with persistent data at root `data/`. The root `visual-portfolio/index.html` is an older tracked development file; the Vite app uses `visual-portfolio/frontend/index.html`.

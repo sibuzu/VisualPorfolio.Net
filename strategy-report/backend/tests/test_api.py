@@ -54,6 +54,28 @@ def _login(client: TestClient) -> None:
     assert response.json()["user_id"] == "demo"
 
 
+def test_backtest_capital_override_is_saved_and_can_be_reset(fake_visual_portfolio_auth):
+    with TestClient(app) as client:
+        _login(client)
+        created = client.post("/api/performances", files={"file": (SAMPLE.name, SAMPLE.read_bytes())})
+        item_id = created.json()["performance"]["performance_id"]
+        endpoint = f"/api/performances/{item_id}/report"
+        automatic = client.post(endpoint, json={"mode": "backtest"})
+        assert automatic.status_code == 200
+        assert automatic.json()["compound"]["summary"]["initial_capital"] == 100_000
+
+        manual = client.post(endpoint, json={"mode": "backtest", "backtest_initial_capital": 150_000})
+        assert manual.status_code == 200
+        assert manual.json()["compound"]["summary"]["initial_capital"] == 150_000
+        assert manual.json()["compound"]["summary"]["net_profit"] == automatic.json()["compound"]["summary"]["net_profit"]
+        assert client.get(f"/api/performances/{item_id}").json()["performance"]["settings"]["backtest_initial_capital"] == "150000"
+
+        restored = client.post(endpoint, json={"mode": "backtest", "backtest_initial_capital": None})
+        assert restored.status_code == 200
+        assert restored.json()["compound"]["summary"]["initial_capital"] == 100_000
+        assert client.get(f"/api/performances/{item_id}").json()["performance"]["settings"]["backtest_initial_capital"] is None
+
+
 def test_date_range_defaults_owner_memory_and_viewer_isolation(fake_visual_portfolio_auth, tmp_path):
     body = ('<策略回測><參數><策略>Dates</策略><開始日期>2012/01/01</開始日期>'
             '<結束日期>2026/12/31</結束日期></參數><策略交易>'
@@ -70,7 +92,8 @@ def test_date_range_defaults_owner_memory_and_viewer_isolation(fake_visual_portf
         settings = {"date_start": "2026-01-01", "date_end": "2026-08-11", "date_range_enabled": True}
         selected = client.post(url + "/report", json=settings)
         assert selected.status_code == 200
-        assert selected.json()["simple"]["summary"]["trade_count"] == 1
+        # The only in-range event closes a position opened before the range.
+        assert selected.json()["simple"]["summary"]["trade_count"] == 0
         assert selected.json()["source"]["date_range"] == item["source_range"]
         settings["date_range_enabled"] = False
         full = client.post(url + "/report", json=settings)

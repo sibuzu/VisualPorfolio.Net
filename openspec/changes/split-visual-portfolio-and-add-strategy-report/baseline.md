@@ -1,5 +1,7 @@
 # Implementation baseline
 
+> Historical Beta checks below describe the completed relocation. VisualPortfolio Beta deployment, scripts, validation gate, and data were removed at the user's request on 2026-10-17; they are no longer release requirements.
+
 Recorded 2026-10-14 UTC against Visual Portfolio commit `326d79e31a014828f09092f04c142436b22af48f`, before moving its source tree.
 
 | Check | Command | Result |

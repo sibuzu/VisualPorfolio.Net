@@ -1,5 +1,7 @@
 ## 1. Baseline and reference inventory
 
+> Historical Beta checks below describe the completed relocation. VisualPortfolio Beta deployment, scripts, validation gate, and data were removed at the user's request on 2026-10-17; they are no longer release requirements.
+
 - [x] 1.1 Record the current Visual Portfolio backend test, frontend build, production Compose config, and beta Compose config results.
 - [x] 1.2 Inventory C# StrategyReport's visible summary fields, detail columns, period tables, chart series, ten capital modes, defaults, date range behavior, and save/print behavior in a parity matrix.
 - [x] 1.3 Select paired `.srp` and `.sea` fixtures from `sea_spec/examples/srp/`; record source-derived expected values for normal, losing, overlapping, and filtered trades, the C# source version, and the current desktop-output validation limit.
