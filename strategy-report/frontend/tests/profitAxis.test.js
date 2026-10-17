@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { fitCurveAxis, formatProfitTick, profitAxisLayout } from '../src/profitAxis.js'
+import { fitCurveAxis, fitLogCurveAxis, formatProfitTick, profitAxisLayout } from '../src/profitAxis.js'
 
 test('profit axis always uses compact amounts and measures the longest tick', () => {
   const ticks = [-500000, 0, 1000000, 2000000, 3000000]
@@ -23,4 +23,12 @@ test('single and dual curve axes cover their data with readable ticks', () => {
   assert.deepEqual(fitCurveAxis({ min: 0, max: 4 }, [0, 1], true), {
     min: 0, max: 4, interval: 1, scale: false
   })
+})
+
+test('log axis bounds include positive capital while ignoring zero and losses', () => {
+  const axis = fitLogCurveAxis([-50000, 0, 100000, 3000000])
+  assert.equal(axis.type, 'log')
+  assert.ok(axis.min > 0 && axis.min < 100000)
+  assert.ok(axis.max > 3000000)
+  assert.deepEqual(fitLogCurveAxis([0, -1]), { type: 'log', logBase: 10, min: 1, max: 10 })
 })

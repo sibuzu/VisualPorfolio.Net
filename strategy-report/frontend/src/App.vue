@@ -4,9 +4,9 @@ import BuyHoldDialog from './BuyHoldDialog.vue'
 import HelpIcon from './HelpIcon.vue'
 import SummaryPanel from './SummaryPanel.vue'
 import ReportDateInput from './ReportDateInput.vue'
-import { visibleSimpleCurveSeries } from './curveSelection.js'
+import { nextSimpleCurveSelection, visibleSimpleCurveSeries } from './curveSelection.js'
 import { profitDrawdownSegments } from './profitPlot.js'
-import { fitCurveAxis, formatProfitTick, profitAxisLayout } from './profitAxis.js'
+import { fitCurveAxis, fitLogCurveAxis, formatProfitTick, profitAxisLayout } from './profitAxis.js'
 import { buildPeriodPlotData, nextPeriodMetricSelection, periodDrawdownLabel, withoutUnavailableBuyHold } from './periodComparison.js'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
@@ -107,6 +107,8 @@ const detailPages = ref({ simple: 1, compound: 1, buyhold: 1 })
 const detailScrollTops = { simple: 0, compound: 0, buyhold: 0 }
 const detailsPageSize = 100
 const curveSelection = ref({ profit: true, buyHold: false, drawdown: false, quantity: false })
+const compoundCurveSelection = ref({ profit: true, buyHold: false, drawdown: false, quantity: false })
+const compoundCurveScale = ref('linear')
 let chart = null
 let resizeObserver = null
 let chartResizeFrame = null
@@ -140,14 +142,21 @@ const detailPageNumbers = computed(() => {
 })
 const hasBuyHoldCurve = computed(() => Boolean(report.value?.buy_hold?.curve?.length))
 const simpleCurveVisible = computed(() => visibleSimpleCurveSeries(curveSelection.value, hasBuyHoldCurve.value))
+const compoundCurveVisible = computed(() => visibleSimpleCurveSeries(compoundCurveSelection.value, hasBuyHoldCurve.value))
+const activeCurveVisible = computed(() => activeSection.value === 'compound' ? compoundCurveVisible.value : simpleCurveVisible.value)
 const isFullHeightPlot = computed(() => activeView.value === 'periods' ||
-  (activeSection.value === 'simple' && activeView.value === 'curve'))
+  activeView.value === 'curve')
 const simpleCurveItems = computed(() => [
   { key: 'profit', label: '獲利' },
   ...(hasBuyHoldCurve.value ? [{ key: 'buyHold', label: 'BuyHold' }] : []),
   { key: 'drawdown', label: '回撤' },
   { key: 'quantity', label: '口數' }
 ])
+
+function toggleCurveSeries(key) {
+  const selected = activeSection.value === 'compound' ? compoundCurveSelection : curveSelection
+  selected.value = nextSimpleCurveSelection(selected.value, key, hasBuyHoldCurve.value)
+}
 const source = computed(() => report.value?.source || null)
 const backtestCapital = computed({
   get: () => settings.value.backtest_initial_capital ?? source.value?.source_initial_capital ?? 100000,
@@ -545,6 +554,8 @@ function clearReport() {
   detailScrollTops.compound = 0
   detailScrollTops.buyhold = 0
   curveSelection.value = { profit: true, buyHold: false, drawdown: false, quantity: false }
+  compoundCurveSelection.value = { profit: true, buyHold: false, drawdown: false, quantity: false }
+  compoundCurveScale.value = 'linear'
   reportRequestId += 1
   clearTimeout(recalculateTimer)
   recalculateTimer = null
@@ -714,12 +725,11 @@ function renderChart() {
   }
   const curve = currentSection.value.curve || []
   const reference = report.value.buy_hold
-  const hasReference = Boolean(reference?.curve?.length)
-  const hasDrawdown = curve.some(row => row.drawdown > 0)
   const timestamp = value => new Date(value.length === 10 ? `${value}T00:00:00` : value.replace(' ', 'T')).getTime()
-  const equityName = activeSection.value === 'simple' ? '獲利' : '資金'
-  if (activeSection.value === 'simple') {
-    const visible = simpleCurveVisible.value
+  if (activeSection.value === 'simple' || activeSection.value === 'compound') {
+    const compound = activeSection.value === 'compound'
+    const logScale = compound && compoundCurveScale.value === 'log'
+    const visible = activeCurveVisible.value
     const hasPrimary = visible.profit || visible.buyHold
     const leftKind = hasPrimary ? 'profit' : visible.drawdown ? 'drawdown' : 'quantity'
     const hasRightAxis = (leftKind === 'profit' && (visible.drawdown || visible.quantity)) ||
@@ -750,12 +760,12 @@ function renderChart() {
     })
     if (visible.buyHold) series.push({
       name: 'BuyHold', type: 'line', yAxisIndex: 0,
-      data: reference.curve.map(row => [timestamp(row.timestamp), row.profit]),
+      data: reference.curve.map(row => [timestamp(row.timestamp), compound ? row.equity : row.profit]),
       showSymbol: false, lineStyle: { width: 2, color: '#7c3aed' }, itemStyle: { color: '#7c3aed' }
     })
     if (visible.drawdown) series.push({
       name: '回撤', type: 'line', yAxisIndex: secondaryAxis('drawdown'),
-      data: curve.map(row => [timestamp(row.timestamp), row.drawdown]),
+      data: curve.map(row => [timestamp(row.timestamp), compound ? row.drawdown_pct : row.drawdown]),
       showSymbol: false, lineStyle: { width: 1.5, color: '#d77953' }, itemStyle: { color: '#d77953' }
     })
     if (visible.quantity) series.push({
@@ -763,11 +773,15 @@ function renderChart() {
       data: curve.map(row => [timestamp(row.timestamp), row.open_position]),
       showSymbol: false, lineStyle: { width: 1.5, color: '#657587' }, itemStyle: { color: '#657587' }
     })
+    const plottedSeries = series.map(item => logScale && item.yAxisIndex === 0
+      ? { ...item, data: item.data.map(([date, value]) => [date, Number(value) > 0 ? value : null]) }
+      : item)
     const axisKinds = [leftKind, ...(hasRightAxis ? [visible.quantity ? 'quantity' : 'drawdown'] : [])]
     axes.forEach((axis, index) => {
-      const values = series.filter(item => (item.yAxisIndex || 0) === index)
+      const values = plottedSeries.filter(item => (item.yAxisIndex || 0) === index)
         .flatMap(item => item.data.map(([, value]) => value))
-      axes[index] = fitCurveAxis(axis, values, axisKinds[index] === 'quantity' && integerQuantity)
+      axes[index] = logScale && index === 0 ? fitLogCurveAxis(values)
+        : fitCurveAxis(axis, values, axisKinds[index] === 'quantity' && integerQuantity)
     })
     if (!hasRightAxis) axes.push({ ...axes[0], position: 'right', splitLine: { show: false } })
 
@@ -775,8 +789,15 @@ function renderChart() {
     const measureCanvas = document.createElement('canvas')
     const measureContext = measureCanvas.getContext('2d')
     measureContext.font = `12px ${fontFamily}`
-    const axisFormatter = kind => kind === 'quantity' ? formatQuantity : value => formatProfitTick(value, true)
+    const axisFormatter = kind => kind === 'quantity' ? formatQuantity
+      : kind === 'drawdown' && compound ? formatPercent : value => formatProfitTick(value, true)
     const ticksFor = axis => {
+      if (axis.type === 'log') {
+        const first = Math.ceil(Math.log10(axis.min))
+        const last = Math.floor(Math.log10(axis.max))
+        return [axis.min, ...Array.from({ length: Math.min(30, Math.max(0, last - first + 1)) },
+          (_, index) => 10 ** (first + index)), axis.max]
+      }
       const count = Math.min(30, Math.round((axis.max - axis.min) / axis.interval))
       return Array.from({ length: count + 1 }, (_, index) => axis.min + index * axis.interval)
     }
@@ -803,13 +824,13 @@ function renderChart() {
       .map((segment, index) => ({
         name: `MDD ${index + 1}`, type: 'line', showSymbol: false, silent: true,
         tooltip: { show: false }, animation: false, z: 5,
-        data: segment.map(([date, value]) => [timestamp(date), value]),
+        data: segment.map(([date, value]) => [timestamp(date), logScale && value <= 0 ? null : value]),
         lineStyle: { color: '#e00000', width: 1.5 }
       })) : []
-    const styledSeries = series.map(item => {
-      const color = item.name === '獲利' || series.length === 1 ? '#111'
+    const styledSeries = plottedSeries.map(item => {
+      const color = item.name === '獲利' || plottedSeries.length === 1 ? '#111'
         : item.name === 'BuyHold' ? '#7c3aed' : item.name === '回撤' ? '#d77953' : '#657587'
-      return { ...item, areaStyle: undefined, lineStyle: { color, width: series.length === 1 ? 0.75 : 1.25 },
+      return { ...item, areaStyle: undefined, lineStyle: { color, width: plottedSeries.length === 1 ? 0.75 : 1.25 },
         itemStyle: { color }, z: 4 }
     })
     chart.setOption({
@@ -820,11 +841,11 @@ function renderChart() {
       tooltip: {
         trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: '#777', type: 'dotted' } },
         formatter: items => {
-          const points = items.filter(item => item.seriesName !== '基準線' && !item.seriesName.startsWith('MDD '))
+          const points = items.filter(item => item.data?.[1] != null && item.seriesName !== '基準線' && !item.seriesName.startsWith('MDD '))
           if (!points.length) return ''
           const date = new Date(points[0].data[0])
           const dateText = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
-          return `${dateText}<br>${points.map(item => `${item.marker}${item.seriesName}：${item.seriesName === '口數' ? formatQuantity(item.data[1]) : formatProfitTick(item.data[1])}`).join('<br>')}`
+          return `${dateText}<br>${points.map(item => `${item.marker}${item.seriesName}：${item.seriesName === '口數' ? formatQuantity(item.data[1]) : item.seriesName === '回撤' && compound ? formatPercent(item.data[1]) : formatProfitTick(item.data[1])}`).join('<br>')}`
         }
       },
       xAxis: {
@@ -838,8 +859,8 @@ function renderChart() {
       yAxis: [classicAxis(axes[0], 'left', leftKind),
         classicAxis(axes[1], 'right', hasRightAxis ? axisKinds[1] : leftKind)],
       series: [
-        { name: '基準線', type: 'line', silent: true, showSymbol: false, tooltip: { show: false },
-          data: [[firstTime, 0], [lastTime, 0]], lineStyle: { color: '#243bff', width: 1 }, z: 2 },
+        ...(!logScale ? [{ name: '基準線', type: 'line', silent: true, showSymbol: false, tooltip: { show: false },
+          data: [[firstTime, 0], [lastTime, 0]], lineStyle: { color: '#243bff', width: 1 }, z: 2 }] : []),
         ...styledSeries,
         ...mddLines
       ]
@@ -847,23 +868,6 @@ function renderChart() {
     chart.resize()
     return
   }
-  chart.setOption({
-    animationDuration: 350,
-    grid: { left: 66, right: hasDrawdown ? 70 : 24, top: 52, bottom: 40, containLabel: true },
-    tooltip: { trigger: 'axis', valueFormatter: value => formatNumber(value, 2) },
-    legend: { top: 2, data: [equityName, '回撤', ...(hasReference ? [reference.name] : [])] },
-    xAxis: { type: 'time', boundaryGap: false, axisLabel: { hideOverlap: true } },
-    yAxis: [
-      { type: 'value', scale: true, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { lineStyle: { color: '#e6ecec' } } },
-      { type: 'value', name: '回撤', min: 0, show: hasDrawdown, axisLabel: { formatter: value => formatNumber(value, 0) }, splitLine: { show: false } }
-    ],
-    series: [
-      { name: equityName, type: 'line', data: curve.map(row => [timestamp(row.timestamp), row.equity]), showSymbol: false, smooth: false, lineStyle: { width: 2.5, color: '#0b7183' }, itemStyle: { color: '#0b7183' }, areaStyle: { color: 'rgba(11,113,131,.10)' } },
-      { name: '回撤', type: 'line', yAxisIndex: 1, data: curve.map(row => [timestamp(row.timestamp), row.drawdown]), showSymbol: false, lineStyle: { width: 1.5, color: '#d77953' }, itemStyle: { color: '#d77953' } },
-      ...(hasReference ? [{ name: reference.name, type: 'line', data: reference.curve.map(row => [timestamp(row.timestamp), activeSection.value === 'simple' ? row.profit : row.equity]), showSymbol: false, lineStyle: { width: 2, color: '#7c3aed' }, itemStyle: { color: '#7c3aed' } }] : [])
-    ]
-  }, true)
-  chart.resize()
 }
 
 watch([activeTab, activePeriod, periodSelected, report], () => nextTick(renderChart))
@@ -881,7 +885,7 @@ watch(activeTab, () => {
     }
   })
 })
-watch(curveSelection, () => nextTick(renderChart), { deep: true })
+watch([curveSelection, compoundCurveSelection, compoundCurveScale], () => nextTick(renderChart), { deep: true })
 function goToDetailsPage(page) {
   detailsPage.value = Math.min(Math.max(page, 1), detailsPageCount.value)
   detailScrollTops[activeSection.value] = 0
@@ -1119,15 +1123,22 @@ onMounted(() => {
             <SummaryPanel v-if="activeView === 'summary' && currentSection?.summary" :section="currentSection" :symbol="activeSection === 'buyhold' ? report.settings.buy_hold?.code : source.symbol" :compound="activeSection !== 'simple'" />
             <p v-else-if="activeView === 'summary'" class="no-data">沒有可用的每日收盤行情</p>
             <div v-else-if="activeView === 'curve'" class="chart-panel">
-              <h3 v-if="activeSection !== 'simple'">{{ selectedTab.label }}</h3>
-              <div v-if="activeSection === 'simple'" class="curve-series-controls" role="group" aria-label="曲線項目">
-                <button v-for="item in simpleCurveItems" :key="item.key" type="button"
-                  :class="[item.key, { active: curveSelection[item.key], suppressed: curveSelection[item.key] && !simpleCurveVisible[item.key] }]"
-                  :aria-pressed="curveSelection[item.key]"
-                  :title="item.key === 'quantity' && curveSelection.quantity && !simpleCurveVisible.quantity ? '獲利或 BuyHold 與回撤同時顯示時，口數不繪製' : ''"
-                  @click="curveSelection[item.key] = !curveSelection[item.key]">{{ item.label }}</button>
+              <div class="curve-control-row">
+                <div class="curve-series-controls" role="group" aria-label="曲線項目">
+                  <button v-for="item in simpleCurveItems" :key="item.key" type="button"
+                    :class="[item.key, { active: activeCurveVisible[item.key] }]"
+                    :aria-pressed="activeCurveVisible[item.key]"
+                    @click="toggleCurveSeries(item.key)">{{ item.label }}</button>
+                </div>
+                <div v-if="activeSection === 'compound'" class="curve-axis-controls" role="radiogroup" aria-label="縱軸刻度">
+                  <button v-for="axis in [{ key: 'linear', label: '線性軸' }, { key: 'log', label: '對數軸' }]"
+                    :key="axis.key" type="button" role="radio" :aria-checked="compoundCurveScale === axis.key"
+                    :class="{ active: compoundCurveScale === axis.key }"
+                    @click="compoundCurveScale = axis.key">{{ axis.label }}</button>
+                </div>
               </div>
-              <div ref="chartElement" class="chart" :class="{ 'full-height-chart': isFullHeightPlot }" role="img" :aria-label="`${selectedTab.label}，顯示${activeSection === 'simple' ? simpleCurveItems.filter(item => simpleCurveVisible[item.key]).map(item => item.label).join('、') : '資金、回撤'}`"></div>
+              <p v-if="activeSection === 'compound' && compoundCurveScale === 'log'" class="curve-axis-note">對數軸不顯示左軸的零值與負值；右軸維持線性刻度。</p>
+              <div ref="chartElement" class="chart" :class="{ 'full-height-chart': isFullHeightPlot }" role="img" :aria-label="`${selectedTab.label}，顯示${simpleCurveItems.filter(item => activeCurveVisible[item.key]).map(item => item.label).join('、')}，${activeSection === 'compound' && compoundCurveScale === 'log' ? '左軸使用對數刻度' : '線性刻度'}`"></div>
             </div>
 
             <div v-else-if="activeView === 'periods'" class="chart-panel period-chart-panel">

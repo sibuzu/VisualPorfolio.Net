@@ -39,3 +39,16 @@ export function fitCurveAxis(axis, values, integerQuantity = false) {
   const max = Math.max(Math.ceil(maximum / step) * step, min + step)
   return { ...axis, min, max, interval: step, scale: false }
 }
+
+export function fitLogCurveAxis(values) {
+  let minimum = Infinity
+  let maximum = 0
+  for (const value of values) {
+    const number = Number(value)
+    if (!Number.isFinite(number) || number <= 0) continue
+    minimum = Math.min(minimum, number)
+    maximum = Math.max(maximum, number)
+  }
+  if (!Number.isFinite(minimum)) return { type: 'log', logBase: 10, min: 1, max: 10 }
+  return { type: 'log', logBase: 10, min: minimum / 1.1, max: maximum * 1.1 }
+}
